@@ -4935,7 +4935,7 @@ function splatEnsure(){
   var VS='#version 300 es\nprecision highp float;precision highp int;precision highp usampler2D;\n'+
     'layout(location=0) in vec2 aQ; layout(location=1) in uint aI;\n'+
     'uniform highp sampler2D uA; uniform highp sampler2D uB; uniform highp sampler2D uC; uniform mediump sampler2D uD;\n'+
-    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform float uLtOn; uniform vec3 uLtPos; uniform vec3 uLtCol; uniform vec3 uLtPar; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
+    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
     'out vec4 vCol; out vec2 vPos;\n'+
     'void main(){ int W='+W+'; ivec2 tc=ivec2(int(aI)%W, int(aI)/W); vec4 A=texelFetch(uA,tc,0); vec4 B=texelFetch(uB,tc,0); vec2 C=texelFetch(uC,tc,0).xy; vec4 D=texelFetch(uD,tc,0);\n'+
     ' gl_Position=vec4(0.0,0.0,2.0,1.0); if(A.z>uZMax) return; if(B.x+B.w+C.y>uMaxVar&&A.w<uFaint) return; if(uBoxOn>0.5&&(A.x<uBox.x||A.x>uBox.z||A.y<uBox.y||A.y>uBox.w)) return; if(((uCutOn>0.5&&dot(A.xyz,uCl[0].xyz)>uCl[0].w)||(uCutOn>1.5&&dot(A.xyz,uCl[1].xyz)>uCl[1].w)||(uCutOn>2.5&&dot(A.xyz,uCl[2].xyz)>uCl[2].w)||(uCutOn>3.5&&dot(A.xyz,uCl[3].xyz)>uCl[3].w))) return;\n'+
@@ -4950,7 +4950,7 @@ function splatEnsure(){
     ' vec2 M1=min(sqrt(2.0*l1),1024.0)*v1, M2=min(sqrt(2.0*l2),1024.0)*vec2(v1.y,-v1.x);\n'+
     ' int sty=int(D.a*255.0+0.5); float fa=1.0; vec3 rgb=D.rgb; if(sty<255){ int st=sty&7; vec3 pc=uPal[(sty>>4)&7];\n'+
     '  if(st==1){ fa=0.10; rgb=mix(rgb, vec3(0.75,0.88,1.0), 0.35); } else if(st==2){ M1=normalize(M1+vec2(1e-6,0.0))*1.6; M2=normalize(M2+vec2(0.0,1e-6))*1.6; fa=8.0; } else if(st==3){ rgb=pc*(0.45+0.75*dot(rgb,vec3(0.3,0.59,0.11))); } else if(st==4){ rgb=mix(rgb, pc, 0.5); } else if(st==5||st==6){ vec3 q0=cross(S[1],S[2]), q1=cross(S[2],S[0]), q2=cross(S[0],S[1]); vec3 nv=normalize(vec3(0.31,0.47,0.83)); nv=normalize(q0*nv.x+q1*nv.y+q2*nv.z+1e-12); nv=normalize(q0*nv.x+q1*nv.y+q2*nv.z+1e-12); float sh=0.38+0.5*abs(dot(nv,normalize(vec3(0.45,0.3,0.84))))+0.12*abs(nv.z); if(st==5){ float lu=dot(rgb,vec3(0.3,0.59,0.11)); rgb=vec3(0.9,0.89,0.86)*clamp(0.12+0.45*sh+0.6*lu,0.0,1.1); } else { float hz=clamp((A.z-uGrad.x)/max(1e-4,uGrad.y-uGrad.x),0.0,1.0); vec3 gc=hz<0.25?mix(vec3(0.17,0.32,0.85),vec3(0.1,0.7,0.85),hz*4.0):hz<0.5?mix(vec3(0.1,0.7,0.85),vec3(0.25,0.8,0.3),hz*4.0-1.0):hz<0.75?mix(vec3(0.25,0.8,0.3),vec3(0.98,0.85,0.2),hz*4.0-2.0):mix(vec3(0.98,0.85,0.2),vec3(0.9,0.25,0.15),hz*4.0-3.0); rgb=gc*(0.55+0.55*sh); } } }\n'+
-    ' if(uLtOn>0.5){ vec3 l0=cross(S[1],S[2]), l1=cross(S[2],S[0]), l2=cross(S[0],S[1]); vec3 ln=normalize(vec3(0.31,0.47,0.83)); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); vec3 Ld; float lf; if(uLtOn>1.5){ Ld=normalize(uLtPos); lf=1.0; } else { vec3 dv=uLtPos-A.xyz; float dd=length(dv); Ld=dv/max(dd,1e-4); lf=1.0/(1.0+dd*dd/max(1e-4,uLtPar.y*uLtPar.y)); } float lam=abs(dot(ln,Ld)); rgb=rgb*uLtPar.z+rgb*uLtCol*(lf*(0.3+0.7*lam)*uLtPar.x); }\n'+
+    ' if(uLtN>0.5){ vec3 l0=cross(S[1],S[2]), l1=cross(S[2],S[0]), l2=cross(S[0],S[1]); vec3 ln=normalize(vec3(0.31,0.47,0.83)); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); vec3 acc=vec3(0.0); for(int k=0;k<8;k++){ if(float(k)>=uLtN) break; vec4 LP=uLP[k]; vec3 Ld; float lf=1.0; if(LP.w>0.5&&LP.w<1.5){ Ld=normalize(LP.xyz); } else { vec3 dv=LP.xyz-A.xyz; float dd=length(dv); Ld=dv/max(dd,1e-4); lf=1.0/(1.0+dd*dd/max(1e-4,uLR[k].x*uLR[k].x)); if(LP.w>1.5){ float cs=dot(-Ld, normalize(uLD[k].xyz)); lf*=smoothstep(uLD[k].w, max(uLD[k].w+1e-4,uLR[k].y), cs); } } float lam=abs(dot(ln,Ld)); acc+=uLC[k].rgb*(uLC[k].a*lf*(0.3+0.7*lam)); } rgb=rgb*uLAmb+rgb*acc; }\n'+
     ' if(uGrOn>0.5){ rgb=rgb*(1.0+uGr.x); rgb=(rgb-0.5)*uGr.y+0.5; float gl0=dot(rgb,vec3(0.3,0.59,0.11)); rgb=mix(vec3(gl0),rgb,uGr.z); rgb+=vec3(uGr.w*0.08, -uGrT*0.06, -uGr.w*0.08); rgb=clamp(rgb,0.0,1.0); }\n'+
     ' if(uIso>0.5&&(sty>=255||(sty&8)==0)){ fa*=0.08; rgb=vec3(dot(rgb,vec3(0.3,0.59,0.11))); }\n'+
     ' if(uTbOn>0.5){ vec3 dd=A.xyz-uTbC; if(abs(dot(dd,uTbU))<=uTbH.x&&abs(dot(dd,uTbV))<=uTbH.y&&abs(dot(dd,uTbW))<=uTbH.z) rgb=mix(rgb, vec3(1.0,0.45,0.1), 0.55); }\n'+
@@ -8409,7 +8409,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r307';
+var SB_BUILD='2026-10-11 r308';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22064,57 +22064,237 @@ sbAfter('msDraw', function(r){ try{ var q=document.getElementById('msQuick'); if
 (function(){ var c=document.createElement('style'); c.textContent='body.sbSkin #drvHud{left:96px!important}body.sbSkin.sbPanelOn #drvHud{left:396px!important}'; document.head.appendChild(c); })();
 (function(){ var c=document.createElement('style'); c.textContent='body.sbSkin #tools3d{flex-wrap:nowrap}body.sbSkin #tools3d button{padding:4px 9px}'; document.head.appendChild(c); })();
 
-/* ===== Light: a lamp you place in the scene (or a sun), lighting the splats from where it is, with the rest of the scene dimmed as much as
-   you like. It is a look, not true relighting: splats keep the light they were captured in, this adds and shades on top. ===== */
-var SBL={on:false, kind:'lamp', pos:null, h:1.5, col:'#ffd9a0', str:1.6, reach:4, amb:0.55, az:135, el:40, placing:false};
-try{ var _l=JSON.parse(localStorage.getItem('sb_light')||'null'); if(_l){ Object.assign(SBL, _l); SBL.placing=false; SBL.pos=null; } }catch(e){}
-function sbLSave(){ try{ var o=Object.assign({}, SBL); delete o.pos; delete o.placing; localStorage.setItem('sb_light', JSON.stringify(o)); }catch(e){} }
-function sbLHex(h){ var n=parseInt((h||'#ffffff').slice(1),16); return [(n>>16&255)/255, (n>>8&255)/255, (n&255)/255]; }
-function sbLSc(){ return (typeof fScale==='function'?fScale():1)||1; }
-function sbLDefaultPos(){ var c=[cam.tx, cam.ty]; var g=(typeof groundAt==='function')?groundAt(c[0],c[1]):mdlFloor(); return [c[0], c[1], (isFinite(g)?g:mdlFloor())+SBL.h*sbLSc()]; }
-/* the uniforms, every frame */
-sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog){ var gl=GL, L=SPL.loc; if(L.uLtOn===undefined){ ['uLtOn','uLtPos','uLtCol','uLtPar'].forEach(function(k){ L[k]=gl.getUniformLocation(SPL.prog,k); }); }
-      if(L.uLtOn){ gl.useProgram(SPL.prog); var on=SBL.on&&APP.res?(SBL.kind==='sun'?2:1):0; gl.uniform1f(L.uLtOn, on);
-        if(on){ var p; if(SBL.kind==='sun'){ var a=SBL.az*Math.PI/180, e=SBL.el*Math.PI/180; p=[Math.cos(e)*Math.cos(a), Math.cos(e)*Math.sin(a), Math.sin(e)]; } else { if(!SBL.pos) SBL.pos=sbLDefaultPos(); p=SBL.pos; }
-          var c=sbLHex(SBL.col); gl.uniform3f(L.uLtPos, p[0], p[1], p[2]); gl.uniform3f(L.uLtCol, c[0], c[1], c[2]); gl.uniform3f(L.uLtPar, SBL.str, Math.max(0.2, SBL.reach)*sbLSc(), SBL.amb); } } } }catch(e){} return r; });
-/* the lamp drawn as a small glowing marker */
-function sbLOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('sbLightOv'); if(!cv){ cv=document.createElement('canvas'); cv.id='sbLightOv'; cv.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:12'; st.appendChild(cv); }
-  var r=glCv.getBoundingClientRect(), dpr=window.devicePixelRatio||1, W=Math.round(r.width*dpr), H=Math.round(r.height*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=r.width+'px'; cv.style.height=r.height+'px'; }
-  var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!(SBL.on&&SBL.kind==='lamp'&&SBL.pos&&APP.view==='3d'&&!miniVP&&(SBP.key==='light'||SBL.placing))) return; var m=camMVP(), P=SBL.pos, o=[0,0,0,0]; for(var k=0;k<4;k++) o[k]=m[k]*P[0]+m[4+k]*P[1]+m[8+k]*P[2]+m[12+k]; if(o[3]<=0.001) return;
-  var x=(o[0]/o[3]*0.5+0.5)*W, y=(0.5-o[1]/o[3]*0.5)*H, g=c.createRadialGradient(x,y,0,x,y,26*dpr); g.addColorStop(0, SBL.col); g.addColorStop(1, 'rgba(255,220,150,0)'); c.fillStyle=g; c.beginPath(); c.arc(x,y,26*dpr,0,7); c.fill();
-  c.fillStyle='#fff'; c.beginPath(); c.arc(x,y,5*dpr,0,7); c.fill(); c.strokeStyle='rgba(0,0,0,.6)'; c.lineWidth=1.5*dpr; c.stroke();
-  var gz=(typeof groundAt==='function')?groundAt(P[0],P[1]):mdlFloor(); if(isFinite(gz)){ var o2=[0,0,0,0]; for(k=0;k<4;k++) o2[k]=m[k]*P[0]+m[4+k]*P[1]+m[8+k]*gz+m[12+k]; if(o2[3]>0.001){ c.setLineDash([4*dpr,4*dpr]); c.strokeStyle='rgba(255,255,255,.7)'; c.beginPath(); c.moveTo(x,y); c.lineTo((o2[0]/o2[3]*0.5+0.5)*W, (0.5-o2[1]/o2[3]*0.5)*H); c.stroke(); c.setLineDash([]); } } }
-sbAfter('gl_render', function(r){ try{ if(!miniVP) sbLOv(); }catch(e){} return r; });
-/* placing: click on the scan, the lamp goes that high above it */
-window.addEventListener('pointerdown', function(e){ if(!SBL.placing||e.target!==glCv||e.button!==0) return; e.preventDefault(); e.stopImmediatePropagation(); var hit=null; try{ hit=stScanHit(pickRay(e.clientX, e.clientY)); }catch(er){}
-  if(!hit||!hit.p){ toast('Click on the scan where the light should be.', 2200); return; } SBL.pos=[hit.p[0], hit.p[1], hit.p[2]+SBL.h*sbLSc()]; SBL.placing=false; SBL.on=true; glCv.style.cursor=''; sbLDraw(); requestRender(false); toast('Light placed. Use Height to raise or lower it.', 2200); }, true);
-/* the panel */
+/* ===== Lights (r308): several named lights, each with its own settings: Lamp (shines all round), Beam (a spot or headlight) or Sun.
+   With the Light panel open: drag a light to move it (Shift+drag: up/down), drag a beam's square to aim it, or attach a light to an object
+   so it travels and turns with it (Drive too). Lamps and beams can glow, beams can show a haze. The sun can follow the clock (sunrise to
+   sunset), and the walk-through video can run that clock. Presets set up a scene in one click. Saved with the job.
+   A look on top of the scan: splats keep the light they were captured in, so there are no cast shadows. ===== */
+var LT={sel:null, drag:null, hov:null, mode:null, todOv:null}, LT_MAX=8;
+var LT_SW=[['#ffd9a0','Warm'],['#ffffff','Neutral'],['#cfe3ff','Cool'],['#ffb15c','Sodium'],['#ff9a5c','Sunset']];
+function ltM(){ var M=APP.model; if(!M) return null; if(!M.lights) M.lights=[]; return M; }
+function ltList(){ var M=ltM(); return M?M.lights:[]; }
+function ltOn(){ var M=ltM(); return !!(M&&M.lightsOn!==false); }
+function ltById(id){ return ltList().filter(function(l){ return l.id===id; })[0]||null; }
+function ltSc(){ return (typeof fScale==='function'?fScale():1)||1; }
+function ltHex(h){ var n=parseInt((h||'#ffffff').slice(1),16); return [(n>>16&255)/255, (n>>8&255)/255, (n&255)/255]; }
+function ltGround(x,y){ var g=(typeof groundAt==='function')?groundAt(x,y):NaN; return isFinite(g)?g:(typeof mdlFloor==='function'?mdlFloor():0); }
+function ltDir(az, el){ var a=az*Math.PI/180, e=el*Math.PI/180; return [Math.cos(e)*Math.cos(a), Math.cos(e)*Math.sin(a), Math.sin(e)]; }
+function ltAzEl(d){ var L=Math.hypot(d[0],d[1],d[2])||1; return {az:Math.round(Math.atan2(d[1],d[0])*1800/Math.PI)/10, el:Math.round(Math.asin(Math.max(-1,Math.min(1,d[2]/L)))*1800/Math.PI)/10}; }
+function ltNewId(){ return 'lt'+Date.now().toString(36)+Math.floor(Math.random()*1e4); }
+function ltName(kind){ var n=1, base=kind==='beam'?'Beam':kind==='sun'?'Sun':'Lamp'; while(ltList().some(function(l){ return l.name===base+' '+n; })) n++; return base+' '+n; }
+
+/* ---------- time of day: the sun follows the clock, rising, crossing the sky and setting, warm and low at each end, the scene darker towards night ---------- */
+function ltHM(h){ h=((h%24)+24)%24; var H=Math.floor(h), m=Math.round((h-H)*60); if(m===60){ H=(H+1)%24; m=0; } return (H<10?'0':'')+H+':'+(m<10?'0':'')+m; }
+function ltParseHM(s){ var m=String(s||'').trim().match(/^(\d{1,2})(?:[:.](\d{1,2}))?$/); if(!m) return null; var h=+m[1]+(m[2]?+m[2]/60:0); return h>=0&&h<=24?h:null; }
+function ltSunState(l){ if(!l.tod) return null; var h=LT.todOv!=null?LT.todOv:(l.time==null?12:l.time), rise=l.rise==null?6.5:l.rise, set=l.set==null?19:l.set, peak=l.peak||50;
+  var f=(h-rise)/Math.max(0.5, set-rise), el; if(f>=0&&f<=1) el=peak*Math.sin(Math.PI*f); else { var away=f<0?-f:f-1; el=-Math.min(18, away*(set-rise)*12); }
+  var az=(l.az==null?90:l.az)-180*Math.max(-0.1, Math.min(1.1, f)), lo=Math.max(0, Math.min(1, el/28)), c0=[1,0.52,0.28], c1=[1,0.97,0.92], col=[c0[0]+(c1[0]-c0[0])*lo, c0[1]+(c1[1]-c0[1])*lo, c0[2]+(c1[2]-c0[2])*lo];
+  var str=el<=0?0:(0.35+1.25*Math.min(1, el/30))*(l.str||1.2)/1.2, amb=0.16+0.69*Math.max(0, Math.min(1, (el+6)/32));
+  return {el:el, az:az, dir:ltDir(az, Math.max(el, 0.5)), col:col, str:str, amb:amb, h:h}; }
+function ltTodSun(){ return ltOn()?ltList().filter(function(l){ return l.on&&l.kind==='sun'&&l.tod; })[0]||null:null; }
+function ltAmb(){ var M=ltM(), s=ltTodSun(); if(s) return ltSunState(s).amb; return M&&typeof M.lightAmb==='number'?M.lightAmb:0.55; }
+
+/* ---------- the object a light rides on: its middle and its turn ---------- */
+function ltPropFrame(pid){ var p=typeof propById==='function'?propById(pid):null; if(!p||p.hide) return null; var B=prop3Box(p); return {p:p, m:[p.x, p.y, B.z0+B.hz/2], R:propRot(p), k:p.s||1}; }
+function ltWorld(l){ var pos=[l.x, l.y, l.z], dir=ltDir(l.az||0, l.el||0);
+  if(l.att){ var F=ltPropFrame(l.att.id); if(F){ var o=l.att.o, d=l.att.d, R=F.R, k=F.k; pos=[F.m[0]+k*(R[0]*o[0]+R[1]*o[1]+R[2]*o[2]), F.m[1]+k*(R[3]*o[0]+R[4]*o[1]+R[5]*o[2]), F.m[2]+k*(R[6]*o[0]+R[7]*o[1]+R[8]*o[2])]; dir=[R[0]*d[0]+R[1]*d[1]+R[2]*d[2], R[3]*d[0]+R[4]*d[1]+R[5]*d[2], R[6]*d[0]+R[7]*d[1]+R[8]*d[2]]; } }
+  return {pos:pos, dir:dir}; }
+function ltToLocal(F, v, isPt){ var R=F.R, w=isPt?[(v[0]-F.m[0])/F.k, (v[1]-F.m[1])/F.k, (v[2]-F.m[2])/F.k]:v; return [R[0]*w[0]+R[3]*w[1]+R[6]*w[2], R[1]*w[0]+R[4]*w[1]+R[7]*w[2], R[2]*w[0]+R[5]*w[1]+R[8]*w[2]]; }
+function ltSetPos(l, pos){ var F=l.att?ltPropFrame(l.att.id):null; if(F){ l.att.o=ltToLocal(F, pos, true).map(function(v){ return Math.round(v*1e4)/1e4; }); } else { l.x=Math.round(pos[0]*1e4)/1e4; l.y=Math.round(pos[1]*1e4)/1e4; l.z=Math.round(pos[2]*1e4)/1e4; } }
+function ltSetDir(l, dir){ var L=Math.hypot(dir[0],dir[1],dir[2])||1; dir=[dir[0]/L,dir[1]/L,dir[2]/L]; var F=l.att?ltPropFrame(l.att.id):null; if(F){ l.att.d=ltToLocal(F, dir, false); } else { var ae=ltAzEl(dir); l.az=ae.az; l.el=ae.el; } }
+function ltAttach(l, pid){ var W=ltWorld(l); delete l.att; if(!pid){ ltSetPos(l, W.pos); ltSetDir(l, W.dir); return; } var F=ltPropFrame(pid); if(!F) return; l.att={id:pid, o:[0,0,0], d:[1,0,0]}; ltSetPos(l, W.pos); ltSetDir(l, W.dir); }
+function ltMake(kind, at){ var c=at||[cam.tx, cam.ty, ltGround(cam.tx, cam.ty)+(kind==='beam'?1.0:1.8)*ltSc()];
+  return {id:ltNewId(), name:ltName(kind), kind:kind, on:true, x:c[0], y:c[1], z:c[2], col:kind==='sun'?'#fff1d6':'#ffd9a0', str:kind==='sun'?1.2:(kind==='beam'?2.2:1.6), reach:kind==='beam'?10:4,
+    az:kind==='sun'?135:Math.round(cam.yaw*180/Math.PI+180), el:kind==='sun'?40:-15, cone:35, soft:0.4, glow:kind!=='sun', haze:kind==='beam'?0.35:0}; }
+function ltAdd(kind){ var L=ltList(); if(L.length>=LT_MAX){ toast('Up to '+LT_MAX+' lights.', 2500); return null; } if(kind==='sun'&&L.some(function(l){ return l.kind==='sun'; })){ toast('There is a sun already: change it, or delete it first.', 3000); return null; }
+  pushUndo(); var l=ltMake(kind); L.push(l); ltM().lightsOn=true; LT.sel=l.id; afterEdit(); ltPanel(); requestRender(false); toast(l.name+' added'+(kind==='sun'?'.':': drag it in 3D to move it'+(kind==='beam'?', drag its square to aim it.':'.')), 3000); return l; }
+function ltDel(id){ var L=ltList(), i=L.findIndex(function(l){ return l.id===id; }); if(i<0) return; pushUndo(); L.splice(i,1); if(LT.sel===id) LT.sel=null; afterEdit(); ltPanel(); requestRender(false); }
+
+/* ---------- the shader: up to 8 lights, every frame ---------- */
+sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL, L=SPL.loc; if(L.uLtN===undefined){ ['uLtN','uLAmb'].forEach(function(k){ L[k]=gl.getUniformLocation(SPL.prog,k); }); ['uLP','uLC','uLD','uLR'].forEach(function(k){ L[k]=gl.getUniformLocation(SPL.prog,k+'[0]'); }); }
+    if(!L.uLtN) return r; gl.useProgram(SPL.prog); var act=(APP.res&&ltOn())?ltList().filter(function(l){ return l.on; }).slice(0,LT_MAX):[];
+    gl.uniform1f(L.uLtN, act.length); if(!act.length) return r; var P=new Float32Array(32), C=new Float32Array(32), D=new Float32Array(32), R=new Float32Array(32), sc=ltSc();
+    act.forEach(function(l,i){ var W=ltWorld(l), c=ltHex(l.col), o=i*4, st=l.str;
+      if(l.kind==='sun'){ var S=ltSunState(l), s=S?S.dir:ltDir(l.az||0, l.el||40); if(S){ c=S.col; st=S.str; } P[o]=s[0]; P[o+1]=s[1]; P[o+2]=s[2]; P[o+3]=1; }
+      else { P[o]=W.pos[0]; P[o+1]=W.pos[1]; P[o+2]=W.pos[2]; P[o+3]=l.kind==='beam'?2:0; }
+      C[o]=c[0]; C[o+1]=c[1]; C[o+2]=c[2]; C[o+3]=st;
+      var half=Math.max(1, Math.min(89, (l.cone||35)/2))*Math.PI/180, inner=half*(1-Math.max(0, Math.min(0.95, l.soft==null?0.4:l.soft)));
+      D[o]=W.dir[0]; D[o+1]=W.dir[1]; D[o+2]=W.dir[2]; D[o+3]=Math.cos(half); R[o]=Math.max(0.2, l.reach||4)*sc; R[o+1]=Math.cos(inner); });
+    gl.uniform4fv(L.uLP, P); gl.uniform4fv(L.uLC, C); gl.uniform4fv(L.uLD, D); gl.uniform4fv(L.uLR, R); gl.uniform1f(L.uLAmb, ltAmb()); }catch(e){ console.warn(e); } return r; });
+
+/* ---------- glow and beam haze, drawn into the 3D view itself so pictures and clips include them ---------- */
+var LTG={prog:null, buf:null};
+function ltGlowProg(){ if(LTG.prog||!GL) return LTG.prog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; layout(location=2) in vec2 aU; uniform mat4 uM; out vec4 vC; out vec2 vU; void main(){ vC=aC; vU=aU; gl_Position=uM*vec4(aP,1.0); }';
+  var FS='#version 300 es\nprecision mediump float; in vec4 vC; in vec2 vU; out vec4 o; void main(){ float a=vC.a; if(vU.x>-1.5){ float d=dot(vU,vU); if(d>1.0) discard; a*=exp(-d*4.0); } o=vec4(vC.rgb*a, a); }';
+  LTG.prog=program(gl, VS, FS); LTG.buf=gl.createBuffer(); return LTG.prog; }
+function ltGlowDraw(){ if(!GL||miniVP||APP.view!=='3d'||!APP.res||!ltOn()) return; var act=ltList().filter(function(l){ return l.on&&l.kind!=='sun'&&(l.glow||(l.kind==='beam'&&l.haze>0)); }); if(!act.length) return;
+  var gl=GL, pr=ltGlowProg(); if(!pr) return; var B=camBasis(), V=[], sc=ltSc();
+  function vtx(p, c, a, u){ V.push(p[0],p[1],p[2], c[0],c[1],c[2],a, u[0],u[1]); }
+  act.forEach(function(l){ var W=ltWorld(l), c=ltHex(l.col), P=W.pos;
+    if(l.kind==='beam'&&l.haze>0){ var d=W.dir, Lb=Math.max(0.5, (l.reach||10))*sc*0.8, half=Math.max(1, Math.min(80, (l.cone||35)/2))*Math.PI/180, rr=Math.tan(half)*Lb, t1=Math.abs(d[2])<0.9?[0,0,1]:[1,0,0];
+      var e1=[d[1]*t1[2]-d[2]*t1[1], d[2]*t1[0]-d[0]*t1[2], d[0]*t1[1]-d[1]*t1[0]], n1=Math.hypot(e1[0],e1[1],e1[2])||1; e1=[e1[0]/n1,e1[1]/n1,e1[2]/n1]; var e2=[d[1]*e1[2]-d[2]*e1[1], d[2]*e1[0]-d[0]*e1[2], d[0]*e1[1]-d[1]*e1[0]];
+      var a0=Math.min(0.35, 0.12*l.haze*l.str), seg=28, rim=function(t){ return [P[0]+d[0]*Lb+(e1[0]*Math.cos(t)+e2[0]*Math.sin(t))*rr, P[1]+d[1]*Lb+(e1[1]*Math.cos(t)+e2[1]*Math.sin(t))*rr, P[2]+d[2]*Lb+(e1[2]*Math.cos(t)+e2[2]*Math.sin(t))*rr]; };
+      for(var i=0;i<seg;i++){ vtx(P, c, a0, [-2,0]); vtx(rim(i/seg*Math.PI*2), c, 0, [-2,0]); vtx(rim((i+1)/seg*Math.PI*2), c, 0, [-2,0]); } }
+    if(l.glow){ var r=Math.max(0.12, 0.18*Math.sqrt(l.str))*sc, R=B.right, U=B.up, a=Math.min(0.9, 0.35+0.2*l.str), k=[[-1,-1],[1,-1],[1,1],[-1,-1],[1,1],[-1,1]];
+      k.forEach(function(q){ vtx([P[0]+(R[0]*q[0]+U[0]*q[1])*r, P[1]+(R[1]*q[0]+U[1]*q[1])*r, P[2]+(R[2]*q[0]+U[2]*q[1])*r], c, a, q); });
+      var r2=r*0.28; k.forEach(function(q){ vtx([P[0]+(R[0]*q[0]+U[0]*q[1])*r2, P[1]+(R[1]*q[0]+U[1]*q[1])*r2, P[2]+(R[2]*q[0]+U[2]*q[1])*r2], [1,1,1], 0.95, q); }); } });
+  if(!V.length) return; if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uM'), false, camMVP());
+  gl.bindBuffer(gl.ARRAY_BUFFER, LTG.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STREAM_DRAW); var st=36;
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,st,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,4,gl.FLOAT,false,st,12); gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2,2,gl.FLOAT,false,st,28);
+  gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.drawArrays(gl.TRIANGLES, 0, V.length/9);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.BLEND); gl.depthMask(true); gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2); }
+
+/* ---------- markers, names and handles on the overlay (only while the Light panel is open) ---------- */
+function ltShowUI(){ return SBP.key==='light'&&APP.view==='3d'&&!miniVP&&!!APP.res&&ltOn(); }
+function ltScr(q){ var v=projectWorld(q); if(!v) return null; var r=glCv.getBoundingClientRect(); return [v[0]+r.left, v[1]+r.top]; }
+function ltHandles(l){ var W=ltWorld(l), out={pos:W.pos, dir:W.dir}; if(l.kind==='beam'){ var Lt=Math.max(0.6, Math.min(3, (l.reach||10)*0.2))*ltSc(); out.aim=[W.pos[0]+W.dir[0]*Lt, W.pos[1]+W.dir[1]*Lt, W.pos[2]+W.dir[2]*Lt]; } return out; }
+function ltOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('sbLightOv'); if(!cv){ cv=document.createElement('canvas'); cv.id='sbLightOv'; cv.style.cssText='position:absolute;pointer-events:none;z-index:12'; st.appendChild(cv); }
+  var r=glCv.getBoundingClientRect(), sr=st.getBoundingClientRect(), dpr=window.devicePixelRatio||1, Wd=Math.round(r.width*dpr), Hd=Math.round(r.height*dpr); cv.style.left=(r.left-sr.left)+'px'; cv.style.top=(r.top-sr.top)+'px'; if(cv.width!==Wd||cv.height!==Hd){ cv.width=Wd; cv.height=Hd; cv.style.width=r.width+'px'; cv.style.height=r.height+'px'; }
+  var c=cv.getContext('2d'); c.clearRect(0,0,Wd,Hd); if(!ltShowUI()) return;
+  var P=function(q){ var s=ltScr(q); return s?[(s[0]-r.left)*dpr, (s[1]-r.top)*dpr]:null; };
+  ltList().forEach(function(l){ if(l.kind==='sun') return; var H=ltHandles(l), p=P(H.pos); if(!p) return; var sel=LT.sel===l.id, hov=LT.hov&&LT.hov.id===l.id;
+    var gz=ltGround(H.pos[0], H.pos[1]), g=P([H.pos[0], H.pos[1], gz]); if(g){ c.setLineDash([4*dpr,4*dpr]); c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=1.2*dpr; c.beginPath(); c.moveTo(p[0],p[1]); c.lineTo(g[0],g[1]); c.stroke(); c.setLineDash([]); }
+    if(H.aim){ var a=P(H.aim); if(a){ c.strokeStyle=l.col; c.lineWidth=(sel?3:2)*dpr; c.beginPath(); c.moveTo(p[0],p[1]); c.lineTo(a[0],a[1]); c.stroke(); var s=(sel||(hov&&LT.hov.part==='aim')?6:4.5)*dpr; c.fillStyle='#fff'; c.strokeStyle=sel?'#ff8a00':'#333'; c.lineWidth=2*dpr; c.fillRect(a[0]-s,a[1]-s,2*s,2*s); c.strokeRect(a[0]-s,a[1]-s,2*s,2*s); } }
+    var rr=(sel?9:7)*dpr; c.fillStyle=l.on?l.col:'#777'; c.strokeStyle=sel?'#ff8a00':(hov?'#fff':'rgba(0,0,0,.7)'); c.lineWidth=(sel?3:2)*dpr; c.beginPath(); c.arc(p[0],p[1],rr,0,7); c.fill(); c.stroke();
+    c.font='600 '+Math.round(11*dpr)+'px system-ui'; c.textAlign='center'; var txt=l.name+(l.att?' → '+((propById(l.att.id)||{}).name||'object'):''), w=c.measureText(txt).width+10*dpr; c.fillStyle='rgba(10,14,20,.78)'; c.fillRect(p[0]-w/2, p[1]-rr-22*dpr, w, 16*dpr); c.fillStyle=sel?'#ffb35c':'#fff'; c.fillText(txt, p[0], p[1]-rr-10*dpr); });
+  var ts=ltTodSun(); if(ts){ var S=ltSunState(ts); c.font='600 '+Math.round(12*dpr)+'px system-ui'; c.textAlign='right'; var tt='☀ '+ltHM(S.h)+(S.el<=0?' (below the horizon)':''), w3=c.measureText(tt).width+16*dpr; c.fillStyle='rgba(10,14,20,.8)'; c.fillRect(Wd-w3-12*dpr, 12*dpr, w3, 24*dpr); c.fillStyle='#ffd27a'; c.fillText(tt, Wd-20*dpr, 28*dpr); }
+  if(LT.mode){ c.font='600 '+Math.round(12*dpr)+'px system-ui'; c.textAlign='left'; var m=LT.mode==='place'?'Click on the scan where the light goes (Esc cancels)':'Click on what the beam should point at (Esc cancels)'; var w2=c.measureText(m).width+16*dpr; c.fillStyle='rgba(10,14,20,.85)'; c.fillRect(12*dpr, 12*dpr, w2, 24*dpr); c.fillStyle='#fff'; c.fillText(m, 20*dpr, 28*dpr); } }
+sbAfter('gl_render', function(r){ try{ if(!miniVP){ ltGlowDraw(); ltOv(); } }catch(e){ console.warn(e); } return r; });
+function ltHit(x, y){ if(!ltShowUI()) return null; var best=null, bd=13, L=ltList().slice().sort(function(a,b){ return (a.id===LT.sel?-1:0)-(b.id===LT.sel?-1:0); });
+  L.forEach(function(l){ if(l.kind==='sun') return; var H=ltHandles(l); if(H.aim){ var a=ltScr(H.aim); if(a){ var da=Math.hypot(a[0]-x,a[1]-y); if(da<bd-2){ bd=da; best={id:l.id, part:'aim'}; } } } var p=ltScr(H.pos); if(p){ var dp=Math.hypot(p[0]-x,p[1]-y); if(dp<bd){ bd=dp; best={id:l.id, part:'pos'}; } } }); return best; }
+function ltPlaneAt(R, z){ if(Math.abs(R.d[2])<1e-6) return null; var t=(z-R.o[2])/R.d[2]; if(t<0) return null; return [R.o[0]+R.d[0]*t, R.o[1]+R.d[1]*t, z]; }
+function ltScanPt(x, y){ var R=pickRay(x, y), h=null; try{ h=typeof stScanHit==='function'?stScanHit(R):null; }catch(e){} if(h&&h.p) return h.p.slice(); return ltPlaneAt(R, ltGround(cam.tx, cam.ty)); }
+window.addEventListener('pointerdown', function(e){ if(e.target!==glCv||e.button!==0||!ltShowUI()) return;
+  if(LT.mode){ var l0=ltById(LT.sel), q=ltScanPt(e.clientX, e.clientY); e.preventDefault(); e.stopImmediatePropagation(); if(!l0||!q){ toast('Click on the scan itself.', 2000); return; } pushUndo();
+    if(LT.mode==='place') ltSetPos(l0, [q[0], q[1], q[2]+(l0.kind==='beam'?1.0:1.8)*ltSc()]); else { var W=ltWorld(l0); ltSetDir(l0, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
+    LT.mode=null; glCv.style.cursor=''; afterEdit(); ltPanel(); requestRender(false); return; }
+  var h=ltHit(e.clientX, e.clientY); if(!h) return; e.preventDefault(); e.stopImmediatePropagation(); var l=ltById(h.id); if(!l) return; LT.sel=l.id; pushUndo();
+  var W2=ltWorld(l), at=ltPlaneAt(pickRay(e.clientX, e.clientY), W2.pos[2])||W2.pos; LT.drag={id:l.id, part:h.part, z:W2.pos[2], dx:W2.pos[0]-at[0], dy:W2.pos[1]-at[1], y0:e.clientY, moved:false}; ltPanel(); ltOv(); }, true);
+/* a press that started on a light must not reach the orbit or object code underneath */
+['mousedown'].forEach(function(t){ window.addEventListener(t, function(e){ if(LT.drag||(LT.mode&&e.target===glCv&&ltShowUI())){ e.stopImmediatePropagation(); e.preventDefault(); } }, true); });
+window.addEventListener('pointermove', function(e){ var D=LT.drag;
+  if(!D){ if(e.target===glCv&&ltShowUI()&&!(e.buttons&1)){ var h=ltHit(e.clientX, e.clientY), k=h?h.id+h.part:''; if(k!==(LT.hov?LT.hov.id+LT.hov.part:'')){ LT.hov=h; ltOv(); } if(h){ glCv.style.cursor=h.part==='aim'?'crosshair':'move'; e.stopImmediatePropagation(); } else if(LT.mode) glCv.style.cursor='crosshair'; } return; }
+  if(!(e.buttons&1)){ ltDragEnd(); return; } var l=ltById(D.id); if(!l) return; e.stopImmediatePropagation(); e.preventDefault(); var W=ltWorld(l);
+  if(D.part==='aim'){ var q=ltScanPt(e.clientX, e.clientY); if(q) ltSetDir(l, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
+  else if(e.shiftKey){ var k2=Math.max(0.002, cam.dist*0.0025); ltSetPos(l, [W.pos[0], W.pos[1], W.pos[2]+(D.y0-e.clientY)*k2]); D.y0=e.clientY; var W3=ltWorld(l); D.z=W3.pos[2]; var at2=ltPlaneAt(pickRay(e.clientX, e.clientY), D.z); if(at2){ D.dx=W3.pos[0]-at2[0]; D.dy=W3.pos[1]-at2[1]; } }
+  else { var at=ltPlaneAt(pickRay(e.clientX, e.clientY), D.z); if(at) ltSetPos(l, [at[0]+D.dx, at[1]+D.dy, D.z]); D.y0=e.clientY; }
+  D.moved=true; requestRender(false); }, true);
+function ltDragEnd(){ var D=LT.drag; if(!D) return; LT.drag=null; if(!D.moved&&APP.undo.length) APP.undo.pop(); else afterEdit(); ltPanel(); requestRender(false); }
+window.addEventListener('pointerup', function(e){ if(LT.drag){ ltDragEnd(); e.stopImmediatePropagation(); } }, true);
+window.addEventListener('mouseup', function(e){ if(LT.drag) e.stopImmediatePropagation(); }, true);
+window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&LT.mode){ LT.mode=null; glCv.style.cursor=''; ltPanel(); requestRender(false); e.stopImmediatePropagation(); }
+  if((e.key==='Delete'||e.key==='Backspace')&&LT.sel&&ltShowUI()&&!(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))){ ltDel(LT.sel); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+
+/* ---------- presets: one click sets the scene (replaces the lights you have; Ctrl+Z brings them back) ---------- */
+function ltPreset(k){ var M=ltM(); if(!M) return; var sc=ltSc(), cx=cam.tx, cy=cam.ty, g=ltGround(cx, cy), p=null;
+  if(k==='head'){ var pid=typeof PROPS!=='undefined'?PROPS.sel:null; p=pid?propById(pid):null; if(!p){ var Lp=propList().filter(function(q){ return !q.hide; }); p=Lp.length===1?Lp[0]:null; } if(!p){ toast('Pick the object (car, van...) first, then press Headlights. They shine along its red arrow.', 4500); return; } }
+  pushUndo(); var L=[], mk=function(kind, o){ var l=ltMake(kind); Object.assign(l, o); return l; };
+  if(k==='night'){ M.lightAmb=0.22; L.push(mk('lamp', {name:'Street lamp', x:cx, y:cy, z:g+4.5*sc, col:'#ffb15c', str:2.4, reach:9, glow:true})); }
+  else if(k==='warm'){ M.lightAmb=0.6; L.push(mk('lamp', {name:'Room light', x:cx, y:cy, z:g+2.3*sc, col:'#ffd9a0', str:1.4, reach:5, glow:false})); }
+  else if(k==='golden'){ L.push(mk('sun', {name:'Sun', tod:true, rise:6.5, set:19, time:18.3, peak:50, az:Math.round(cam.yaw*180/Math.PI+90), str:1.3})); }
+  else if(k==='head'){ M.lightAmb=0.2; var bb=p.bb||{hx:0.5,hy:0.5,hz:1};
+    [['Headlight L',1],['Headlight R',-1]].forEach(function(q){ var l=mk('beam', {name:q[0], col:'#fff4d6', str:2.6, reach:14, cone:32, soft:0.45, glow:true, haze:0.4}); l.att={id:p.id, o:[bb.hx*0.97, q[1]*bb.hy*0.62, -bb.hz*0.5+bb.hz*0.32], d:[0.995,0,-0.1]}; L.push(l); }); }
+  M.lights=L; M.lightsOn=true; LT.sel=L[0]?L[0].id:null; afterEdit(); ltPanel(); requestRender(false);
+  toast({night:'Night street: one sodium lamp where you are looking, the rest dimmed.', warm:'Warm interior: one room light where you are looking.', golden:'Golden hour: the sun follows the clock, set to just before sunset.', head:'Headlights on '+(p&&p.name)+'. Turn or drive the object and they follow. Ctrl+Z puts your old lights back.'}[k], 4500); }
+
+/* ---------- Play the day: the clock runs from just before sunrise to just after sunset in about 12 seconds ---------- */
+var LTP={raf:0};
+function ltPlayDay(l){ if(LTP.raf){ cancelAnimationFrame(LTP.raf); LTP.raf=0; LT.todOv=null; ltPanel(); requestRender(false); return; } var a=(l.rise==null?6.5:l.rise)-0.75, b=(l.set==null?19:l.set)+0.75, t0=performance.now();
+  (function step(){ var k=(performance.now()-t0)/12000; if(k>=1){ LTP.raf=0; LT.todOv=null; ltPanel(); requestRender(false); return; } LT.todOv=a+(b-a)*k; requestRender(false); var v=document.getElementById('ltTimeV'); if(v) v.textContent=ltHM(LT.todOv); LTP.raf=requestAnimationFrame(step); })(); ltPanel(); }
+
+/* ---------- the panel ---------- */
 function sbLSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbLightSec'); if(!s){ s=document.createElement('div'); s.id='sbLightSec'; s.className='sec'; s.dataset.sec='light'; s.innerHTML='<h2>Light</h2><div class="body"></div>'; }
   if(s.parentNode!==side) side.appendChild(s); return s; }
-function sbLDraw(){ var s=sbLSec(); if(!s) return; var b=s.querySelector('.body'), lamp=SBL.kind==='lamp', sw=[['#ffd9a0','Warm'],['#ffffff','Neutral'],['#cfe3ff','Cool'],['#ff9a5c','Sunset']];
-  var sl=function(id, lab, min, max, step, v, unit, tip){ return '<div class="row" title="'+tip+'"><label>'+lab+'</label><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"><span class="mini" id="'+id+'V">'+v+(unit||'')+'</span></div>'; };
-  b.innerHTML='<div class="row"><label>Light</label><div class="sbLSeg"><button data-on="1" class="'+(SBL.on?'on':'')+'">On</button><button data-on="0" class="'+(!SBL.on?'on':'')+'">Off</button></div></div>'+
-    '<div class="row"><label>Kind</label><div class="sbLSeg"><button data-k="lamp" class="'+(lamp?'on':'')+'">Lamp</button><button data-k="sun" class="'+(!lamp?'on':'')+'">Sun</button></div></div>'+
-    (lamp?'<div class="row"><button class="btn" id="sbLPlace">'+(SBL.placing?'Click on the scan...':'Place it: click on the scan')+'</button></div><div class="row"><button class="btn" id="sbLHere">Put it where I am looking</button></div>'+sl('sbLH','Height',0,6,0.1,SBL.h,' m','How high above the clicked spot')+sl('sbLR','Reach',0.5,30,0.5,SBL.reach,' m','How far the light carries'):
-      sl('sbLAz','Direction',0,360,5,SBL.az,'°','Which way the sun comes from')+sl('sbLEl','Height',5,90,1,SBL.el,'°','How high the sun is'))+
-    sl('sbLS','Strength',0,4,0.1,SBL.str,'','How bright the light is')+sl('sbLA','Scene',0,1.2,0.05,SBL.amb,'','How bright everything else is: lower it for an evening look')+
-    '<div class="row"><label>Colour</label><div class="sbLSw">'+sw.map(function(q){ return '<button data-c="'+q[0]+'" title="'+q[1]+'" class="'+(SBL.col===q[0]?'on':'')+'" style="background:'+q[0]+'"></button>'; }).join('')+'<input type="color" id="sbLC" value="'+SBL.col+'" title="Any colour"></div></div>'+
-    '<p class="mini">A look on top of the scan: the splats keep the light they were captured in, so there are no cast shadows. Pictures and videos you make include it.</p>';
-  var q=function(id){ return document.getElementById(id); }, ch=function(){ sbLSave(); requestRender(false); };
-  b.querySelectorAll('[data-on]').forEach(function(x){ x.onclick=function(){ SBL.on=x.dataset.on==='1'; if(SBL.on&&SBL.kind==='lamp'&&!SBL.pos) SBL.pos=sbLDefaultPos(); sbLDraw(); ch(); }; });
-  b.querySelectorAll('[data-k]').forEach(function(x){ x.onclick=function(){ SBL.kind=x.dataset.k; SBL.on=true; if(SBL.kind==='lamp'&&!SBL.pos) SBL.pos=sbLDefaultPos(); sbLDraw(); ch(); }; });
-  b.querySelectorAll('[data-c]').forEach(function(x){ x.onclick=function(){ SBL.col=x.dataset.c; sbLDraw(); ch(); }; }); q('sbLC').oninput=function(){ SBL.col=this.value; ch(); };
-  if(q('sbLPlace')) q('sbLPlace').onclick=function(){ SBL.placing=!SBL.placing; glCv.style.cursor=SBL.placing?'crosshair':''; sbLDraw(); if(SBL.placing) toast('Click on the scan where the light should be.', 2500); };
-  if(q('sbLHere')) q('sbLHere').onclick=function(){ SBL.pos=sbLDefaultPos(); SBL.on=true; sbLDraw(); ch(); };
-  var bind=function(id, key, fn){ var el=q(id); if(!el) return; el.oninput=function(){ var v=+this.value, old=SBL[key]; SBL[key]=v; q(id+'V').textContent=this.value+(id==='sbLH'||id==='sbLR'?' m':id==='sbLAz'||id==='sbLEl'?'°':''); if(fn) fn(v, old); ch(); }; };
-  bind('sbLH','h', function(v, old){ if(SBL.pos) SBL.pos[2]+=(v-old)*sbLSc(); }); bind('sbLR','reach'); bind('sbLAz','az'); bind('sbLEl','el'); bind('sbLS','str'); bind('sbLA','amb'); }
+function ltEsc(t){ return String(t==null?'':t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function ltPanel(){ var s=sbLSec(); if(!s) return; var b=s.querySelector('.body'), L=ltList(), l=ltById(LT.sel), on=ltOn(), tsun=ltTodSun();
+  var sl=function(id, lab, min, max, step, v, unit, tip, show){ return '<div class="row" title="'+tip+'"><label>'+lab+'</label><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"><span class="mini" id="'+id+'V">'+(show!=null?show:v+(unit||''))+'</span></div>'; };
+  var h='<div class="row"><label>Lights</label><div class="sbLSeg"><button data-mon="1" class="'+(on?'on':'')+'">On</button><button data-mon="0" class="'+(!on?'on':'')+'">Off</button></div></div>'+
+    (tsun?'<p class="mini">Scene brightness follows the sun\'s clock.</p>':sl('ltAmb','Scene',0,1.2,0.05,ltAmb(),'','How bright everything else is: lower it for an evening look'))+
+    '<div class="ltH">Presets</div><div class="ltGrid"><button data-pre="night">Night street</button><button data-pre="warm">Warm interior</button><button data-pre="golden">Golden hour</button><button data-pre="head" title="Pick an object first">Headlights</button></div>'+
+    '<div class="ltH">Add</div><div class="ltGrid3"><button data-add="lamp">+ Lamp</button><button data-add="beam">+ Beam</button><button data-add="sun">+ Sun</button></div>'+
+    '<div class="ltList">'+(L.length?L.map(function(q){ return '<div class="ltIt'+(q.id===LT.sel?' on':'')+'" data-id="'+q.id+'"><span class="ltDot" style="background:'+q.col+'"></span><span class="ltNm">'+ltEsc(q.name)+'</span><span class="ltK">'+q.kind+(q.att?' → obj':'')+(q.tod?' ⏲':'')+'</span><button class="ltEye" data-eye="'+q.id+'" title="Switch this light on or off">'+(q.on?'◉':'○')+'</button><button class="ltX" data-del="'+q.id+'" title="Delete">✕</button></div>'; }).join(''):'<p class="mini">No lights yet: add one, or start from a preset.</p>')+'</div>';
+  if(l){ var lamp=l.kind!=='sun', beam=l.kind==='beam', sun=l.kind==='sun', props=propList().filter(function(p){ return !p.hide; });
+    h+='<div class="ltBox"><div class="row"><label>Name</label><input id="ltName" value="'+ltEsc(l.name)+'"></div>'+
+      (sun&&l.tod?'':'<div class="row"><label>Colour</label><div class="sbLSw">'+LT_SW.map(function(q){ return '<button data-c="'+q[0]+'" title="'+q[1]+'" class="'+(l.col===q[0]?'on':'')+'" style="background:'+q[0]+'"></button>'; }).join('')+'<input type="color" id="ltCol" value="'+l.col+'" title="Any colour"></div></div>')+
+      sl('ltStr','Strength',0,5,0.1,l.str,'','How bright this light is')+
+      (lamp?sl('ltReach','Reach',0.5,40,0.5,l.reach,' m','How far it carries'):'')+
+      (beam?sl('ltCone','Beam width',4,120,1,l.cone,'°','How wide the beam spreads')+sl('ltSoft','Soft edge',0,0.95,0.05,l.soft,'','How gently the beam edge fades')+sl('ltHaze','Haze',0,1,0.05,l.haze,'','A faint visible cone, like a headlight in mist'):'')+
+      (sun?'<div class="row"><label>Follow the clock</label><div class="sbLSeg"><button data-tod="1" class="'+(l.tod?'on':'')+'">On</button><button data-tod="0" class="'+(!l.tod?'on':'')+'">Off</button></div></div>':'')+
+      (sun&&l.tod?sl('ltTime','Time',0,24,0.25,l.time==null?12:l.time,'','Time of day: the sun\'s height, direction and colour follow it', ltHM(LT.todOv!=null?LT.todOv:(l.time==null?12:l.time)))+
+        '<div class="row"><label>Sunrise</label><input id="ltRise" value="'+ltHM(l.rise==null?6.5:l.rise)+'" style="width:70px;flex:0 0 70px"></div><div class="row"><label>Sunset</label><input id="ltSet" value="'+ltHM(l.set==null?19:l.set)+'" style="width:70px;flex:0 0 70px"></div>'+
+        sl('ltAz','Rises from',0,360,5,Math.round((((l.az==null?90:l.az)%360)+360)%360),'°','Which way the sun comes up from, as you see the scan: turn it until sunrise is on the right side')+
+        sl('ltPeak','Midday height',10,75,1,l.peak||50,'°','How high the sun gets at midday (UK: about 15° in December, 60° in June)')+
+        '<div class="ltGrid"><button id="ltPlay">'+(LTP.raf?'■ Stop':'▶ Play the day')+'</button><button id="ltNow" title="Set the clock to now">Now</button></div>':'')+
+      (sun&&!l.tod?sl('ltAz','Direction',0,360,5,Math.round(((l.az%360)+360)%360),'°','Which way the sun comes from')+sl('ltEl','Height',2,90,1,l.el,'°','How high the sun is'):'')+
+      (lamp?'<div class="row"><label>Glow</label><div class="sbLSeg"><button data-glow="1" class="'+(l.glow?'on':'')+'">On</button><button data-glow="0" class="'+(!l.glow?'on':'')+'">Off</button></div></div>'+
+        '<div class="ltGrid"><button id="ltPlace">'+(LT.mode==='place'?'Click the scan...':'Place: click the scan')+'</button><button id="ltHere">Where I am looking</button>'+(beam?'<button id="ltAim">'+(LT.mode==='aim'?'Click the target...':'Aim: click a target')+'</button><button id="ltDown" title="Point it straight down, like a spotlight">Point down</button>':'')+'</div>'+
+        '<div class="row"><label>Attach to</label><select id="ltAtt"><option value="">Nothing (stays put)</option>'+props.map(function(p){ return '<option value="'+p.id+'"'+(l.att&&l.att.id===p.id?' selected':'')+'>'+ltEsc(p.name)+'</option>'; }).join('')+'</select></div>':'')+
+      '<div class="ltGrid"><button id="ltDup">Duplicate</button><button id="ltDel" class="ltRed">Delete</button></div>'+
+      (lamp?'<p class="mini">In 3D: drag the light to move it, Shift+drag for up and down'+(beam?', drag its white square to aim it':'')+'.</p>':'')+'</div>'; }
+  h+='<p class="mini">A look on top of the scan: no cast shadows. Pictures, clips and walk-through videos include the lights and glow. Saved with the job.</p>';
+  b.innerHTML=h; var q=function(id){ return document.getElementById(id); }, M=ltM(), live=function(){ requestRender(false); }, commit=function(){ afterEdit(); };
+  b.querySelectorAll('[data-mon]').forEach(function(x){ x.onclick=function(){ pushUndo(); M.lightsOn=x.dataset.mon==='1'; commit(); ltPanel(); live(); }; });
+  var a=q('ltAmb'); if(a){ a.oninput=function(){ M.lightAmb=+this.value; q('ltAmbV').textContent=this.value; live(); }; a.onchange=commit; }
+  b.querySelectorAll('[data-pre]').forEach(function(x){ x.onclick=function(){ ltPreset(x.dataset.pre); }; });
+  b.querySelectorAll('[data-add]').forEach(function(x){ x.onclick=function(){ ltAdd(x.dataset.add); }; });
+  b.querySelectorAll('.ltIt').forEach(function(x){ x.onclick=function(ev){ if(ev.target.closest('button')) return; LT.sel=x.dataset.id; LT.mode=null; ltPanel(); live(); }; });
+  b.querySelectorAll('[data-eye]').forEach(function(x){ x.onclick=function(){ var t=ltById(x.dataset.eye); if(!t) return; pushUndo(); t.on=!t.on; commit(); ltPanel(); live(); }; });
+  b.querySelectorAll('[data-del]').forEach(function(x){ x.onclick=function(){ ltDel(x.dataset.del); }; });
+  if(!l) return;
+  q('ltName').onchange=function(){ pushUndo(); l.name=this.value.trim()||l.name; commit(); ltPanel(); live(); };
+  b.querySelectorAll('[data-c]').forEach(function(x){ x.onclick=function(){ pushUndo(); l.col=x.dataset.c; commit(); ltPanel(); live(); }; }); if(q('ltCol')){ q('ltCol').oninput=function(){ l.col=this.value; live(); }; q('ltCol').onchange=function(){ commit(); ltPanel(); }; }
+  var bind=function(id, key, unit, fmt){ var el=q(id); if(!el) return; el.onpointerdown=function(){ pushUndo(); }; el.oninput=function(){ l[key]=+this.value; q(id+'V').textContent=fmt?fmt(+this.value):this.value+(unit||''); live(); }; el.onchange=commit; };
+  bind('ltStr','str'); bind('ltReach','reach',' m'); bind('ltCone','cone','°'); bind('ltSoft','soft'); bind('ltHaze','haze'); bind('ltAz','az','°'); bind('ltEl','el','°'); bind('ltPeak','peak','°'); bind('ltTime','time','', ltHM);
+  b.querySelectorAll('[data-glow]').forEach(function(x){ x.onclick=function(){ pushUndo(); l.glow=x.dataset.glow==='1'; commit(); ltPanel(); live(); }; });
+  b.querySelectorAll('[data-tod]').forEach(function(x){ x.onclick=function(){ pushUndo(); l.tod=x.dataset.tod==='1'; if(l.tod&&l.time==null){ l.time=12; l.rise=6.5; l.set=19; l.peak=50; } commit(); ltPanel(); live(); }; });
+  ['ltRise','ltSet'].forEach(function(id){ var el=q(id); if(el) el.onchange=function(){ var v=ltParseHM(this.value); if(v==null){ toast('Type a time like 06:30', 2000); ltPanel(); return; } pushUndo(); l[id==='ltRise'?'rise':'set']=v; if(l.set<=l.rise+0.5){ toast('Sunset must come after sunrise.', 2500); } commit(); ltPanel(); live(); }; });
+  if(q('ltPlay')) q('ltPlay').onclick=function(){ ltPlayDay(l); };
+  if(q('ltNow')) q('ltNow').onclick=function(){ var d=new Date(); pushUndo(); l.time=Math.round((d.getHours()+d.getMinutes()/60)*4)/4; commit(); ltPanel(); live(); };
+  if(q('ltPlace')) q('ltPlace').onclick=function(){ LT.mode=LT.mode==='place'?null:'place'; glCv.style.cursor=LT.mode?'crosshair':''; ltPanel(); live(); };
+  if(q('ltAim')) q('ltAim').onclick=function(){ LT.mode=LT.mode==='aim'?null:'aim'; glCv.style.cursor=LT.mode?'crosshair':''; ltPanel(); live(); };
+  if(q('ltHere')) q('ltHere').onclick=function(){ pushUndo(); ltSetPos(l, [cam.tx, cam.ty, ltGround(cam.tx, cam.ty)+(l.kind==='beam'?1.0:1.8)*ltSc()]); commit(); live(); };
+  if(q('ltDown')) q('ltDown').onclick=function(){ pushUndo(); ltSetDir(l, [0,0,-1]); commit(); live(); };
+  if(q('ltAtt')) q('ltAtt').onchange=function(){ pushUndo(); ltAttach(l, this.value||null); commit(); ltPanel(); live(); if(this.value) toast(l.name+' now travels with '+((propById(this.value)||{}).name||'the object')+'.', 2500); };
+  q('ltDup').onclick=function(){ if(ltList().length>=LT_MAX){ toast('Up to '+LT_MAX+' lights.', 2500); return; } if(l.kind==='sun'){ toast('Only one sun.', 2000); return; } pushUndo(); var c=JSON.parse(JSON.stringify(l)); c.id=ltNewId(); c.name=ltName(l.kind); var W=ltWorld(l); if(c.att) c.att.o[1]=-c.att.o[1]; else { c.x=W.pos[0]+0.5*ltSc(); c.y=W.pos[1]; } ltList().push(c); LT.sel=c.id; commit(); ltPanel(); live(); };
+  q('ltDel').onclick=function(){ ltDel(l.id); }; }
+
+/* ---------- the walk-through video can run the sun's clock: from one time to another over the length of the video ---------- */
+(function(){ var prev=window.wtFrameHook; window.wtFrameHook=function(t){ if(prev) try{ prev(t); }catch(e){ console.warn(e); } try{ var W=wtM(), S=W.sunRun; if(S&&S.on&&ltTodSun()){ var T=(WT._tlT)||(wtTimeline().T)||1; LT.todOv=S.from+(S.to-S.from)*Math.max(0, Math.min(1, t/T)); } }catch(e){} }; })();
+sbBefore('wtPlay', function(){ try{ WT._tlT=wtTimeline().T; }catch(e){} });
+sbBefore('wtExport', function(){ try{ WT._tlT=wtTimeline().T; }catch(e){} });
+sbAfter('wtStop', function(r){ if(!WT.busy){ LT.todOv=null; requestRender(false); } return r; });
+sbAround('wtExport', function(next){ var r=next(); Promise.resolve(r).then(function(){ LT.todOv=null; requestRender(false); }, function(){ LT.todOv=null; }); return r; });
+sbAfter('wtDraw', function(r){ try{ var p=document.getElementById('wtPanel'); if(!p||document.getElementById('wtSunRow')) return r; var W=wtM(), S=W.sunRun||{on:false, from:5.75, to:9}, sun=ltList().filter(function(l){ return l.kind==='sun'; })[0];
+    var d=document.createElement('div'); d.id='wtSunRow'; d.className='wtSunRow'; d.title='Runs the sun’s clock from one time to the other over the length of the video (Light panel: a sun with Follow the clock on)';
+    d.innerHTML='<label><input type="checkbox" id="wtSunOn"'+(S.on?' checked':'')+'> ☀ Sun moves during the video</label><span>from <input id="wtSunFrom" value="'+ltHM(S.from)+'"> to <input id="wtSunTo" value="'+ltHM(S.to)+'"></span><button id="wtSunSet" title="Sunset: an hour before to 30 minutes after">Sunset</button><button id="wtSunRise" title="Sunrise: 30 minutes before to an hour after">Sunrise</button>';
+    var go=document.getElementById('wtGo'), anchor=go?go.closest('.wtfoot')||go.parentNode:null; if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(d, anchor); else p.appendChild(d);
+    var save=function(){ W.sunRun=S; afterEdit(); }, need=function(){ if(S.on&&!(sun&&sun.tod)) toast('Add a sun in the Light panel and switch on Follow the clock: the video then runs its clock.', 5000); };
+    d.querySelector('#wtSunOn').onchange=function(){ S.on=this.checked; save(); need(); };
+    ['wtSunFrom','wtSunTo'].forEach(function(id){ d.querySelector('#'+id).onchange=function(){ var v=ltParseHM(this.value); if(v==null){ toast('Type a time like 18:30', 2000); this.value=ltHM(id==='wtSunFrom'?S.from:S.to); return; } S[id==='wtSunFrom'?'from':'to']=v; save(); }; });
+    var set=function(a,b){ S.from=a; S.to=b; S.on=true; save(); d.querySelector('#wtSunFrom').value=ltHM(a); d.querySelector('#wtSunTo').value=ltHM(b); d.querySelector('#wtSunOn').checked=true; need(); };
+    d.querySelector('#wtSunSet').onclick=function(){ var st=sun&&sun.set!=null?sun.set:19; set(st-1, st+0.5); }; d.querySelector('#wtSunRise').onclick=function(){ var ri=sun&&sun.rise!=null?sun.rise:6.5; set(ri-0.5, ri+1); }; }catch(e){ console.warn(e); } return r; });
+
+/* the old single light (r307 and before) comes across as one light the first time the panel opens on a job that has none */
+function ltMigrate(){ var M=ltM(); if(!M||M._ltMig) return; M._ltMig=1; if(M.lights.length) return; var o=null; try{ o=JSON.parse(localStorage.getItem('sb_light')||'null'); }catch(e){} if(!o||!o.on) return;
+  var l=ltMake(o.kind==='sun'?'sun':'lamp'); l.col=o.col||l.col; l.str=o.str||l.str; l.reach=o.reach||l.reach; if(o.kind==='sun'){ l.az=o.az; l.el=o.el; } M.lights.push(l); M.lightAmb=typeof o.amb==='number'?o.amb:0.55; try{ localStorage.removeItem('sb_light'); }catch(e){} }
+var sbLDraw=function(){ try{ ltMigrate(); }catch(e){} ltPanel(); };
 SKIN_IC.sun='M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6L4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 8a4 4 0 100 8 4 4 0 000-8z';
-SBP_ITEMS.push(['light','Light','sun','A lamp or sun to light the scene, with the rest dimmed']);
-(function(){  sbAfter('buildSidebar', function(r){ try{ sbLDraw(); }catch(e){} return r; }); sbLDraw();
-  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=light] #side .sec[data-sec=light]{display:block}#sbLightSec:not(:only-child){}body.sbSkin:not(.sbPanelOn) #sbLightSec,body:not(.hasScan) #sbLightSec{display:none}'+
+SBP_ITEMS.push(['light','Light','sun','Lamps, beams and a sun to light the scene, each with its own settings']);
+sbAfter('sbPanel', function(r){ try{ if(SBP.key!=='light'&&LT.mode){ LT.mode=null; glCv.style.cursor=''; } if(SBP.key==='light') sbLDraw(); requestRender(false); }catch(e){} return r; });
+(function(){ sbAfter('buildSidebar', function(r){ try{ sbLDraw(); }catch(e){} return r; }); try{ sbLDraw(); }catch(e){}
+  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=light] #side .sec[data-sec=light]{display:block}body.sbSkin:not(.sbPanelOn) #sbLightSec,body:not(.hasScan) #sbLightSec{display:none}'+
     '.sbLSeg{display:inline-flex;border:1px solid var(--sbLn);border-radius:9px;overflow:hidden}.sbLSeg button{border:0;background:none;color:inherit;padding:4px 12px;cursor:pointer;font:inherit}.sbLSeg button.on{background:var(--acc);color:#fff}'+
-    '.sbLSw{display:flex;gap:6px;align-items:center}.sbLSw button{width:22px;height:22px;border-radius:50%;border:2px solid var(--sbLn);cursor:pointer}.sbLSw button.on{border-color:var(--acc)}.sbLSw input{width:26px;height:22px;padding:0;border:0;background:none}#sbLightSec .btn{width:100%}';
+    '.sbLSw{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.sbLSw button{width:22px;height:22px;border-radius:50%;border:2px solid var(--sbLn);cursor:pointer}.sbLSw button.on{border-color:var(--acc)}.sbLSw input{width:26px;height:22px;padding:0;border:0;background:none}'+
+    '#sbLightSec .ltH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:10px 0 4px}#sbLightSec .ltGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0}#sbLightSec .ltGrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}'+
+    '#sbLightSec .ltGrid button,#sbLightSec .ltGrid3 button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 4px;cursor:pointer;font:inherit;font-size:12px}#sbLightSec .ltGrid button:hover,#sbLightSec .ltGrid3 button:hover{border-color:var(--acc)}#sbLightSec .ltRed{color:#c0392b!important}'+
+    '#sbLightSec .ltList{margin:8px 0;display:flex;flex-direction:column;gap:4px}#sbLightSec .ltIt{display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid var(--sbLn);border-radius:8px;cursor:pointer}#sbLightSec .ltIt.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,transparent)}'+
+    '#sbLightSec .ltDot{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.3);flex:0 0 auto}#sbLightSec .ltNm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#sbLightSec .ltK{font-size:11px;color:var(--sbTx2)}#sbLightSec .ltEye,#sbLightSec .ltX{border:0;background:none;color:inherit;cursor:pointer;padding:0 3px;font-size:13px}'+
+    '#sbLightSec .ltBox{border-top:1px solid var(--sbLn);margin-top:8px;padding-top:8px}#sbLightSec select{min-width:0;flex:1}'+
+    '.wtSunRow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 8px;margin:6px 0;border:1px solid var(--sbLn,#ccd);border-radius:8px;font-size:12px}.wtSunRow input:not([type]){width:52px}.wtSunRow button{border:1px solid var(--sbLn,#ccd);background:none;color:inherit;border-radius:7px;padding:3px 9px;cursor:pointer;font:inherit}';
   document.head.appendChild(c); })();
+/* Straighten moves everything drawn on the scan: lights that stand on their own go with it (attached ones follow their object) */
+sbAfter('strMapModel', function(r, f){ try{ ltList().forEach(function(l){ if(l.att||l.kind==='sun') return; var p=[l.x,l.y,l.z], q=f(p); if(l.kind==='beam'){ var d=ltDir(l.az||0,l.el||0), q2=f([p[0]+d[0],p[1]+d[1],p[2]+d[2]]); ltSetDir(l,[q2[0]-q[0],q2[1]-q[1],q2[2]-q[2]]); } l.x=q[0]; l.y=q[1]; l.z=q[2]; }); }catch(e){ console.warn(e); } return r; });
 
 /* ===== Coverage check: finds the weak parts of a scan so you know what to rescan. Thin areas (few splats), blurry areas (splats much bigger
    than usual: the scanner saw it from far or briefly) and holes (empty patches with scan all round) are tinted in the view and listed;

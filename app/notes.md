@@ -1,6 +1,9 @@
-# Scan Bench r307
+# Scan Bench r308
 
-- Moving the view after Straighten or Sit on grid no longer turns the scan into dark blobs
-- Objects: red and green rings tilt the picked object front/back and left/right
-- Objects: Tilt boxes in the object panel (0 stands it straight)
-- Objects: On floor stands a tilted object on its lowest point
+- Lights: up to 8 named lights, each with its own settings (Lamp, Beam, Sun)
+- Lights: drag a light in 3D to move it, Shift+drag for up/down, drag a beam's square to aim it
+- Lights: attach a light to an object so it moves and turns with it (Drive too)
+- Lights: glow on lamps and beams, haze on beams
+- Lights: presets Night street, Warm interior, Golden hour, Headlights
+- Sun: Follow the clock with sunrise/sunset times and Play the day
+- Walk-through video: Sun moves during the video, from one time to another
