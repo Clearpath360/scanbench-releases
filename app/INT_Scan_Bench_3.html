@@ -4114,6 +4114,8 @@ function camFitBox(){
   var shift=(bi/2)/ch*2*cam.dist*t; cam.tx-=U[0]*shift; cam.ty-=U[1]*shift; cam.tz-=U[2]*shift;
 }
 
+/* the bottom clip (Hide below), in the scan's own height units */
+function zLoValue(){ return APP.zLoOn && APP.res ? APP.res.ceil*APP.zLo : -1e9; }
 function zCutValue(){
   if(!APP.zCutOn) return 1e9;
   var h = (APP.res? APP.res.ceil : APP.defaults.height) || 2.5;
@@ -4817,9 +4819,9 @@ function gl_render(){
     gl.uniform1f(gl.getUniformLocation(progPts,'uZMax'), zmax);
     var PM={scan:0, height:1, single:2, twotone:3, grey:4, walls:5, dev:6};
     gl.uniform1f(gl.getUniformLocation(progPts,'uMode'), PM[APP.pointMode]||0);
-    gl.uniform1f(gl.getUniformLocation(progPts,'uZMin'), APP.zLoOn && APP.res ? APP.res.ceil*APP.zLo : -1e9);
+    gl.uniform1f(gl.getUniformLocation(progPts,'uZMin'), zLoValue());
     gl.uniform1f(gl.getUniformLocation(progPts,'uWallOnly'), APP.wallOnly?1:0);
-    var fb=APP.focus; gl.uniform1f(gl.getUniformLocation(progPts,'uFocusOn'), fb&&!miniVP?1:0); var WAp=waUniforms(); gl.uniform1f(gl.getUniformLocation(progPts,'uCutOn'), WAp.cutOn); gl.uniform4fv(gl.getUniformLocation(progPts,'uCl'), WAp.cl);
+    var fb=APP.focus; gl.uniform1f(gl.getUniformLocation(progPts,'uFocusOn'), fb&&!miniVP?1:0); var WAp=waUniforms(1); gl.uniform1f(gl.getUniformLocation(progPts,'uCutOn'), WAp.cutOn); gl.uniform4fv(gl.getUniformLocation(progPts,'uCl'), WAp.cl);
     if(fb) gl.uniform4f(gl.getUniformLocation(progPts,'uFocus'), Math.min(fb.x0,fb.x1), Math.min(fb.y0,fb.y1), Math.max(fb.x0,fb.x1), Math.max(fb.y0,fb.y1));
     gl.uniform3f(gl.getUniformLocation(progPts,'uOff'), 0,0,0);
     var pc=hexRGB(APP.pointColour), pa=hexRGB(APP.gradA), pb=hexRGB(APP.gradB);
@@ -5030,7 +5032,9 @@ function splatSort(){
   if(!SPL.sw) return; if(SPL.busy){ SPL.want=true; return; }
   var b=camBasis(), f=[cam.tx-b.eye[0], cam.ty-b.eye[1], cam.tz-b.eye[2]], L=Math.hypot(f[0],f[1],f[2])||1; f=[f[0]/L,f[1]/L,f[2]/L];
   var key=f.map(function(v){ return v.toFixed(3); }).join(',')+'|'+b.eye.map(function(v){ return v.toFixed(2); }).join(',');
-  if(key===SPL.lastKey) return; SPL.lastKey=key; SPL.busy=true; var ob=SPL.obuf; SPL.obuf=null; var mv=null; try{ var vv=splatView(), VV=vv.V; if(typeof strOnAny==='function'&&strOnAny()) VV=mMul(VV, strM4()); mv=Array.prototype.slice.call(mMul(vv.P, VV)); }catch(er){ mv=null; } SPL.sw.postMessage({f:f, e:b.eye, id:++SPL.reqId, buf:ob, m:mv}, ob?[ob]:[]);
+  if(typeof strOnAny==='function'&&strOnAny()) key+='|str'+STR.x.toFixed(1)+','+STR.y.toFixed(1)+','+STR.z.toFixed(1);   // r305: turning a Straighten ring re-sorts the splats, so near ones stay in front
+  if(key===SPL.lastKey) return; SPL.lastKey=key; SPL.busy=true; var ob=SPL.obuf; SPL.obuf=null; var mv=null; try{ var vv=splatView(), VV=vv.V; if(typeof strOnAny==='function'&&strOnAny()) VV=mMul(VV, strM4()); mv=Array.prototype.slice.call(mMul(vv.P, VV)); }catch(er){ mv=null; } var fS=f, eS=b.eye; if(typeof strOnAny==='function'&&strOnAny()&&typeof strToScan==='function'){ fS=strToScan(f,false); eS=strToScan(b.eye,true); }   // r305: depth order in the scan's own frame while it is turned
+  SPL.sw.postMessage({f:fS, e:eS, id:++SPL.reqId, buf:ob, m:mv}, ob?[ob]:[]);
 }
 function splatView(){
   var asp=glCv.width/Math.max(1,glCv.height), cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
@@ -5045,8 +5049,8 @@ function splatDraw(zmax){
   gl.uniform1i(SPL.loc.uA,0); gl.uniform1i(SPL.loc.uB,1); gl.uniform1i(SPL.loc.uC,2); gl.uniform1i(SPL.loc.uD,3);
   gl.uniformMatrix4fv(SPL.loc.uV,false,new Float32Array(v.V)); gl.uniformMatrix4fv(SPL.loc.uP,false,new Float32Array(v.P));
   gl.uniform2f(SPL.loc.uF, v.fy, v.fy); gl.uniform2f(SPL.loc.uVp, glCv.width, glCv.height);
-  var WA=waUniforms(); gl.uniform1f(SPL.loc.uBoxOn, WA.boxOn); gl.uniform4f(SPL.loc.uBox, WA.box[0],WA.box[1],WA.box[2],WA.box[3]); gl.uniform1f(SPL.loc.uCutOn, WA.cutOn); gl.uniform4fv(SPL.loc.uCl, WA.cl);
-  gl.uniform1f(SPL.loc.uZMax, zmax); gl.uniform1f(SPL.loc.uBright, APP.pointBright||1); gl.uniform1f(SPL.loc.uOrtho, v.ortho?1:0); gl.uniform2f(SPL.loc.uSlab, -1e9, 1e9); gl.uniform1f(SPL.loc.uZMin, APP.zLoOn && APP.res ? APP.res.ceil*APP.zLo : -1e9);
+  var WA=waUniforms(1); gl.uniform1f(SPL.loc.uBoxOn, WA.boxOn); gl.uniform4f(SPL.loc.uBox, WA.box[0],WA.box[1],WA.box[2],WA.box[3]); gl.uniform1f(SPL.loc.uCutOn, WA.cutOn); gl.uniform4fv(SPL.loc.uCl, WA.cl);
+  gl.uniform1f(SPL.loc.uZMax, zmax); gl.uniform1f(SPL.loc.uBright, APP.pointBright||1); gl.uniform1f(SPL.loc.uOrtho, v.ortho?1:0); gl.uniform2f(SPL.loc.uSlab, -1e9, 1e9); gl.uniform1f(SPL.loc.uZMin, zLoValue());
   var ms=APP.splatClean===false?1e9:(APP.res&&APP.res.scale?APP.res.scale*APP.res.scale:1)*0.12; gl.uniform1f(SPL.loc.uMaxVar, ms); gl.uniform1f(SPL.loc.uFaint, APP.params.splatFull===false?2.0:0.4);   // hides the big soft floaters, anything wider than about a third of a metre
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   var sbST=(typeof sbFastNow==='function'&&sbFastNow()); if(sbST){ if(SPL.loc.uStoch===undefined) SPL.loc.uStoch=gl.getUniformLocation(SPL.prog,'uStoch'); gl.uniform1f(SPL.loc.uStoch,1); gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, SPL.n); gl.uniform1f(SPL.loc.uStoch,0); gl.depthFunc(gl.LESS); } else gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, (SPL.drawN>0&&SPL.drawFor===SPL.n&&!(typeof sbCamFar==='function'&&sbCamFar()))?SPL.drawN:SPL.n);
@@ -8404,7 +8408,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r304';
+var SB_BUILD='2026-10-11 r305';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -19242,8 +19246,8 @@ function patchSetDrop(S){ try{ var gl=GL; S.S.tex.forEach(function(t){ gl.delete
 function patchDrawSets(sets, zmax){
   var gl=GL, v=splatView(); if(typeof strOnAny==='function'&&strOnAny()) v.V=mMul(v.V, strM4()); var L=SPL.loc; gl.useProgram(SPL.prog);
   gl.uniform1i(L.uA,0); gl.uniform1i(L.uB,1); gl.uniform1i(L.uC,2); gl.uniform1i(L.uD,3); gl.uniformMatrix4fv(L.uV,false,new Float32Array(v.V)); gl.uniformMatrix4fv(L.uP,false,new Float32Array(v.P)); gl.uniform2f(L.uF, v.fy, v.fy); gl.uniform2f(L.uVp, glCv.width, glCv.height);
-  var WA=waUniforms(); gl.uniform1f(L.uBoxOn, WA.boxOn); gl.uniform4f(L.uBox, WA.box[0],WA.box[1],WA.box[2],WA.box[3]); gl.uniform1f(L.uCutOn, WA.cutOn); gl.uniform4fv(L.uCl, WA.cl);
-  gl.uniform1f(L.uZMax, zmax); gl.uniform1f(L.uBright, APP.pointBright||1); gl.uniform1f(L.uOrtho, v.ortho?1:0); gl.uniform2f(L.uSlab, -1e9, 1e9); gl.uniform1f(L.uZMin, APP.zLoOn&&APP.res?APP.res.ceil*APP.zLo:-1e9); gl.uniform1f(L.uMaxVar, splMV()); gl.uniform1f(L.uFaint, splFaint());
+  var WA=waUniforms(1); gl.uniform1f(L.uBoxOn, WA.boxOn); gl.uniform4f(L.uBox, WA.box[0],WA.box[1],WA.box[2],WA.box[3]); gl.uniform1f(L.uCutOn, WA.cutOn); gl.uniform4fv(L.uCl, WA.cl);
+  gl.uniform1f(L.uZMax, zmax); gl.uniform1f(L.uBright, APP.pointBright||1); gl.uniform1f(L.uOrtho, v.ortho?1:0); gl.uniform2f(L.uSlab, -1e9, 1e9); gl.uniform1f(L.uZMin, zLoValue()); gl.uniform1f(L.uMaxVar, splMV()); gl.uniform1f(L.uFaint, splFaint());
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); if(L.uCut) gl.uniform1f(L.uCut, 0);
   function bind(S){ gl.bindVertexArray(S.vao); for(var t=0;t<4;t++){ gl.activeTexture(gl.TEXTURE0+t); gl.bindTexture(gl.TEXTURE_2D, S.tex[t]); } }
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); sets.forEach(function(S){ lccSort(S, false); bind(S); gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, S.n); }); gl.depthMask(true); gl.disable(gl.BLEND);
@@ -22477,6 +22481,28 @@ sbAfter('buildSidebar', function(r){ try{ sitPanel(); }catch(e){} return r; });
 sbAfter('skinCmds', function(L){ L.push({t:'Sit on grid (put the scan on the floor grid)', where:'Level', fn:sitAuto}, {t:'Click the base to put it on the grid', where:'Level', fn:sitPickStart}); return L; });
 (function(){ var c=document.createElement('style'); c.textContent='#sitBox{margin-top:10px;padding-top:8px;border-top:1px solid var(--sbLn,#ddd);display:flex;flex-direction:column;gap:6px}#sitBox .sitH{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--sbTx2,#666)}#sitBox .sitR{display:flex;gap:6px}#sitBox button{flex:1}#sitBox button.on{outline:2px solid var(--acc,#2563eb)}';
   document.head.appendChild(c); try{ sitPanel(); }catch(e){} })();
+
+/* ===== r305: while Straighten turns the scan on screen, the top and bottom height clips stay level with the grid, the way they will be
+   once the turn is applied. Before, the clip turned with the scan, so letting go of a ring made the view jump (a 180 degree flip swapped
+   which end was cut off). The scan and points get the clip as planes in their own frame; everything else keeps its normal clip. ===== */
+function strClipLive(){ return typeof STR!=='undefined' && typeof strOnAny==='function' && strOnAny() && !miniVP && !!APP.res; }
+var STRCLIP={raw:0};
+function strClipRaw(f){ STRCLIP.raw++; try{ return f(); } finally{ STRCLIP.raw--; } }
+sbAround('zCutValue', function(next){ var z=next(); return (!STRCLIP.raw && strClipLive()) ? 1e9 : z; });
+sbAround('zLoValue', function(next){ var z=next(); return (!STRCLIP.raw && strClipLive()) ? -1e9 : z; });
+sbAfter('waUniforms', function(out, scan){ if(!scan || !strClipLive()) return out;
+  var top=strClipRaw(zCutValue), lo=strClipRaw(zLoValue), M=strM4(), n=[M[2],M[6],M[10]], t=M[14];
+  function add(nx,ny,nz,d){ if(out.cutOn>=4) return; var i=out.cutOn++; out.cl[i*4]=nx; out.cl[i*4+1]=ny; out.cl[i*4+2]=nz; out.cl[i*4+3]=d; }
+  if(top<1e8) add(n[0],n[1],n[2], top-t);       // shown height above the top clip: hidden
+  if(lo>-1e8) add(-n[0],-n[1],-n[2], -(lo-t));  // shown height below the bottom clip: hidden
+  return out; });
+/* and when the turn is applied the clip stays at the same height in the room: the scan's heights are measured afresh after a turn,
+   so the clip is moved by the same amount the scan moved */
+sbBefore('strApply', function(){ STRCLIP.k=null; if(!APP.res||!(STR.x||STR.y||STR.z)) return; STRCLIP.k={tz:cam.tz, top:APP.zCutOn?strClipRaw(zCutValue):null, lo:APP.zLoOn?strClipRaw(zLoValue):null}; });
+sbAfter('strAfterResult', function(r){ var k=STRCLIP.k; if(!k||APP._strPend||STR.busy) return r; STRCLIP.k=null;
+  try{ if((k.top!=null||k.lo!=null)&&typeof bandSet==='function'){ var dz=cam.tz-k.tz, rg=ceiClipRange(); bandSet(k.lo!=null?k.lo+dz:rg[0], k.top!=null?k.top+dz:rg[1], true); if(typeof bandSync==='function') bandSync(); requestRender(false); } }catch(e){} return r; });
+/* a direction (pt false) or a point (pt true) as seen on screen, back into the scan's own frame while Straighten turns it */
+function strToScan(v, pt){ var R=strR3(), p=strPivot(), d=pt?[v[0]-p[0],v[1]-p[1],v[2]-p[2]]:v, q=[R[0]*d[0]+R[3]*d[1]+R[6]*d[2], R[1]*d[0]+R[4]*d[1]+R[7]*d[2], R[2]*d[0]+R[5]*d[1]+R[8]*d[2]]; return pt?[q[0]+p[0],q[1]+p[1],q[2]+p[2]]:q; }
 
 
 </script>

@@ -1,4 +1,5 @@
-# Scan Bench r304
+# Scan Bench r305
 
-- Help > Publish this version removed (updates are now published automatically)
-- Check for updates unchanged
+- Straighten: letting go of a ring no longer makes the view jump
+- The top and bottom height cut stays level while you turn the scan, and stays at the same height after
+- Splats stay in the right front-to-back order while a ring turns
