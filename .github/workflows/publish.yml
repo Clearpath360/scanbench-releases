@@ -1,0 +1,41 @@
+# Files pushed into incoming/ become a Scan Bench release that every copy's Check for updates finds.
+#   incoming/INT_Scan_Bench_3.html   the new build (its SB_BUILD 'YYYY-MM-DD rNNN' gives the version)
+#   incoming/notes.md                optional: what is in this update, shown in the app's update box
+# The file is kept at app/INT_Scan_Bench_3.html (the app downloads it from there at the release tag).
+name: publish
+on:
+  push:
+    paths: ['incoming/**']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move the build into app/ and commit
+        id: a
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if [ ! -f incoming/INT_Scan_Bench_3.html ]; then echo "v=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          V=$(grep -oE "var SB_BUILD='[^']*'" incoming/INT_Scan_Bench_3.html | grep -oE 'r[0-9]+' | head -1)
+          if [ -z "$V" ]; then echo "No build number in the file"; exit 1; fi
+          if gh release view "$V" >/dev/null 2>&1; then echo "$V is already published"; echo "v=" >> "$GITHUB_OUTPUT"; exit 0; fi
+          mkdir -p app
+          mv incoming/INT_Scan_Bench_3.html app/INT_Scan_Bench_3.html
+          if [ -f incoming/notes.md ]; then mv incoming/notes.md app/notes.md; else printf 'Scan Bench %s\n' "$V" > app/notes.md; fi
+          rm -rf incoming
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add -A
+          git commit -m "Scan Bench $V"
+          git push
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Release
+        if: steps.a.outputs.v != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.a.outputs.v }}" --target "${{ steps.a.outputs.sha }}" --title "Scan Bench ${{ steps.a.outputs.v }}" --notes-file app/notes.md --latest
