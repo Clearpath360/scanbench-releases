@@ -8409,7 +8409,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r308';
+var SB_BUILD='2026-10-11 r309';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22149,6 +22149,10 @@ function ltGlowDraw(){ if(!GL||miniVP||APP.view!=='3d'||!APP.res||!ltOn()) retur
 function ltShowUI(){ return SBP.key==='light'&&APP.view==='3d'&&!miniVP&&!!APP.res&&ltOn(); }
 function ltScr(q){ var v=projectWorld(q); if(!v) return null; var r=glCv.getBoundingClientRect(); return [v[0]+r.left, v[1]+r.top]; }
 function ltHandles(l){ var W=ltWorld(l), out={pos:W.pos, dir:W.dir}; if(l.kind==='beam'){ var Lt=Math.max(0.6, Math.min(3, (l.reach||10)*0.2))*ltSc(); out.aim=[W.pos[0]+W.dir[0]*Lt, W.pos[1]+W.dir[1]*Lt, W.pos[2]+W.dir[2]*Lt]; } return out; }
+/* the picked light's move arrows: red along X, green along Y, blue up and down (an attached light uses its object's own directions) */
+function ltAxes(l){ if(!l||l.kind==='sun') return []; var W=ltWorld(l), F=l.att?ltPropFrame(l.att.id):null, R=F?F.R:[1,0,0, 0,1,0, 0,0,1], La=Math.max(0.25, cam.dist*0.09);
+  return [['x','#ef4444'],['y','#22c55e'],['z','#3b82f6']].map(function(q,i){ var a=[R[i], R[3+i], R[6+i]]; return {k:q[0], col:q[1], ax:a, c0:W.pos, tip:[W.pos[0]+a[0]*La, W.pos[1]+a[1]*La, W.pos[2]+a[2]*La]}; }); }
+function ltAxisT(h, R){ var w=[h.c0[0]-R.o[0], h.c0[1]-R.o[1], h.c0[2]-R.o[2]], A=h.ax, D=R.d, b=A[0]*D[0]+A[1]*D[1]+A[2]*D[2], c=D[0]*D[0]+D[1]*D[1]+D[2]*D[2], d=A[0]*w[0]+A[1]*w[1]+A[2]*w[2], e=D[0]*w[0]+D[1]*w[1]+D[2]*w[2], den=c-b*b; if(Math.abs(den)<1e-6) return null; return (b*e-c*d)/den; }
 function ltOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('sbLightOv'); if(!cv){ cv=document.createElement('canvas'); cv.id='sbLightOv'; cv.style.cssText='position:absolute;pointer-events:none;z-index:12'; st.appendChild(cv); }
   var r=glCv.getBoundingClientRect(), sr=st.getBoundingClientRect(), dpr=window.devicePixelRatio||1, Wd=Math.round(r.width*dpr), Hd=Math.round(r.height*dpr); cv.style.left=(r.left-sr.left)+'px'; cv.style.top=(r.top-sr.top)+'px'; if(cv.width!==Wd||cv.height!==Hd){ cv.width=Wd; cv.height=Hd; cv.style.width=r.width+'px'; cv.style.height=r.height+'px'; }
   var c=cv.getContext('2d'); c.clearRect(0,0,Wd,Hd); if(!ltShowUI()) return;
@@ -22158,11 +22162,15 @@ function ltOv(){ var st=document.getElementById('stage'); if(!st) return; var cv
     if(H.aim){ var a=P(H.aim); if(a){ c.strokeStyle=l.col; c.lineWidth=(sel?3:2)*dpr; c.beginPath(); c.moveTo(p[0],p[1]); c.lineTo(a[0],a[1]); c.stroke(); var s=(sel||(hov&&LT.hov.part==='aim')?6:4.5)*dpr; c.fillStyle='#fff'; c.strokeStyle=sel?'#ff8a00':'#333'; c.lineWidth=2*dpr; c.fillRect(a[0]-s,a[1]-s,2*s,2*s); c.strokeRect(a[0]-s,a[1]-s,2*s,2*s); } }
     var rr=(sel?9:7)*dpr; c.fillStyle=l.on?l.col:'#777'; c.strokeStyle=sel?'#ff8a00':(hov?'#fff':'rgba(0,0,0,.7)'); c.lineWidth=(sel?3:2)*dpr; c.beginPath(); c.arc(p[0],p[1],rr,0,7); c.fill(); c.stroke();
     c.font='600 '+Math.round(11*dpr)+'px system-ui'; c.textAlign='center'; var txt=l.name+(l.att?' → '+((propById(l.att.id)||{}).name||'object'):''), w=c.measureText(txt).width+10*dpr; c.fillStyle='rgba(10,14,20,.78)'; c.fillRect(p[0]-w/2, p[1]-rr-22*dpr, w, 16*dpr); c.fillStyle=sel?'#ffb35c':'#fff'; c.fillText(txt, p[0], p[1]-rr-10*dpr); });
+  var ls=ltById(LT.sel); ltAxes(ls).forEach(function(h){ var A=P(h.c0), B2=P(h.tip); if(!A||!B2) return; var on=(LT.drag&&LT.drag.part==='ax'&&LT.drag.k===h.k)||(LT.hov&&LT.hov.part==='ax'&&LT.hov.k===h.k), dx=B2[0]-A[0], dy=B2[1]-A[1], L2=Math.hypot(dx,dy)||1, ux=dx/L2, uy=dy/L2, hw=(on?7:5.5)*dpr, hl=(on?14:11)*dpr;
+    c.strokeStyle=h.col; c.lineWidth=(on?4:3)*dpr; c.beginPath(); c.moveTo(A[0]+dx*0.3, A[1]+dy*0.3); c.lineTo(B2[0]-ux*hl*0.6, B2[1]-uy*hl*0.6); c.stroke(); c.fillStyle=h.col; c.beginPath(); c.moveTo(B2[0],B2[1]); c.lineTo(B2[0]-ux*hl-uy*hw, B2[1]-uy*hl+ux*hw); c.lineTo(B2[0]-ux*hl+uy*hw, B2[1]-uy*hl-ux*hw); c.closePath(); c.fill(); });
   var ts=ltTodSun(); if(ts){ var S=ltSunState(ts); c.font='600 '+Math.round(12*dpr)+'px system-ui'; c.textAlign='right'; var tt='☀ '+ltHM(S.h)+(S.el<=0?' (below the horizon)':''), w3=c.measureText(tt).width+16*dpr; c.fillStyle='rgba(10,14,20,.8)'; c.fillRect(Wd-w3-12*dpr, 12*dpr, w3, 24*dpr); c.fillStyle='#ffd27a'; c.fillText(tt, Wd-20*dpr, 28*dpr); }
   if(LT.mode){ c.font='600 '+Math.round(12*dpr)+'px system-ui'; c.textAlign='left'; var m=LT.mode==='place'?'Click on the scan where the light goes (Esc cancels)':'Click on what the beam should point at (Esc cancels)'; var w2=c.measureText(m).width+16*dpr; c.fillStyle='rgba(10,14,20,.85)'; c.fillRect(12*dpr, 12*dpr, w2, 24*dpr); c.fillStyle='#fff'; c.fillText(m, 20*dpr, 28*dpr); } }
 sbAfter('gl_render', function(r){ try{ if(!miniVP){ ltGlowDraw(); ltOv(); } }catch(e){ console.warn(e); } return r; });
-function ltHit(x, y){ if(!ltShowUI()) return null; var best=null, bd=13, L=ltList().slice().sort(function(a,b){ return (a.id===LT.sel?-1:0)-(b.id===LT.sel?-1:0); });
-  L.forEach(function(l){ if(l.kind==='sun') return; var H=ltHandles(l); if(H.aim){ var a=ltScr(H.aim); if(a){ var da=Math.hypot(a[0]-x,a[1]-y); if(da<bd-2){ bd=da; best={id:l.id, part:'aim'}; } } } var p=ltScr(H.pos); if(p){ var dp=Math.hypot(p[0]-x,p[1]-y); if(dp<bd){ bd=dp; best={id:l.id, part:'pos'}; } } }); return best; }
+function ltHit(x, y){ if(!ltShowUI()) return null; var ls=ltById(LT.sel), ab=null, abd=9; ltAxes(ls).forEach(function(h){ var A=ltScr(h.c0), B=ltScr(h.tip); if(!A||!B) return; var m=[A[0]+(B[0]-A[0])*0.3, A[1]+(B[1]-A[1])*0.3], vx=B[0]-m[0], vy=B[1]-m[1], l2=vx*vx+vy*vy||1, t=Math.max(0,Math.min(1,((x-m[0])*vx+(y-m[1])*vy)/l2)), d=Math.hypot(m[0]+vx*t-x, m[1]+vy*t-y); if(d<abd){ abd=d; ab={id:ls.id, part:'ax', k:h.k}; } }); var mk=ltHitMarker(x, y); if(mk&&(mk.d<9||!ab)) return mk.h; if(ab) return ab; return mk?mk.h:null; }
+function ltHitMarker(x, y){
+  var best=null, bd=13, L=ltList().slice().sort(function(a,b){ return (a.id===LT.sel?-1:0)-(b.id===LT.sel?-1:0); });
+  L.forEach(function(l){ if(l.kind==='sun') return; var H=ltHandles(l); if(H.aim){ var a=ltScr(H.aim); if(a){ var da=Math.hypot(a[0]-x,a[1]-y); if(da<bd-2){ bd=da; best={id:l.id, part:'aim'}; } } } var p=ltScr(H.pos); if(p){ var dp=Math.hypot(p[0]-x,p[1]-y); if(dp<bd){ bd=dp; best={id:l.id, part:'pos'}; } } }); return best?{h:best, d:bd}:null; }
 function ltPlaneAt(R, z){ if(Math.abs(R.d[2])<1e-6) return null; var t=(z-R.o[2])/R.d[2]; if(t<0) return null; return [R.o[0]+R.d[0]*t, R.o[1]+R.d[1]*t, z]; }
 function ltScanPt(x, y){ var R=pickRay(x, y), h=null; try{ h=typeof stScanHit==='function'?stScanHit(R):null; }catch(e){} if(h&&h.p) return h.p.slice(); return ltPlaneAt(R, ltGround(cam.tx, cam.ty)); }
 window.addEventListener('pointerdown', function(e){ if(e.target!==glCv||e.button!==0||!ltShowUI()) return;
@@ -22170,16 +22178,17 @@ window.addEventListener('pointerdown', function(e){ if(e.target!==glCv||e.button
     if(LT.mode==='place') ltSetPos(l0, [q[0], q[1], q[2]+(l0.kind==='beam'?1.0:1.8)*ltSc()]); else { var W=ltWorld(l0); ltSetDir(l0, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
     LT.mode=null; glCv.style.cursor=''; afterEdit(); ltPanel(); requestRender(false); return; }
   var h=ltHit(e.clientX, e.clientY); if(!h) return; e.preventDefault(); e.stopImmediatePropagation(); var l=ltById(h.id); if(!l) return; LT.sel=l.id; pushUndo();
-  var W2=ltWorld(l), at=ltPlaneAt(pickRay(e.clientX, e.clientY), W2.pos[2])||W2.pos; LT.drag={id:l.id, part:h.part, z:W2.pos[2], dx:W2.pos[0]-at[0], dy:W2.pos[1]-at[1], y0:e.clientY, moved:false}; ltPanel(); ltOv(); }, true);
+  var W2=ltWorld(l), at=ltPlaneAt(pickRay(e.clientX, e.clientY), W2.pos[2])||W2.pos; LT.drag={id:l.id, part:h.part, z:W2.pos[2], dx:W2.pos[0]-at[0], dy:W2.pos[1]-at[1], y0:e.clientY, moved:false}; if(h.part==='ax'){ var hx=ltAxes(l).filter(function(q){ return q.k===h.k; })[0]; LT.drag.k=h.k; LT.drag.ax=hx; LT.drag.p0=W2.pos.slice(); var t0=hx?ltAxisT(hx, pickRay(e.clientX, e.clientY)):null; LT.drag.t0=t0==null?0:t0; } ltPanel(); ltOv(); }, true);
 /* a press that started on a light must not reach the orbit or object code underneath */
 ['mousedown'].forEach(function(t){ window.addEventListener(t, function(e){ if(LT.drag||(LT.mode&&e.target===glCv&&ltShowUI())){ e.stopImmediatePropagation(); e.preventDefault(); } }, true); });
 window.addEventListener('pointermove', function(e){ var D=LT.drag;
-  if(!D){ if(e.target===glCv&&ltShowUI()&&!(e.buttons&1)){ var h=ltHit(e.clientX, e.clientY), k=h?h.id+h.part:''; if(k!==(LT.hov?LT.hov.id+LT.hov.part:'')){ LT.hov=h; ltOv(); } if(h){ glCv.style.cursor=h.part==='aim'?'crosshair':'move'; e.stopImmediatePropagation(); } else if(LT.mode) glCv.style.cursor='crosshair'; } return; }
+  if(!D){ if(e.target===glCv&&ltShowUI()&&!(e.buttons&1)){ var h=ltHit(e.clientX, e.clientY), k=h?h.id+h.part:''; if(k!==(LT.hov?LT.hov.id+LT.hov.part:'')){ LT.hov=h; ltOv(); } if(h){ glCv.style.cursor=h.part==='aim'?'crosshair':(h.part==='ax'?'grab':'move'); e.stopImmediatePropagation(); } else if(LT.mode) glCv.style.cursor='crosshair'; } return; }
   if(!(e.buttons&1)){ ltDragEnd(); return; } var l=ltById(D.id); if(!l) return; e.stopImmediatePropagation(); e.preventDefault(); var W=ltWorld(l);
-  if(D.part==='aim'){ var q=ltScanPt(e.clientX, e.clientY); if(q) ltSetDir(l, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
+  if(D.part==='ax'&&D.ax){ var t1=ltAxisT(D.ax, pickRay(e.clientX, e.clientY)); if(t1!=null){ var dm=(t1-D.t0)*(e.shiftKey?0.2:1), A3=D.ax.ax; ltSetPos(l, [D.p0[0]+A3[0]*dm, D.p0[1]+A3[1]*dm, D.p0[2]+A3[2]*dm]); ltPosFields(l); } }
+  else if(D.part==='aim'){ var q=ltScanPt(e.clientX, e.clientY); if(q) ltSetDir(l, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
   else if(e.shiftKey){ var k2=Math.max(0.002, cam.dist*0.0025); ltSetPos(l, [W.pos[0], W.pos[1], W.pos[2]+(D.y0-e.clientY)*k2]); D.y0=e.clientY; var W3=ltWorld(l); D.z=W3.pos[2]; var at2=ltPlaneAt(pickRay(e.clientX, e.clientY), D.z); if(at2){ D.dx=W3.pos[0]-at2[0]; D.dy=W3.pos[1]-at2[1]; } }
   else { var at=ltPlaneAt(pickRay(e.clientX, e.clientY), D.z); if(at) ltSetPos(l, [at[0]+D.dx, at[1]+D.dy, D.z]); D.y0=e.clientY; }
-  D.moved=true; requestRender(false); }, true);
+  D.moved=true; ltPosFields(l); requestRender(false); }, true);
 function ltDragEnd(){ var D=LT.drag; if(!D) return; LT.drag=null; if(!D.moved&&APP.undo.length) APP.undo.pop(); else afterEdit(); ltPanel(); requestRender(false); }
 window.addEventListener('pointerup', function(e){ if(LT.drag){ ltDragEnd(); e.stopImmediatePropagation(); } }, true);
 window.addEventListener('mouseup', function(e){ if(LT.drag) e.stopImmediatePropagation(); }, true);
@@ -22227,11 +22236,12 @@ function ltPanel(){ var s=sbLSec(); if(!s) return; var b=s.querySelector('.body'
         sl('ltPeak','Midday height',10,75,1,l.peak||50,'°','How high the sun gets at midday (UK: about 15° in December, 60° in June)')+
         '<div class="ltGrid"><button id="ltPlay">'+(LTP.raf?'■ Stop':'▶ Play the day')+'</button><button id="ltNow" title="Set the clock to now">Now</button></div>':'')+
       (sun&&!l.tod?sl('ltAz','Direction',0,360,5,Math.round(((l.az%360)+360)%360),'°','Which way the sun comes from')+sl('ltEl','Height',2,90,1,l.el,'°','How high the sun is'):'')+
+      (lamp?ltPosRows(l):'')+
       (lamp?'<div class="row"><label>Glow</label><div class="sbLSeg"><button data-glow="1" class="'+(l.glow?'on':'')+'">On</button><button data-glow="0" class="'+(!l.glow?'on':'')+'">Off</button></div></div>'+
         '<div class="ltGrid"><button id="ltPlace">'+(LT.mode==='place'?'Click the scan...':'Place: click the scan')+'</button><button id="ltHere">Where I am looking</button>'+(beam?'<button id="ltAim">'+(LT.mode==='aim'?'Click the target...':'Aim: click a target')+'</button><button id="ltDown" title="Point it straight down, like a spotlight">Point down</button>':'')+'</div>'+
         '<div class="row"><label>Attach to</label><select id="ltAtt"><option value="">Nothing (stays put)</option>'+props.map(function(p){ return '<option value="'+p.id+'"'+(l.att&&l.att.id===p.id?' selected':'')+'>'+ltEsc(p.name)+'</option>'; }).join('')+'</select></div>':'')+
       '<div class="ltGrid"><button id="ltDup">Duplicate</button><button id="ltDel" class="ltRed">Delete</button></div>'+
-      (lamp?'<p class="mini">In 3D: drag the light to move it, Shift+drag for up and down'+(beam?', drag its white square to aim it':'')+'.</p>':'')+'</div>'; }
+      (lamp?'<p class="mini">In 3D: drag the red, green or blue arrow to move it one way, or drag the light itself across (Shift+drag: up and down)'+(beam?', drag its white square to aim it':'')+'.</p>':'')+'</div>'; }
   h+='<p class="mini">A look on top of the scan: no cast shadows. Pictures, clips and walk-through videos include the lights and glow. Saved with the job.</p>';
   b.innerHTML=h; var q=function(id){ return document.getElementById(id); }, M=ltM(), live=function(){ requestRender(false); }, commit=function(){ afterEdit(); };
   b.querySelectorAll('[data-mon]').forEach(function(x){ x.onclick=function(){ pushUndo(); M.lightsOn=x.dataset.mon==='1'; commit(); ltPanel(); live(); }; });
@@ -22251,6 +22261,7 @@ function ltPanel(){ var s=sbLSec(); if(!s) return; var b=s.querySelector('.body'
   ['ltRise','ltSet'].forEach(function(id){ var el=q(id); if(el) el.onchange=function(){ var v=ltParseHM(this.value); if(v==null){ toast('Type a time like 06:30', 2000); ltPanel(); return; } pushUndo(); l[id==='ltRise'?'rise':'set']=v; if(l.set<=l.rise+0.5){ toast('Sunset must come after sunrise.', 2500); } commit(); ltPanel(); live(); }; });
   if(q('ltPlay')) q('ltPlay').onclick=function(){ ltPlayDay(l); };
   if(q('ltNow')) q('ltNow').onclick=function(){ var d=new Date(); pushUndo(); l.time=Math.round((d.getHours()+d.getMinutes()/60)*4)/4; commit(); ltPanel(); live(); };
+  ltPosBind(l);
   if(q('ltPlace')) q('ltPlace').onclick=function(){ LT.mode=LT.mode==='place'?null:'place'; glCv.style.cursor=LT.mode?'crosshair':''; ltPanel(); live(); };
   if(q('ltAim')) q('ltAim').onclick=function(){ LT.mode=LT.mode==='aim'?null:'aim'; glCv.style.cursor=LT.mode?'crosshair':''; ltPanel(); live(); };
   if(q('ltHere')) q('ltHere').onclick=function(){ pushUndo(); ltSetPos(l, [cam.tx, cam.ty, ltGround(cam.tx, cam.ty)+(l.kind==='beam'?1.0:1.8)*ltSc()]); commit(); live(); };
@@ -22295,6 +22306,16 @@ sbAfter('sbPanel', function(r){ try{ if(SBP.key!=='light'&&LT.mode){ LT.mode=nul
   document.head.appendChild(c); })();
 /* Straighten moves everything drawn on the scan: lights that stand on their own go with it (attached ones follow their object) */
 sbAfter('strMapModel', function(r, f){ try{ ltList().forEach(function(l){ if(l.att||l.kind==='sun') return; var p=[l.x,l.y,l.z], q=f(p); if(l.kind==='beam'){ var d=ltDir(l.az||0,l.el||0), q2=f([p[0]+d[0],p[1]+d[1],p[2]+d[2]]); ltSetDir(l,[q2[0]-q[0],q2[1]-q[1],q2[2]-q[2]]); } l.x=q[0]; l.y=q[1]; l.z=q[2]; }); }catch(e){ console.warn(e); } return r; });
+
+/* position boxes: across (X), along (Y) and height above the ground under the light, in the drawing units */
+function ltU(){ return typeof CEI_UNIT==='undefined'||CEI_UNIT==='mm'?[1000,'mm',0]:CEI_UNIT==='cm'?[100,'cm',1]:[1,'m',3]; }
+function ltPosVals(l){ var W=ltWorld(l), u=ltU()[0], sc=ltSc(); return {x:Math.round(W.pos[0]/sc*u*1000)/1000, y:Math.round(W.pos[1]/sc*u*1000)/1000, h:Math.round((W.pos[2]-ltGround(W.pos[0],W.pos[1]))/sc*u*1000)/1000}; }
+function ltPosRows(l){ var v=ltPosVals(l), U=ltU(), f=function(n){ return (+n).toFixed(U[2]); };
+  return '<div class="row ltPos" title="Red arrow X, green arrow Y, blue arrow height. Drag the arrows in 3D, or type here."><label>Position</label><span class="ltAx" style="color:#ef4444">X</span><input type="number" id="ltPX" step="'+(U[0]>=1000?50:0.05)+'" value="'+f(v.x)+'"><span class="ltAx" style="color:#22c55e">Y</span><input type="number" id="ltPY" step="'+(U[0]>=1000?50:0.05)+'" value="'+f(v.y)+'"></div>'+
+    '<div class="row ltPos"><label>Height</label><span class="ltAx" style="color:#3b82f6">Z</span><input type="number" id="ltPZ" step="'+(U[0]>=1000?50:0.05)+'" value="'+f(v.h)+'"><span class="mini">'+U[1]+' above the ground</span></div>'; }
+function ltPosFields(l){ var x=document.getElementById('ltPX'); if(!x||!l||LT.sel!==l.id) return; var v=ltPosVals(l), d=ltU()[2], y=document.getElementById('ltPY'), z=document.getElementById('ltPZ'); [[x,v.x],[y,v.y],[z,v.h]].forEach(function(q){ if(q[0]&&document.activeElement!==q[0]) q[0].value=(+q[1]).toFixed(d); }); }
+function ltPosBind(l){ var ids=['ltPX','ltPY','ltPZ']; ids.forEach(function(id){ var el=document.getElementById(id); if(!el) return; el.onchange=function(){ var vx=parseFloat(document.getElementById('ltPX').value), vy=parseFloat(document.getElementById('ltPY').value), vh=parseFloat(document.getElementById('ltPZ').value); if(![vx,vy,vh].every(isFinite)) return; var u=ltU()[0], sc=ltSc(), X=vx/u*sc, Y=vy/u*sc; pushUndo(); ltSetPos(l, [X, Y, ltGround(X,Y)+vh/u*sc]); afterEdit(); requestRender(false); }; }); }
+(function(){ var c=document.createElement('style'); c.textContent='#sbLightSec .ltPos input{width:0;flex:1;min-width:0}#sbLightSec #ltPZ{flex:0 0 84px;width:84px}#sbLightSec .ltAx{font-weight:700;font-size:11px;margin:0 2px 0 4px}'; document.head.appendChild(c); })();
 
 /* ===== Coverage check: finds the weak parts of a scan so you know what to rescan. Thin areas (few splats), blurry areas (splats much bigger
    than usual: the scanner saw it from far or briefly) and holes (empty patches with scan all round) are tinted in the view and listed;
