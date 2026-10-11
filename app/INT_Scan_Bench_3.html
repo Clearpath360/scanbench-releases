@@ -8404,7 +8404,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r303';
+var SB_BUILD='2026-10-11 r304';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22260,6 +22260,9 @@ setTimeout(function(){ if(!SBU.auto||!navigator.onLine) return; var last=0; try{
     '#sbuBox button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:9px;padding:6px 14px;cursor:pointer;font:inherit}#sbuBox button.p{background:var(--acc);color:#fff;border-color:transparent}#sbuBox button:disabled{opacity:.6;cursor:default}';
   document.head.appendChild(c); })();
 
+/* r304: the old Help > Publish this version is gone (releases now go through the repo workflow); forget any GitHub token it saved */
+try{ localStorage.removeItem("sb_gh_token"); }catch(e){}
+
 /* ===== VR: see the scan in a Meta Quest (or any PC VR headset) through Quest Link / Air Link, using WebXR in Chrome or Edge.
    The 3D view is drawn once per eye with the headset's own camera; you stand where the 3D view was looking, on the floor.
    Left stick walks, right stick left/right turns 30 degrees, right stick up/down rises and sinks, B or Y comes out. ===== */
@@ -22474,47 +22477,6 @@ sbAfter('buildSidebar', function(r){ try{ sitPanel(); }catch(e){} return r; });
 sbAfter('skinCmds', function(L){ L.push({t:'Sit on grid (put the scan on the floor grid)', where:'Level', fn:sitAuto}, {t:'Click the base to put it on the grid', where:'Level', fn:sitPickStart}); return L; });
 (function(){ var c=document.createElement('style'); c.textContent='#sitBox{margin-top:10px;padding-top:8px;border-top:1px solid var(--sbLn,#ddd);display:flex;flex-direction:column;gap:6px}#sitBox .sitH{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--sbTx2,#666)}#sitBox .sitR{display:flex;gap:6px}#sitBox button{flex:1}#sitBox button.on{outline:2px solid var(--acc,#2563eb)}';
   document.head.appendChild(c); try{ sitPanel(); }catch(e){} })();
-
-/* ===== Help > Publish this version (internal copies only, file names starting INT_): puts a Scan Bench file into the releases repo and makes a release,
-   so everyone's Check for updates finds it. Uses a GitHub token typed into this box (kept only in this browser if you tick Remember). ===== */
-var SBPUBL={repo:SBU.repo, branch:'main'};
-function sbplTok(){ try{ return localStorage.getItem('sb_gh_token')||''; }catch(e){ return ''; } }
-function sbplApi(path, tok, opt){ opt=opt||{}; return fetch('https://api.github.com'+path, {method:opt.method||'GET', headers:Object.assign({'Accept':'application/vnd.github+json','Authorization':'Bearer '+tok,'X-GitHub-Api-Version':'2022-11-28'}, opt.body?{'Content-Type':'application/json'}:{}), body:opt.body?JSON.stringify(opt.body):undefined})
-  .then(function(r){ return r.text().then(function(t){ var j=null; try{ j=t?JSON.parse(t):null; }catch(e){} if(!r.ok){ var m=(j&&j.message)||('GitHub said '+r.status); var e2=new Error(m); e2.status=r.status; throw e2; } return j; }); }); }
-function sbplB64(str){ var u8=new TextEncoder().encode(str), out='', CH=0x8000; for(var i=0;i<u8.length;i+=CH) out+=String.fromCharCode.apply(null, u8.subarray(i,i+CH)); return btoa(out); }
-/* the file to publish: this app's own file if Scan Bench knows where it is, otherwise the one you pick */
-function sbplGetFile(){ return sbSelfDb('get').then(function(h){ if(h&&h.getFile) return h.getFile().then(function(f){ return f.text(); }).catch(function(){ return null; }); return null; })
-  .then(function(t){ if(t&&/var SB_BUILD='([^']*)'/.test(t)) return t; if(!window.showOpenFilePicker) throw new Error('this browser cannot pick the file (use Chrome or Edge)');
-    return window.showOpenFilePicker({types:[{description:'Scan Bench app', accept:{'text/html':['.html']}}]}).then(function(hs){ return hs[0].getFile(); }).then(function(f){ return f.text(); }); }); }
-function sbplPublish(tok, notes, prog){ var txt, ver, tag, ref, base;
-  return sbplGetFile().then(function(t){ txt=t; if(!/Scan Bench/.test(t)||!/function openFile\(/.test(t)) throw new Error('that file is not Scan Bench'); var m=t.match(/var SB_BUILD='([^']*)'/); ver=m?m[1]:''; var r=ver.match(/r(\d+)/); if(!r) throw new Error('that file has no build number'); tag='r'+r[1]; prog('Checking the repo ('+tag+')');
-      return sbplApi('/repos/'+SBPUBL.repo+'/releases/tags/'+tag, tok).then(function(){ throw new Error(tag+' is already published. Make a new build first.'); }, function(e){ if(e.status!==404) throw e; }); })
-    .then(function(){ return sbplApi('/repos/'+SBPUBL.repo+'/git/ref/heads/'+SBPUBL.branch, tok); })
-    .then(function(r){ ref=r.object.sha; return sbplApi('/repos/'+SBPUBL.repo+'/git/commits/'+ref, tok); })
-    .then(function(c){ base=c.tree.sha; prog('Uploading the app ('+Math.round(txt.length/1048576*10)/10+' MB)'); return sbplApi('/repos/'+SBPUBL.repo+'/git/blobs', tok, {method:'POST', body:{content:sbplB64(txt), encoding:'base64'}}); })
-    .then(function(bl){ var notesMd='# Scan Bench '+tag+'\n\n'+notes.trim()+'\n'; return sbplApi('/repos/'+SBPUBL.repo+'/git/trees', tok, {method:'POST', body:{base_tree:base, tree:[{path:'app/INT_Scan_Bench_3.html', mode:'100644', type:'blob', sha:bl.sha},{path:'app/notes.md', mode:'100644', type:'blob', content:notesMd}]}}); })
-    .then(function(tr){ prog('Saving'); return sbplApi('/repos/'+SBPUBL.repo+'/git/commits', tok, {method:'POST', body:{message:'Scan Bench '+tag, tree:tr.sha, parents:[ref]}}); })
-    .then(function(c){ return sbplApi('/repos/'+SBPUBL.repo+'/git/refs/heads/'+SBPUBL.branch, tok, {method:'PATCH', body:{sha:c.sha}}).then(function(){ return c.sha; }); })
-    .then(function(sha){ prog('Making release '+tag); return sbplApi('/repos/'+SBPUBL.repo+'/releases', tok, {method:'POST', body:{tag_name:tag, target_commitish:sha, name:'Scan Bench '+tag, body:notes.trim(), make_latest:'true'}}); })
-    .then(function(rel){ return {tag:tag, url:rel.html_url}; }); }
-function sbplOpen(){ var old=document.getElementById('sbplBox'); if(old) old.remove(); var d=document.createElement('div'); d.id='sbplBox'; var tok=sbplTok();
-  d.innerHTML='<div class="sbplB"><b>Publish this version</b><p>Puts the Scan Bench file into <b>'+SBPUBL.repo+'</b> and makes a release. Everyone\'s Check for updates then offers it with your notes. This build: <b>'+SB_BUILD+'</b>.</p>'+
-    '<label>What is in this update (one line each)<textarea id="sbplNotes" rows="6" placeholder="- Sit on grid in the Level panel&#10;- Straighten rings turn as far as you turn them"></textarea></label>'+
-    '<label>GitHub token <span>(fine-grained, only this repo, Contents: read and write)</span><input id="sbplTok" type="password" autocomplete="off" value="'+(tok?'••••••••':'')+'" placeholder="paste it here, never into the chat"></label>'+
-    '<label class="sbplC"><input type="checkbox" id="sbplRem"'+(tok?' checked':'')+'> Remember the token in this browser</label><div class="sbplMsg" id="sbplMsg"></div>'+
-    '<div class="sbplN"><button id="sbplX">Cancel</button><button id="sbplGo" class="p">Publish</button></div></div>';
-  document.body.appendChild(d); var ti=d.querySelector('#sbplTok'); ti.onfocus=function(){ if(ti.value==='••••••••') ti.value=''; };
-  d.querySelector('#sbplX').onclick=function(){ d.remove(); };
-  d.querySelector('#sbplGo').onclick=function(){ var t=ti.value==='••••••••'||!ti.value?sbplTok():ti.value.trim(), notes=d.querySelector('#sbplNotes').value, msg=d.querySelector('#sbplMsg'), go=d.querySelector('#sbplGo');
-    if(!t){ msg.textContent='Paste the GitHub token first.'; return; } if(!notes.trim()){ msg.textContent='Write a line or two on what is in this update.'; return; }
-    try{ if(d.querySelector('#sbplRem').checked) localStorage.setItem('sb_gh_token', t); else localStorage.removeItem('sb_gh_token'); }catch(e){}
-    go.disabled=true; sbplPublish(t, notes, function(s){ msg.textContent=s+'...'; }).then(function(r){ msg.innerHTML='Published <b>'+r.tag+'</b>. Check for updates will offer it from now on.'; go.textContent='Done'; go.disabled=false; go.onclick=function(){ d.remove(); }; })
-      .catch(function(e){ go.disabled=false; msg.textContent='Not published: '+(e&&e.message||e)+(e&&e.status===401?' (the token was refused)':''); }); }; }
-sbAfter('sbMenus', function(M){ try{ if(SBPUB.prefix!=='INT_') return M; var H=M.filter(function(m){ return m.id==='help'; })[0]; if(H){ var i=H.items.findIndex(function(x){ return x.t==='Check for updates...'; }); H.items.splice(i<0?H.items.length:i+2, 0, {t:'Publish this version...', fn:sbplOpen}); } }catch(e){} return M; });
-(function(){ var c=document.createElement('style'); c.textContent='#sbplBox{position:fixed;inset:0;z-index:9000;background:rgba(10,14,20,.4);display:flex;align-items:center;justify-content:center}#sbplBox .sbplB{width:min(500px,92vw);background:var(--sbGl2);backdrop-filter:blur(18px);border:1px solid var(--sbLn);border-radius:16px;box-shadow:var(--sbSh);padding:14px 16px;color:var(--sbTx);display:flex;flex-direction:column;gap:9px}'+
-  '#sbplBox p{margin:0;color:var(--sbTx2);line-height:1.4}#sbplBox label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600}#sbplBox label span{font-weight:400;color:var(--sbTx2)}#sbplBox textarea,#sbplBox input[type=password]{font:inherit;font-weight:400;padding:7px 9px;border:1px solid var(--sbLn);border-radius:9px;background:var(--bg3);color:inherit}#sbplBox .sbplC{flex-direction:row;align-items:center;font-weight:400}'+
-  '#sbplBox .sbplMsg{min-height:18px;font-size:12.5px;color:var(--sbTx2)}#sbplBox .sbplN{display:flex;gap:8px;justify-content:flex-end}#sbplBox button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:9px;padding:6px 14px;cursor:pointer;font:inherit}#sbplBox button.p{background:var(--acc);color:#fff;border-color:transparent}#sbplBox button:disabled{opacity:.6}';
-  document.head.appendChild(c); })();
 
 
 </script>

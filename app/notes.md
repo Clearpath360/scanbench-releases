@@ -1,4 +1,4 @@
-# Scan Bench r303
+# Scan Bench r304
 
-- Test release to check the automatic publish workflow
-- No changes from r302
+- Help > Publish this version removed (updates are now published automatically)
+- Check for updates unchanged
