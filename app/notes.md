@@ -1,5 +1,5 @@
-# Scan Bench r305
+# Scan Bench r306
 
-- Straighten: letting go of a ring no longer makes the view jump
-- The top and bottom height cut stays level while you turn the scan, and stays at the same height after
-- Splats stay in the right front-to-back order while a ring turns
+- Objects: red, green and blue arrows in 3D move the picked object one way only
+- Objects: drag a white corner square to make it bigger or smaller
+- Objects: settings panel now shows in Prep scan as well

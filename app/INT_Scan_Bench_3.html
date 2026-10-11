@@ -8408,7 +8408,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r305';
+var SB_BUILD='2026-10-11 r306';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -16187,27 +16187,62 @@ function prop3Draw(){ if(!APP.res||!mdlOn3D()) return; var o=document.getElement
     c.strokeStyle=sel?'#ff8a00':'rgba(255,170,60,.7)'; c.lineWidth=(sel?2:1.3)*dpr; c.setLineDash(sel?[]:[5*dpr,4*dpr]); c.beginPath();
     [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(function(e){ c.moveTo(K[e[0]][0],K[e[0]][1]); c.lineTo(K[e[1]][0],K[e[1]][1]); }); c.stroke(); c.setLineDash([]);
     if(sel){ var B=prop3Box(p), fm=P([p.x+Math.cos(B.a)*B.hx, p.y+Math.sin(B.a)*B.hx, B.z0+0.02]), dt=P(prop3Dot(p)); if(fm&&dt){ c.beginPath(); c.moveTo(fm[0],fm[1]); c.lineTo(dt[0],dt[1]); c.stroke(); c.fillStyle='#fff'; c.beginPath(); c.arc(dt[0],dt[1],7*dpr,0,7); c.fill(); c.stroke(); PROPS.dot3=[dt[0]/dpr+sr.left, dt[1]/dpr+sr.top]; } }
+    if(sel&&!p.locked) prop3DrawHandles(c, p, P, dpr);
     var top=P([p.x, p.y, (p.z||0)+prop3Box(p).hz]); if(top){ c.font='600 '+Math.round(11*dpr)+'px system-ui'; c.textAlign='center'; c.fillStyle=sel?'#ff8a00':'rgba(255,190,110,.95)'; c.fillText(p.name, top[0], top[1]-8*dpr); } }); }
 var _p3T=0; function prop3Soon(){ if(_p3T) return; _p3T=requestAnimationFrame(function(){ _p3T=0; requestRender(); mdlOv(); }); }
 window.addEventListener('mousedown', function(ev){ if(ev.target!==glCv||ev.button!==0||!APP.res||!mdlOn3D()||!propList().length) return; if(APP.tool&&APP.tool!=='move') return; if(ev.ctrlKey||ev.metaKey) return;
   var sel=propById(PROPS.sel);
+  var hh=sel&&!sel.locked?prop3HandleAt(sel, ev.clientX, ev.clientY):null; if(hh){ pushUndo(); PROPS.drag3=prop3HandleStart(sel, hh, ev); ev.stopImmediatePropagation(); ev.preventDefault(); mdlOv(); return; }
   if(sel&&PROPS.dot3&&Math.hypot(PROPS.dot3[0]-ev.clientX, PROPS.dot3[1]-ev.clientY)<11){ pushUndo(); PROPS.drag3={kind:'rot', p:sel}; ev.stopImmediatePropagation(); ev.preventDefault(); return; }
   var h=prop3Pick(ev.clientX, ev.clientY); if(!h){ if(PROPS.sel){ PROPS.sel=null; PROPS.dot3=null; propPanel(); mdlOv(); planDraw(); } return; }
   var p=h.p; PROPS.sel=p.id; propPanel(); if(p.locked){ mdlOv(); ev.stopImmediatePropagation(); ev.preventDefault(); return; }
   var hz=h.R.o[2]+h.R.d[2]*h.t, at=prop3Plane(h.R, hz)||[p.x,p.y]; pushUndo(); PROPS.drag3={kind:'move', p:p, z:hz, dx:p.x-at[0], dy:p.y-at[1], y0:ev.clientY, lz:p.z||0, moved:false};
   mdlOv(); ev.stopImmediatePropagation(); ev.preventDefault(); }, true);
 window.addEventListener('mousemove', function(ev){ var D=PROPS.drag3;
-  if(!D){ if(ev.target===glCv&&mdlOn3D()&&propList().length&&(!APP.tool||APP.tool==='move')&&!(ev.buttons&1)){ var h=prop3Pick(ev.clientX, ev.clientY), id=h?h.p.id:null; if(id!==PROPS.hov3){ PROPS.hov3=id; glCv.style.cursor=id?'move':''; mdlOv(); } } return; }
+  if(!D){ if(ev.target===glCv&&mdlOn3D()&&propList().length&&(!APP.tool||APP.tool==='move')&&!(ev.buttons&1)){ var sp=propById(PROPS.sel), hk=sp&&!sp.locked?prop3HandleAt(sp, ev.clientX, ev.clientY):null, hkk=hk?hk.k:null; if(hkk!==PROPS.hovH){ PROPS.hovH=hkk; mdlOv(); } if(hk){ glCv.style.cursor=hk.k==='s'?'nwse-resize':'grab'; ev.stopImmediatePropagation(); return; } var h=prop3Pick(ev.clientX, ev.clientY), id=h?h.p.id:null; if(id!==PROPS.hov3){ PROPS.hov3=id; glCv.style.cursor=id?'move':''; mdlOv(); } } return; }
   if(!(ev.buttons&1)){ prop3End(); return; } var p=D.p, R=pickRay(ev.clientX, ev.clientY);
-  if(D.kind==='move'){ if(ev.shiftKey){ var k=Math.max(0.002, cam.dist*0.0025); p.z=D.lz+(D.y0-ev.clientY)*k; } else { var w=prop3Plane(R, D.z); if(w){ p.x=w[0]+D.dx; p.y=w[1]+D.dy; } D.y0=ev.clientY; D.lz=p.z||0; } }
+  if(D.kind==='axis'||D.kind==='scale'){ prop3HandleMove(D, ev); }
+  else if(D.kind==='move'){ if(ev.shiftKey){ var k=Math.max(0.002, cam.dist*0.0025); p.z=D.lz+(D.y0-ev.clientY)*k; } else { var w=prop3Plane(R, D.z); if(w){ p.x=w[0]+D.dx; p.y=w[1]+D.dy; } D.y0=ev.clientY; D.lz=p.z||0; } }
   else { var w2=prop3Plane(R, p.z||0); if(w2){ var a=Math.atan2(w2[1]-p.y, w2[0]-p.x)*180/Math.PI; if(ev.shiftKey) a=Math.round(a/15)*15; p.rot=Math.round(a*10)/10; var ri=document.getElementById('prRot'); if(ri) ri.value=Math.round(p.rot); } }
   D.moved=true; ev.stopImmediatePropagation(); prop3Soon(); }, true);
 function prop3End(){ var D=PROPS.drag3; if(!D) return; PROPS.drag3=null; if(!D.moved&&APP.undo.length) APP.undo.pop(); afterEdit(); requestRender(); mdlOv(); planDraw(); propPanel(); }
 window.addEventListener('mouseup', function(ev){ if(PROPS.drag3){ prop3End(); ev.stopImmediatePropagation(); } }, true);
 window.addEventListener('blur', function(){ if(PROPS.drag3) prop3End(); });
 /* the panel hint now covers both views */
-sbAfter('propPanel', function(r){ var b=document.querySelector('#prBox .hint'); if(b) b.innerHTML='Drag it on the Plan or in 3D to move it; drag the white dot to turn it (Shift snaps 15&deg;). In 3D, Shift+drag lifts it. Delete key removes it.'; return r; });
+sbAfter('propPanel', function(r){ var b=document.querySelector('#prBox .hint'); if(b) b.innerHTML='In 3D: drag the red, green or blue arrow to move it one way, a white corner square to make it bigger or smaller, the white dot to turn it (Shift: fine). Dragging the object itself slides it over the floor; Shift+drag lifts it. Delete key removes it.'; return r; });
 
+
+/* ---- r306: the picked object gets the same move arrows as everything else (red along its width, green along its depth, blue up and down)
+   and a white grip on each top corner: drag a corner to make the whole object bigger or smaller (it stays standing where it is) ---- */
+function prop3Handles(p){ var B=prop3Box(p), c=Math.cos(B.a), s=Math.sin(B.a), c0=[p.x, p.y, B.z0+B.hz/2], L=Math.max(B.hx,B.hy,B.hz/2)+Math.max(0.3, Math.max(B.hx,B.hy,B.hz)*0.35), out=[];
+  [['x',[c,s,0],'#ef4444'],['y',[-s,c,0],'#22c55e'],['z',[0,0,1],'#3b82f6']].forEach(function(q){ var a=q[1], Lq=q[0]==='z'?B.hz/2+Math.max(0.3,B.hz*0.35):L; out.push({k:q[0], ax:a, col:q[2], c0:c0, tip:[c0[0]+a[0]*Lq, c0[1]+a[1]*Lq, c0[2]+a[2]*Lq]}); });
+  prop3Corners(p).slice(4).forEach(function(q,i){ out.push({k:'s', i:i, at:q}); }); return out; }
+function prop3Scr(q){ var ctx=mdl3Ctx(), v=ctx.proj(q); return v?[v[0]+ctx.rect.left, v[1]+ctx.rect.top]:null; }
+function prop3HandleAt(p, x, y){ if(!mdlOn3D()) return null; var H=prop3Handles(p), best=null, bd=11;
+  H.forEach(function(h){ if(h.k==='s'){ var q=prop3Scr(h.at); if(!q) return; var d=Math.hypot(q[0]-x,q[1]-y); if(d<bd){ bd=d; best=h; } return; }
+    var a=prop3Scr(h.c0), b=prop3Scr(h.tip); if(!a||!b) return; var m=[a[0]+(b[0]-a[0])*0.45, a[1]+(b[1]-a[1])*0.45], vx=b[0]-m[0], vy=b[1]-m[1], L2=vx*vx+vy*vy||1, t=Math.max(0,Math.min(1,((x-m[0])*vx+(y-m[1])*vy)/L2)), d2=Math.hypot(m[0]+vx*t-x, m[1]+vy*t-y)-1.5; if(d2<bd){ bd=d2; best=h; } });
+  return best; }
+/* where along the arrow's line the mouse ray passes closest */
+function prop3AxisT(h, R){ var w=[h.c0[0]-R.o[0], h.c0[1]-R.o[1], h.c0[2]-R.o[2]], A=h.ax, D=R.d, b=A[0]*D[0]+A[1]*D[1]+A[2]*D[2], c=D[0]*D[0]+D[1]*D[1]+D[2]*D[2], d=A[0]*w[0]+A[1]*w[1]+A[2]*w[2], e=D[0]*w[0]+D[1]*w[1]+D[2]*w[2], den=c-b*b; if(Math.abs(den)<1e-6) return null; return (b*e-c*d)/den; }
+function prop3HandleStart(p, h, ev){ if(h.k==='s'){ var B=prop3Box(p), m=prop3Scr([p.x,p.y,B.z0+B.hz/2]); return {kind:'scale', p:p, h:h, m:m, d0:Math.max(4, m?Math.hypot(ev.clientX-m[0], ev.clientY-m[1]):40), s0:p.s||1, moved:false}; }
+  var t0=prop3AxisT(h, pickRay(ev.clientX, ev.clientY)); return {kind:'axis', p:p, h:h, t0:t0==null?0:t0, x0:p.x, y0:p.y, z0:p.z||0, moved:false}; }
+function prop3HandleMove(D, ev){ var p=D.p;
+  if(D.kind==='scale'){ if(!D.m) return; var d=Math.hypot(ev.clientX-D.m[0], ev.clientY-D.m[1]), k=Math.max(0.02, d/D.d0), s=D.s0*(ev.shiftKey?1+(k-1)*0.2:k); p.s=Math.max(1e-3, Math.round(s*10000)/10000);
+    var hi=document.getElementById('prH'); if(hi){ var bb=p.bb||{hz:1}, U=CEI_UNIT==='m'?1:(CEI_UNIT==='cm'?100:1000); hi.value=Math.round(bb.hz*p.s*U*100)/100; } return; }
+  var t=prop3AxisT(D.h, pickRay(ev.clientX, ev.clientY)); if(t==null) return; var dm=t-D.t0; if(ev.shiftKey) dm*=0.2; var a=D.h.ax, r3=function(x){ return Math.round(x*1000)/1000; };
+  p.x=r3(D.x0+a[0]*dm); p.y=r3(D.y0+a[1]*dm); p.z=r3(D.z0+a[2]*dm);
+  var li=document.getElementById('prLift'); if(li&&typeof mdlFloor==='function'){ var U2=CEI_UNIT==='m'?1:(CEI_UNIT==='cm'?100:1000); li.value=Math.round(((p.z||0)-mdlFloor())*U2*100)/100; } }
+function prop3DrawHandles(c, p, P, dpr){ var H=prop3Handles(p), hv=PROPS.drag3&&PROPS.drag3.h?PROPS.drag3.h:null;
+  H.forEach(function(h){ var on=(hv&&hv.k===h.k&&hv.i===h.i)||(!hv&&PROPS.hovH===h.k);
+    if(h.k==='s'){ var q=P(h.at); if(!q) return; var r=(on?6:4.5)*dpr; c.fillStyle='#fff'; c.strokeStyle='#ff8a00'; c.lineWidth=2*dpr; c.fillRect(q[0]-r,q[1]-r,2*r,2*r); c.strokeRect(q[0]-r,q[1]-r,2*r,2*r); return; }
+    var a=P(h.c0), b=P(h.tip); if(!a||!b) return; var dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L, hw=(on?7:5.5)*dpr, hl=(on?15:12)*dpr;
+    c.strokeStyle=h.col; c.lineWidth=(on?4:3)*dpr; c.beginPath(); c.moveTo(a[0]+dx*0.45, a[1]+dy*0.45); c.lineTo(b[0]-ux*hl*0.6, b[1]-uy*hl*0.6); c.stroke();
+    c.fillStyle=h.col; c.beginPath(); c.moveTo(b[0],b[1]); c.lineTo(b[0]-ux*hl-uy*hw, b[1]-uy*hl+ux*hw); c.lineTo(b[0]-ux*hl+uy*hw, b[1]-uy*hl-ux*hw); c.closePath(); c.fill(); });
+  var D=PROPS.drag3; if(D&&D.moved&&(D.kind==='axis'||D.kind==='scale')){ var B=prop3Box(p), tp=P([p.x,p.y,B.z0+B.hz]); if(tp){ var U=CEI_UNIT==='m'?1:(CEI_UNIT==='cm'?100:1000), un=CEI_UNIT==='m'?' m':(CEI_UNIT==='cm'?' cm':' mm'), txt=D.kind==='scale'?'Height '+Math.round(B.hz*U*(U>1?1:100))/(U>1?1:100)+un:(D.h.k==='z'?'Lift '+Math.round(((p.z||0)-(typeof mdlFloor==='function'?mdlFloor():0))*U)+un:'Moved '+Math.round(Math.hypot(p.x-D.x0,p.y-D.y0)*U)+un);
+    c.font='600 '+Math.round(12*dpr)+'px system-ui'; var w=c.measureText(txt).width+12*dpr; c.fillStyle='rgba(10,14,20,.85)'; c.fillRect(tp[0]-w/2, tp[1]-34*dpr, w, 20*dpr); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(txt, tp[0], tp[1]-20*dpr); } } }
+/* the object's settings show even in Prep, where the right panel is normally folded away */
+sbAfter('propPanel', function(r){ try{ document.body.classList.toggle('sbObjSel', !!document.getElementById('prBox')); try{ resizeCanvases(); gl_render(); }catch(e){} }catch(e){} return r; });
+(function(){ var c=document.createElement('style'); c.textContent='body.sbSkin.sbObjSel[data-step=prep] #app{grid-template-columns:84px minmax(0,1fr) 262px!important}body.sbSkin.sbObjSel.sbPanelOn[data-step=prep] #app{grid-template-columns:384px minmax(0,1fr) 262px!important}body.hasScan.sbObjSel[data-step=prep] #right{width:auto;min-width:0;overflow-y:auto;border-left:1px solid var(--sbLn,#ddd);padding:8px;visibility:visible}'; document.head.appendChild(c); })();
 </script>
 <script>
 /* ---- r205: My objects, a library of your own object scans kept in this browser, plus the shadow switch ---- */
