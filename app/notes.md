@@ -1,5 +1,6 @@
-# Scan Bench r306
+# Scan Bench r307
 
-- Objects: red, green and blue arrows in 3D move the picked object one way only
-- Objects: drag a white corner square to make it bigger or smaller
-- Objects: settings panel now shows in Prep scan as well
+- Moving the view after Straighten or Sit on grid no longer turns the scan into dark blobs
+- Objects: red and green rings tilt the picked object front/back and left/right
+- Objects: Tilt boxes in the object panel (0 stands it straight)
+- Objects: On floor stands a tilted object on its lowest point
