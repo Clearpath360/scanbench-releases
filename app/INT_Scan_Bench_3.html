@@ -4935,7 +4935,7 @@ function splatEnsure(){
   var VS='#version 300 es\nprecision highp float;precision highp int;precision highp usampler2D;\n'+
     'layout(location=0) in vec2 aQ; layout(location=1) in uint aI;\n'+
     'uniform highp sampler2D uA; uniform highp sampler2D uB; uniform highp sampler2D uC; uniform mediump sampler2D uD;\n'+
-    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
+    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
     'out vec4 vCol; out vec2 vPos;\n'+
     'void main(){ int W='+W+'; ivec2 tc=ivec2(int(aI)%W, int(aI)/W); vec4 A=texelFetch(uA,tc,0); vec4 B=texelFetch(uB,tc,0); vec2 C=texelFetch(uC,tc,0).xy; vec4 D=texelFetch(uD,tc,0);\n'+
     ' gl_Position=vec4(0.0,0.0,2.0,1.0); if(A.z>uZMax) return; if(B.x+B.w+C.y>uMaxVar&&A.w<uFaint) return; if(uBoxOn>0.5&&(A.x<uBox.x||A.x>uBox.z||A.y<uBox.y||A.y>uBox.w)) return; if(((uCutOn>0.5&&dot(A.xyz,uCl[0].xyz)>uCl[0].w)||(uCutOn>1.5&&dot(A.xyz,uCl[1].xyz)>uCl[1].w)||(uCutOn>2.5&&dot(A.xyz,uCl[2].xyz)>uCl[2].w)||(uCutOn>3.5&&dot(A.xyz,uCl[3].xyz)>uCl[3].w))) return;\n'+
@@ -4951,7 +4951,10 @@ function splatEnsure(){
     ' int sty=int(D.a*255.0+0.5); float fa=1.0; vec3 rgb=D.rgb; if(sty<255){ int st=sty&7; vec3 pc=uPal[(sty>>4)&7];\n'+
     '  if(st==1){ fa=0.10; rgb=mix(rgb, vec3(0.75,0.88,1.0), 0.35); } else if(st==2){ M1=normalize(M1+vec2(1e-6,0.0))*1.6; M2=normalize(M2+vec2(0.0,1e-6))*1.6; fa=8.0; } else if(st==3){ rgb=pc*(0.45+0.75*dot(rgb,vec3(0.3,0.59,0.11))); } else if(st==4){ rgb=mix(rgb, pc, 0.5); } else if(st==5||st==6){ vec3 q0=cross(S[1],S[2]), q1=cross(S[2],S[0]), q2=cross(S[0],S[1]); vec3 nv=normalize(vec3(0.31,0.47,0.83)); nv=normalize(q0*nv.x+q1*nv.y+q2*nv.z+1e-12); nv=normalize(q0*nv.x+q1*nv.y+q2*nv.z+1e-12); float sh=0.38+0.5*abs(dot(nv,normalize(vec3(0.45,0.3,0.84))))+0.12*abs(nv.z); if(st==5){ float lu=dot(rgb,vec3(0.3,0.59,0.11)); rgb=vec3(0.9,0.89,0.86)*clamp(0.12+0.45*sh+0.6*lu,0.0,1.1); } else { float hz=clamp((A.z-uGrad.x)/max(1e-4,uGrad.y-uGrad.x),0.0,1.0); vec3 gc=hz<0.25?mix(vec3(0.17,0.32,0.85),vec3(0.1,0.7,0.85),hz*4.0):hz<0.5?mix(vec3(0.1,0.7,0.85),vec3(0.25,0.8,0.3),hz*4.0-1.0):hz<0.75?mix(vec3(0.25,0.8,0.3),vec3(0.98,0.85,0.2),hz*4.0-2.0):mix(vec3(0.98,0.85,0.2),vec3(0.9,0.25,0.15),hz*4.0-3.0); rgb=gc*(0.55+0.55*sh); } } }\n'+
     ' if(uLtN>0.5){ vec3 l0=cross(S[1],S[2]), l1=cross(S[2],S[0]), l2=cross(S[0],S[1]); vec3 ln=normalize(vec3(0.31,0.47,0.83)); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); vec3 acc=vec3(0.0); for(int k=0;k<8;k++){ if(float(k)>=uLtN) break; vec4 LP=uLP[k]; vec3 Ld; float lf=1.0; if(LP.w>0.5&&LP.w<1.5){ Ld=normalize(LP.xyz); } else { vec3 dv=LP.xyz-A.xyz; float dd=length(dv); Ld=dv/max(dd,1e-4); lf=1.0/(1.0+dd*dd/max(1e-4,uLR[k].x*uLR[k].x)); if(LP.w>1.5){ float cs=dot(-Ld, normalize(uLD[k].xyz)); lf*=smoothstep(uLD[k].w, max(uLD[k].w+1e-4,uLR[k].y), cs); } } float lam=abs(dot(ln,Ld)); acc+=uLC[k].rgb*(uLC[k].a*lf*(0.3+0.7*lam)); } rgb=rgb*uLAmb+rgb*acc; }\n'+
-    ' if(uGrOn>0.5){ rgb=rgb*(1.0+uGr.x); rgb=(rgb-0.5)*uGr.y+0.5; float gl0=dot(rgb,vec3(0.3,0.59,0.11)); rgb=mix(vec3(gl0),rgb,uGr.z); rgb+=vec3(uGr.w*0.08, -uGrT*0.06, -uGr.w*0.08); rgb=clamp(rgb,0.0,1.0); }\n'+
+    ' if(uWx.w>0.005){ vec3 n0=cross(S[1],S[2]), n1=cross(S[2],S[0]), n2=cross(S[0],S[1]); vec3 wn=normalize(vec3(0.31,0.47,0.83)); wn=normalize(n0*wn.x+n1*wn.y+n2*wn.z+1e-12); wn=normalize(n0*wn.x+n1*wn.y+n2*wn.z+1e-12); float wup=abs(wn.z); if(wup>0.75){ vec3 vd=normalize(A.xyz-uEyeW); float sp=pow(max(0.0,-vd.z*0.5+0.5),5.0); float wk=uWx.w*smoothstep(0.75,0.95,wup); rgb=rgb*(1.0-0.3*wk)+uFgCol*(0.35*wk*sp); } }\n'+
+' rgb*=(vec3(1.0)+uWx.rgb);\n'+
+' if(uFg.x>0.0||uFg.z>0.0){ float fz=1.0-exp(-uFg.x*max(0.0,tz-uFg.y)); float mz=uFg.z*clamp((uFg.w-A.z)/max(1e-3,uFg.w),0.0,1.0)*(1.0-exp(-tz*0.25)); float ff=clamp(max(fz,mz),0.0,0.97); rgb=mix(rgb,uFgCol,ff); }\n'+
+' if(uGrOn>0.5){ rgb=rgb*(1.0+uGr.x); rgb=(rgb-0.5)*uGr.y+0.5; float gl0=dot(rgb,vec3(0.3,0.59,0.11)); rgb=mix(vec3(gl0),rgb,uGr.z); rgb+=vec3(uGr.w*0.08, -uGrT*0.06, -uGr.w*0.08); rgb=clamp(rgb,0.0,1.0); }\n'+
     ' if(uIso>0.5&&(sty>=255||(sty&8)==0)){ fa*=0.08; rgb=vec3(dot(rgb,vec3(0.3,0.59,0.11))); }\n'+
     ' if(uTbOn>0.5){ vec3 dd=A.xyz-uTbC; if(abs(dot(dd,uTbU))<=uTbH.x&&abs(dot(dd,uTbV))<=uTbH.y&&abs(dot(dd,uTbW))<=uTbH.z) rgb=mix(rgb, vec3(1.0,0.45,0.1), 0.55); }\n'+
     ' float hA=uHideA; float fm=0.0; if(hA>1.5){ hA-=2.0; fm=1.0; } float al=1.0-hA; float fi=float(aI); for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ al=1.0-uRng[k].z; fm=uRng[k].w; } } if(al<0.003) return; if(al<0.997){ if(fm>0.5) fa*=al; else { float hh=fract(sin(fi*12.9898)*43758.5453); if(hh>al) return; } }\n'+
@@ -8409,7 +8412,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r309';
+var SB_BUILD='2026-10-11 r310';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22092,7 +22095,7 @@ function ltSunState(l){ if(!l.tod) return null; var h=LT.todOv!=null?LT.todOv:(l
   var str=el<=0?0:(0.35+1.25*Math.min(1, el/30))*(l.str||1.2)/1.2, amb=0.16+0.69*Math.max(0, Math.min(1, (el+6)/32));
   return {el:el, az:az, dir:ltDir(az, Math.max(el, 0.5)), col:col, str:str, amb:amb, h:h}; }
 function ltTodSun(){ return ltOn()?ltList().filter(function(l){ return l.on&&l.kind==='sun'&&l.tod; })[0]||null:null; }
-function ltAmb(){ var M=ltM(), s=ltTodSun(); if(s) return ltSunState(s).amb; return M&&typeof M.lightAmb==='number'?M.lightAmb:0.55; }
+function ltAmb(){ var M=ltM(), s=ltTodSun(); if(s) return ltSunState(s).amb; if(typeof wxOn==='function'&&wxOn()){ var e=wxSun().el; return 0.16+0.69*Math.max(0, Math.min(1, (e+6)/32))+0.7*wxFlash(wxT()); } return M&&typeof M.lightAmb==='number'?M.lightAmb:0.55; }
 
 /* ---------- the object a light rides on: its middle and its turn ---------- */
 function ltPropFrame(pid){ var p=typeof propById==='function'?propById(pid):null; if(!p||p.hide) return null; var B=prop3Box(p); return {p:p, m:[p.x, p.y, B.z0+B.hz/2], R:propRot(p), k:p.s||1}; }
@@ -22117,6 +22120,7 @@ sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL,
     act.forEach(function(l,i){ var W=ltWorld(l), c=ltHex(l.col), o=i*4, st=l.str;
       if(l.kind==='sun'){ var S=ltSunState(l), s=S?S.dir:ltDir(l.az||0, l.el||40); if(S){ c=S.col; st=S.str; } P[o]=s[0]; P[o+1]=s[1]; P[o+2]=s[2]; P[o+3]=1; }
       else { P[o]=W.pos[0]; P[o+1]=W.pos[1]; P[o+2]=W.pos[2]; P[o+3]=l.kind==='beam'?2:0; }
+      if(l.kind!=='sun'&&typeof wxDuskK==='function') st*=wxDuskK();   /* Sky & weather: lamps on at dusk */
       C[o]=c[0]; C[o+1]=c[1]; C[o+2]=c[2]; C[o+3]=st;
       var half=Math.max(1, Math.min(89, (l.cone||35)/2))*Math.PI/180, inner=half*(1-Math.max(0, Math.min(0.95, l.soft==null?0.4:l.soft)));
       D[o]=W.dir[0]; D[o+1]=W.dir[1]; D[o+2]=W.dir[2]; D[o+3]=Math.cos(half); R[o]=Math.max(0.2, l.reach||4)*sc; R[o+1]=Math.cos(inner); });
@@ -22131,6 +22135,7 @@ function ltGlowProg(){ if(LTG.prog||!GL) return LTG.prog; var gl=GL;
 function ltGlowDraw(){ if(!GL||miniVP||APP.view!=='3d'||!APP.res||!ltOn()) return; var act=ltList().filter(function(l){ return l.on&&l.kind!=='sun'&&(l.glow||(l.kind==='beam'&&l.haze>0)); }); if(!act.length) return;
   var gl=GL, pr=ltGlowProg(); if(!pr) return; var B=camBasis(), V=[], sc=ltSc();
   function vtx(p, c, a, u){ V.push(p[0],p[1],p[2], c[0],c[1],c[2],a, u[0],u[1]); }
+  var dk=typeof wxDuskK==='function'?wxDuskK():1; if(dk<0.03) return;
   act.forEach(function(l){ var W=ltWorld(l), c=ltHex(l.col), P=W.pos;
     if(l.kind==='beam'&&l.haze>0){ var d=W.dir, Lb=Math.max(0.5, (l.reach||10))*sc*0.8, half=Math.max(1, Math.min(80, (l.cone||35)/2))*Math.PI/180, rr=Math.tan(half)*Lb, t1=Math.abs(d[2])<0.9?[0,0,1]:[1,0,0];
       var e1=[d[1]*t1[2]-d[2]*t1[1], d[2]*t1[0]-d[0]*t1[2], d[0]*t1[1]-d[1]*t1[0]], n1=Math.hypot(e1[0],e1[1],e1[2])||1; e1=[e1[0]/n1,e1[1]/n1,e1[2]/n1]; var e2=[d[1]*e1[2]-d[2]*e1[1], d[2]*e1[0]-d[0]*e1[2], d[0]*e1[1]-d[1]*e1[0]];
@@ -22769,6 +22774,156 @@ sbAfter('strAfterResult', function(r){ var k=STRCLIP.k; if(!k||APP._strPend||STR
   try{ if((k.top!=null||k.lo!=null)&&typeof bandSet==='function'){ var dz=cam.tz-k.tz, rg=ceiClipRange(); bandSet(k.lo!=null?k.lo+dz:rg[0], k.top!=null?k.top+dz:rg[1], true); if(typeof bandSync==='function') bandSync(); requestRender(false); } }catch(e){} return r; });
 /* a direction (pt false) or a point (pt true) as seen on screen, back into the scan's own frame while Straighten turns it */
 function strToScan(v, pt){ var R=strR3(), p=strPivot(), d=pt?[v[0]-p[0],v[1]-p[1],v[2]-p[2]]:v, q=[R[0]*d[0]+R[3]*d[1]+R[6]*d[2], R[1]*d[0]+R[4]*d[1]+R[7]*d[2], R[2]*d[0]+R[5]*d[1]+R[8]*d[2]]; return pt?[q[0]+p[0],q[1]+p[1],q[2]+p[2]]:q; }
+
+/* ===== Sky & weather (r310): a sky that follows the sun's clock (dawn, day, sunset, dusk, night), drifting clouds from clear to storm,
+   stars and a moon at night; rain, snow, fog, ground mist and lightning; a darker, cooler scene, a wet sheen and splashes in the rain.
+   One Strength slider runs from subtle to dramatic. Pictures, clips and walk-through videos include it all. Saved with the job.
+   The sky is drawn straight after the 3D view is cleared, so the scan sits in front of it; fog and the wet look are in the splat shader. ===== */
+var WX={inR:false, prog:null, tri:null, pprog:null, pbuf:null, raf:0, tv:null, seed:null, last:0};
+function wxS(){ var M=APP.model; if(!M) return null; if(!M.sky) M.sky={on:false, time:12, clouds:0.25, speed:0.3, stars:true, rain:0, snow:0, fog:0, mist:0, lightning:false, wet:true, splash:true, strength:1, dusk:true, anim:true}; return M.sky; }
+function wxOn(){ var S=wxS(); return !!(S&&S.on&&APP.res); }
+function wxT(){ return WX.tv!=null?WX.tv:performance.now()/1000; }
+function wxSc(){ return (typeof fScale==='function'?fScale():1)||1; }
+function wxClamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function wxMix(a,b,k){ return [a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k]; }
+function wxHex(h){ var n=parseInt(h.slice(1),16); return [(n>>16&255)/255, (n>>8&255)/255, (n&255)/255]; }
+/* the sun: the Light panel's sun when it follows the clock, otherwise this panel's own time */
+function wxSun(){ var S=wxS(), ts=typeof ltTodSun==='function'?ltTodSun():null;
+  if(ts){ var st=ltSunState(ts); return {el:st.el, az:st.az, dir:ltDir(st.az, st.el), h:st.h, own:false}; }
+  var h=(typeof LT!=='undefined'&&LT.todOv!=null)?LT.todOv:(S.time==null?12:S.time), rise=6.5, set=19, f=(h-rise)/(set-rise), el; if(f>=0&&f<=1) el=50*Math.sin(Math.PI*f); else { var away=f<0?-f:f-1; el=-Math.min(18, away*(set-rise)*12); }
+  var az=90-180*wxClamp(f,-0.1,1.1); return {el:el, az:az, dir:ltDir(az, el), h:h, own:true}; }
+/* sky colours by the sun's height: night, twilight, sunrise/sunset, golden, day; then greyed by cloud */
+var WX_KEYS=[[-14,'#03050c','#0a0f1f'],[-7,'#0b1230','#26294d'],[-2,'#1f2d5c','#c0623f'],[3,'#3f64a8','#ff9d5c'],[10,'#3d72c4','#ffd2a0'],[25,'#2c6bd2','#b6d6f2'],[60,'#2563c9','#c3dcf4']];
+function wxSkyCols(el, cov, storm){ var K=WX_KEYS, i=0; while(i<K.length-1&&el>K[i+1][0]) i++; var a=K[i], b=K[Math.min(K.length-1,i+1)], k=b[0]===a[0]?0:wxClamp((el-a[0])/(b[0]-a[0]),0,1);
+  var zen=wxMix(wxHex(a[1]), wxHex(b[1]), k), hor=wxMix(wxHex(a[2]), wxHex(b[2]), k), day=wxClamp((el+8)/20,0,1), grey=wxMix([0.06,0.07,0.09],[0.56,0.6,0.65],day), dark=wxMix([0.04,0.045,0.06],[0.24,0.26,0.3],day);
+  var g=wxMix(grey, dark, storm); zen=wxMix(zen, g, cov*0.85); hor=wxMix(hor, wxMix(g,[1,1,1],0.12*day), cov*0.8); return {zen:zen, hor:hor, day:day}; }
+function wxNight(el){ return wxClamp((-el-2)/10, 0, 1); }
+/* lightning: flashes worked out from the clock, so a video export gets the same ones every time */
+function wxHash(n){ var x=Math.sin(n*127.1+311.7)*43758.5453; return x-Math.floor(x); }
+function wxFlash(t){ var S=wxS(); if(!S||!S.lightning) return 0; var win=3.2, k=Math.floor(t/win), f=0; for(var j=k-1;j<=k;j++){ if(wxHash(j)>0.55) continue; var t0=j*win+wxHash(j+7)*win*0.8, d=t-t0; if(d<0||d>0.9) continue; var a=Math.exp(-d*9)+(d>0.12?0.7*Math.exp(-(d-0.12)*11):0); f=Math.max(f, a); } return wxClamp(f,0,1)*(0.6+0.4*Math.min(1,S.rain*1.5)); }
+/* lamps on at dusk */
+function wxDuskK(){ var S=wxS(); if(!S||!S.on||!S.dusk) return 1; var el=wxSun().el; return wxClamp((4-el)/6, 0, 1); }
+
+/* ---------- the sky, drawn straight after the clear ---------- */
+function wxSkyProg(){ if(WX.prog||!GL) return WX.prog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec2 aP; out vec2 vN; void main(){ vN=aP; gl_Position=vec4(aP,0.9999,1.0); }';
+  var FS='#version 300 es\nprecision highp float; in vec2 vN; out vec4 o; uniform mat4 uInv; uniform vec3 uZen; uniform vec3 uHor; uniform vec3 uSun; uniform vec3 uSunCol; uniform float uCov; uniform float uStorm; uniform float uT; uniform float uNight; uniform float uStars; uniform float uFlash; uniform float uFog; uniform vec3 uFogCol; uniform vec2 uWind;\n'+
+    'float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); } float h31(vec3 p){ p=fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }\n'+
+    'float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }\n'+
+    'float fbm(vec2 p){ float s=0.0, a=0.5; for(int i=0;i<5;i++){ s+=a*vn(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return s; }\n'+
+    'void main(){ vec4 a=uInv*vec4(vN,-1.0,1.0), b=uInv*vec4(vN,1.0,1.0); vec3 d=normalize(b.xyz/b.w-a.xyz/a.w); float up=d.z;\n'+
+    ' float hz=pow(1.0-clamp(up,0.0,1.0),2.2); vec3 col=mix(uZen,uHor,hz); if(up<0.0) col=mix(uHor*0.75, uHor*0.35, clamp(-up*3.0,0.0,1.0));\n'+
+    ' float sd=max(0.0,dot(d,uSun)); col+=uSunCol*(pow(sd,600.0)*6.0*(1.0-uCov*0.9)+pow(sd,12.0)*0.35*(1.0-uCov*0.6)+pow(sd,3.0)*0.08)*step(-0.05,uSun.z);\n'+
+    ' if(uNight>0.0&&up>0.0){ vec3 q=floor(d*420.0); float hs=h31(q); float st=step(0.9975,hs)*(0.6+0.4*sin(uT*2.5+hs*90.0)); col+=vec3(st)*uNight*uStars*(1.0-uCov); vec3 md=normalize(vec3(-uSun.x,-uSun.y,0.6)); float m=dot(d,md); col+=vec3(0.92,0.94,1.0)*(smoothstep(0.99955,0.9997,m)*1.2+pow(max(0.0,m),80.0)*0.25)*uNight*uStars*(1.0-uCov*0.85); }\n'+
+    ' if(up>0.005&&uCov>0.001){ vec2 p=d.xy/(up+0.08)*0.55+uWind*uT; float n=fbm(p*1.6); float th=1.0-uCov; float c=smoothstep(th-0.08, th+0.28, n)*smoothstep(0.0,0.12,up); float sh=fbm(p*1.6+vec2(0.15,0.1)); vec3 lit=mix(vec3(0.95,0.95,0.97), uSunCol, 0.35)*mix(0.35,1.0,1.0-uNight*0.85); vec3 dk=mix(lit*0.55, vec3(0.16,0.17,0.2), uStorm); vec3 cc=mix(lit, dk, clamp((sh-n)*3.0+uCov*0.6+uStorm*0.5,0.0,1.0)); cc+=vec3(0.75,0.8,1.0)*uFlash*1.4; col=mix(col, cc, c*0.95); }\n'+
+    ' col+=vec3(0.5,0.55,0.7)*uFlash*0.35; col=mix(col, uFogCol, clamp(uFog*1.6*(1.0-clamp(up*2.0,0.0,1.0))+uFog*0.25,0.0,0.95)); o=vec4(col,1.0); }';
+  WX.prog=program(gl, VS, FS); WX.tri=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, WX.tri); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW); return WX.prog; }
+function wxInv(m){ var a=m, inv=new Float32Array(16), i; inv[0]=a[5]*a[10]*a[15]-a[5]*a[11]*a[14]-a[9]*a[6]*a[15]+a[9]*a[7]*a[14]+a[13]*a[6]*a[11]-a[13]*a[7]*a[10]; inv[4]=-a[4]*a[10]*a[15]+a[4]*a[11]*a[14]+a[8]*a[6]*a[15]-a[8]*a[7]*a[14]-a[12]*a[6]*a[11]+a[12]*a[7]*a[10]; inv[8]=a[4]*a[9]*a[15]-a[4]*a[11]*a[13]-a[8]*a[5]*a[15]+a[8]*a[7]*a[13]+a[12]*a[5]*a[11]-a[12]*a[7]*a[9]; inv[12]=-a[4]*a[9]*a[14]+a[4]*a[10]*a[13]+a[8]*a[5]*a[14]-a[8]*a[6]*a[13]-a[12]*a[5]*a[10]+a[12]*a[6]*a[9];
+  inv[1]=-a[1]*a[10]*a[15]+a[1]*a[11]*a[14]+a[9]*a[2]*a[15]-a[9]*a[3]*a[14]-a[13]*a[2]*a[11]+a[13]*a[3]*a[10]; inv[5]=a[0]*a[10]*a[15]-a[0]*a[11]*a[14]-a[8]*a[2]*a[15]+a[8]*a[3]*a[14]+a[12]*a[2]*a[11]-a[12]*a[3]*a[10]; inv[9]=-a[0]*a[9]*a[15]+a[0]*a[11]*a[13]+a[8]*a[1]*a[15]-a[8]*a[3]*a[13]-a[12]*a[1]*a[11]+a[12]*a[3]*a[9]; inv[13]=a[0]*a[9]*a[14]-a[0]*a[10]*a[13]-a[8]*a[1]*a[14]+a[8]*a[2]*a[13]+a[12]*a[1]*a[10]-a[12]*a[2]*a[9];
+  inv[2]=a[1]*a[6]*a[15]-a[1]*a[7]*a[14]-a[5]*a[2]*a[15]+a[5]*a[3]*a[14]+a[13]*a[2]*a[7]-a[13]*a[3]*a[6]; inv[6]=-a[0]*a[6]*a[15]+a[0]*a[7]*a[14]+a[4]*a[2]*a[15]-a[4]*a[3]*a[14]-a[12]*a[2]*a[7]+a[12]*a[3]*a[6]; inv[10]=a[0]*a[5]*a[15]-a[0]*a[7]*a[13]-a[4]*a[1]*a[15]+a[4]*a[3]*a[13]+a[12]*a[1]*a[7]-a[12]*a[3]*a[5]; inv[14]=-a[0]*a[5]*a[14]+a[0]*a[6]*a[13]+a[4]*a[1]*a[14]-a[4]*a[2]*a[13]-a[12]*a[1]*a[6]+a[12]*a[2]*a[5];
+  inv[3]=-a[1]*a[6]*a[11]+a[1]*a[7]*a[10]+a[5]*a[2]*a[11]-a[5]*a[3]*a[10]-a[9]*a[2]*a[7]+a[9]*a[3]*a[6]; inv[7]=a[0]*a[6]*a[11]-a[0]*a[7]*a[10]-a[4]*a[2]*a[11]+a[4]*a[3]*a[10]+a[8]*a[2]*a[7]-a[8]*a[3]*a[6]; inv[11]=-a[0]*a[5]*a[11]+a[0]*a[7]*a[9]+a[4]*a[1]*a[11]-a[4]*a[3]*a[9]-a[8]*a[1]*a[7]+a[8]*a[3]*a[5]; inv[15]=a[0]*a[5]*a[10]-a[0]*a[6]*a[9]-a[4]*a[1]*a[10]+a[4]*a[2]*a[9]+a[8]*a[1]*a[6]-a[8]*a[2]*a[5];
+  var det=a[0]*inv[0]+a[1]*inv[4]+a[2]*inv[8]+a[3]*inv[12]; if(Math.abs(det)<1e-20) return inv; det=1/det; for(i=0;i<16;i++) inv[i]*=det; return inv; }
+/* everything the frame needs, worked out once */
+function wxState(){ var S=wxS(), k=S.strength==null?1:S.strength, sun=wxSun(), storm=wxClamp(Math.max(S.rain, S.lightning?0.6:0)*1.1,0,1), cov=wxClamp(S.clouds+storm*0.4+S.snow*0.3,0,1), C=wxSkyCols(sun.el, cov, storm), t=wxT(), fl=wxFlash(t)*Math.min(1.2,k);
+  var sunCol=wxMix([1,0.55,0.32],[1,0.97,0.9], wxClamp(sun.el/25,0,1)), fogCol=wxMix(C.hor, wxMix([0.55,0.58,0.62],[0.08,0.09,0.12], wxNight(sun.el)), 0.45);
+  if(S.snow>0) fogCol=wxMix(fogCol,[0.85,0.88,0.92], 0.5*S.snow*C.day);
+  return {S:S, k:k, sun:sun, cov:cov, storm:storm, C:C, t:t, flash:fl, sunCol:sunCol, fogCol:fogCol, night:wxNight(sun.el)}; }
+function wxSkyDraw(){ var gl=GL, pr=wxSkyProg(); if(!pr) return; var X=wxState(), S=X.S, U=function(n){ return gl.getUniformLocation(pr,n); };
+  if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(U('uInv'), false, wxInv(camMVP()));
+  gl.uniform3fv(U('uZen'), X.C.zen); gl.uniform3fv(U('uHor'), X.C.hor); gl.uniform3fv(U('uSun'), X.sun.dir); gl.uniform3fv(U('uSunCol'), X.sunCol); gl.uniform1f(U('uCov'), Math.min(1, X.cov*(0.6+0.4*X.k))); gl.uniform1f(U('uStorm'), X.storm);
+  gl.uniform1f(U('uT'), X.t); gl.uniform1f(U('uNight'), X.night); gl.uniform1f(U('uStars'), S.stars?1:0); gl.uniform1f(U('uFlash'), X.flash); gl.uniform1f(U('uFog'), wxClamp(S.fog*X.k,0,1)); gl.uniform3fv(U('uFogCol'), X.fogCol);
+  var sp=(S.speed==null?0.3:S.speed)*0.02; gl.uniform2f(U('uWind'), sp, sp*0.35);
+  gl.bindBuffer(gl.ARRAY_BUFFER, WX.tri); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0); for(var i=1;i<4;i++) gl.disableVertexAttribArray(i);
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
+(function hookClear(){ if(typeof GL==='undefined'||!GL){ setTimeout(hookClear, 300); return; } var gl=GL, oc=gl.clear.bind(gl);
+  gl.clear=function(m){ oc(m); try{ if(WX.inR&&(m&gl.COLOR_BUFFER_BIT)&&!miniVP&&!gl.getParameter(gl.FRAMEBUFFER_BINDING)) wxSkyDraw(); }catch(e){ console.warn(e); } }; })();
+sbAround('gl_render', function(next){ WX.inR=wxOn()&&APP.view==='3d'&&!miniVP; try{ return next(); } finally{ WX.inR=false; } });
+
+/* ---------- fog, darker/cooler light, wet sheen: uniforms for the splat shader every frame ---------- */
+sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL, L=SPL.loc; if(L.uWx===undefined){ ['uFg','uFgCol','uWx','uEyeW'].forEach(function(k){ L[k]=gl.getUniformLocation(SPL.prog,k); }); } if(!L.uWx) return r; gl.useProgram(SPL.prog);
+    if(!wxOn()){ gl.uniform4f(L.uWx,0,0,0,0); gl.uniform4f(L.uFg,0,0,0,0); return r; }
+    var X=wxState(), S=X.S, k=X.k, sc=wxSc(), lightsOn=typeof ltList==='function'&&ltOn()&&ltList().some(function(l){ return l.on; });
+    var dim=1-(0.32*S.rain+0.22*X.cov)*k; var tint=[dim,dim,dim]; if(S.rain>0){ tint=[tint[0]*(1-0.12*S.rain*k), tint[1]*(1-0.06*S.rain*k), tint[2]]; } if(S.snow>0){ tint=wxMix(tint,[tint[0]*0.94,tint[1]*0.98,tint[2]*1.06],S.snow); }
+    if(!lightsOn){ var nk=X.night*k; tint=[tint[0]*(1-0.72*nk), tint[1]*(1-0.68*nk), tint[2]*(1-0.55*nk)]; var gold=wxClamp(1-Math.abs(X.sun.el-4)/10,0,1)*(1-X.cov)*k*0.25; tint=[tint[0]*(1+gold), tint[1]*(1+gold*0.4), tint[2]*(1-gold*0.3)]; }
+    tint=tint.map(function(v){ return v*(1+X.flash*1.3); });
+    var wet=(S.wet&&S.rain>0)?wxClamp(S.rain*1.4,0,1)*Math.min(1,k):0, B=camBasis();
+    gl.uniform4f(L.uWx, tint[0]-1, tint[1]-1, tint[2]-1, wet); gl.uniform3f(L.uEyeW, B.eye[0], B.eye[1], B.eye[2]); gl.uniform3fv(L.uFgCol, X.fogCol);
+    var g=typeof mdlFloor==='function'?mdlFloor():0; gl.uniform4f(L.uFg, S.fog>0?(0.012+0.11*S.fog*S.fog)*k/sc:0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
+
+/* ---------- rain, snow and splashes: worked out from the clock alone, anchored to the ground (they do not swim when you move) ---------- */
+function wxPartProg(){ if(WX.pprog||!GL) return WX.pprog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; uniform mat4 uM; uniform float uPS; out vec4 vC; void main(){ vC=aC; gl_Position=uM*vec4(aP,1.0); gl_PointSize=clamp(uPS/max(0.05,gl_Position.w),1.0,18.0); }';
+  var FS='#version 300 es\nprecision mediump float; in vec4 vC; uniform float uPt; out vec4 o; void main(){ float a=vC.a; if(uPt>0.5){ vec2 q=gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; a*=1.0-d; } o=vec4(vC.rgb*a, a); }';
+  WX.pprog=program(gl, VS, FS); WX.pbuf=gl.createBuffer(); return WX.pprog; }
+function wxSeed(){ if(WX.seed) return WX.seed; var N=6000, u=new Float32Array(N*4); for(var i=0;i<N*4;i++) u[i]=wxHash(i*1.37+0.5); WX.seed=u; return u; }
+function wxWrap(v, c, H){ var P=2*H, a=c-H; return a+(((v-a)%P)+P)%P; }
+function wxPartDraw(){ var S=wxS(); if(!S||!wxOn()||APP.view!=='3d'||miniVP) return; if(!(S.rain>0||S.snow>0)) return; var gl=GL, pr=wxPartProg(); if(!pr) return;
+  var X=wxState(), k=X.k, t=X.t, sc=wxSc(), u=wxSeed(), cx=cam.tx, cy=cam.ty, H=wxClamp(cam.dist*0.7, 5, 45)*sc, g=typeof mdlFloor==='function'?mdlFloor():0, Hz=Math.max(6*sc, cam.tz-g+H*0.8), V=[], L=[];
+  var lit=wxMix([0.75,0.8,0.9],[0.25,0.28,0.35], X.night); lit=lit.map(function(v){ return v*(1+X.flash*1.5); });
+  if(S.rain>0){ var n=Math.round(500+3500*S.rain*Math.min(1.3,k)), vz=9*sc, wx=1.2*sc, len=0.06*vz, a=Math.min(0.55, 0.22+0.25*S.rain)*Math.min(1.2,k);
+    for(var i=0;i<n;i++){ var s=0.8+0.4*u[i*4+3], x=wxWrap(u[i*4]*2*H+wx*t*s, cx, H), y=wxWrap(u[i*4+1]*2*H, cy, H), z=g+((u[i*4+2]*Hz-vz*s*t)%Hz+Hz)%Hz;
+      L.push(x,y,z, lit[0],lit[1],lit[2],a, x-wx*0.06,y,z+len*s, lit[0],lit[1],lit[2],0); }
+    if(S.splash){ var m=Math.round(150+500*S.rain), rate=2.2, sa=Math.min(0.6,0.3+0.3*S.rain)*Math.min(1.2,k);
+      for(var j=0;j<m;j++){ var ph=t*rate+u[(j+3000)*4+3]*10, cyc=Math.floor(ph), age=ph-cyc; if(age>0.22) continue; var hx=wxHash(j*13.1+cyc*7.7), hy=wxHash(j*5.3+cyc*3.1), sx=cx+(hx*2-1)*H*0.8, sy=cy+(hy*2-1)*H*0.8, gz=typeof groundAt==='function'?groundAt(sx,sy):g; if(!isFinite(gz)) gz=g;
+        var r=(0.03+0.12*age/0.22)*sc, h=0.07*sc*Math.sin(age/0.22*Math.PI), fa=sa*(1-age/0.22); for(var q=0;q<3;q++){ var an=q*2.094+hx*6; L.push(sx,sy,gz+0.01*sc, lit[0],lit[1],lit[2],fa, sx+Math.cos(an)*r, sy+Math.sin(an)*r, gz+h, lit[0],lit[1],lit[2],0); } } } }
+  if(S.snow>0){ var ns=Math.round(400+2600*S.snow*Math.min(1.3,k)), vs=0.9*sc, sa2=Math.min(0.95,0.55+0.3*S.snow); var sl=wxMix([1,1,1],[0.55,0.6,0.7],X.night);
+    for(var i2=0;i2<ns;i2++){ var b=(i2+1500)*4, sx2=wxWrap(u[b]*2*H+Math.sin(t*0.7+u[b+3]*20)*0.4*sc+0.3*sc*t, cx, H), sy2=wxWrap(u[b+1]*2*H+Math.cos(t*0.6+u[b+3]*13)*0.3*sc, cy, H), sz=g+((u[b+2]*Hz-vs*(0.7+0.6*u[b+3])*t)%Hz+Hz)%Hz; V.push(sx2,sy2,sz, sl[0],sl[1],sl[2],sa2); } }
+  if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uM'), false, camMVP()); gl.bindBuffer(gl.ARRAY_BUFFER, WX.pbuf);
+  gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); for(var e=2;e<4;e++) gl.disableVertexAttribArray(e); gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  if(L.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(L), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,28,12); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),0); gl.drawArrays(gl.LINES, 0, L.length/7); }
+  if(V.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,28,12); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),1); gl.uniform1f(gl.getUniformLocation(pr,'uPS'), 0.09*sc*glCv.height/Math.tan(0.45)/2); gl.drawArrays(gl.POINTS, 0, V.length/7); }
+  gl.disable(gl.BLEND); gl.depthMask(true); gl.disableVertexAttribArray(1); }
+sbAfter('gl_render', function(r){ try{ if(!miniVP) wxPartDraw(); }catch(e){ console.warn(e); } return r; });
+/* keep it moving: about 30 frames a second while rain, snow, lightning or drifting cloud is on and the 3D view is showing */
+function wxAnimNeed(){ var S=wxS(); return !!(S&&wxOn()&&S.anim!==false&&APP.view==='3d'&&!document.hidden&&(S.rain>0||S.snow>0||S.lightning||(S.clouds>0.02&&S.speed>0))); }
+function wxLoop(){ if(WX.raf) return; (function step(ts){ if(!wxAnimNeed()||WT&&WT.busy){ WX.raf=0; return; } if(!WX.last||ts-WX.last>32){ WX.last=ts; if(!(typeof glMoving!=='undefined'&&glMoving)) requestRender(false); } WX.raf=requestAnimationFrame(step); })(performance.now()); }
+setInterval(function(){ if(wxAnimNeed()&&!WX.raf) wxLoop(); }, 500);
+/* the walk-through video: the weather's clock runs with the video's own time, so exports are smooth and the same every time */
+(function(){ var prev=window.wtFrameHook; window.wtFrameHook=function(t){ if(prev) try{ prev(t); }catch(e){ console.warn(e); } if(WT&&WT.busy) WX.tv=1000+t; }; })();
+sbAround('wtExport', function(next){ var r=next(); Promise.resolve(r).then(function(){ WX.tv=null; }, function(){ WX.tv=null; }); return r; });
+
+/* ---------- presets ---------- */
+function wxPreset(k){ var S=wxS(); if(!S) return; pushUndo(); var P={
+  misty:{time:7.2, clouds:0.35, speed:0.2, rain:0, snow:0, fog:0.35, mist:0.75, lightning:false, stars:true, strength:1},
+  storm:{time:18.6, clouds:0.95, speed:0.9, rain:0.85, snow:0, fog:0.2, mist:0.1, lightning:true, wet:true, splash:true, stars:false, strength:1.1},
+  winter:{time:12.5, clouds:0.85, speed:0.25, rain:0, snow:0.6, fog:0.25, mist:0, lightning:false, stars:false, strength:1},
+  night:{time:23, clouds:0.05, speed:0.15, rain:0, snow:0, fog:0, mist:0.1, lightning:false, stars:true, dusk:true, strength:1},
+  clear:{time:13, clouds:0.15, speed:0.3, rain:0, snow:0, fog:0, mist:0, lightning:false, strength:1}}[k]; Object.assign(S, P, {on:true});
+  var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=S.time;
+  if(k==='night'&&typeof ltList==='function'&&!ltList().some(function(l){ return l.kind!=='sun'; })){ var l=ltMake('lamp'); l.name='Lamp 1'; l.col='#ffc27a'; l.str=2.2; l.reach=8; ltList().push(l); ltM().lightsOn=true; }
+  afterEdit(); wxPanel(); requestRender(false); toast({misty:'Misty morning', storm:'Stormy evening', winter:'Winter’s day', night:'Clear night: stars, moon and lamps on', clear:'Clear day'}[k]+'. Ctrl+Z undoes it.', 3000); }
+
+/* ---------- the panel ---------- */
+function wxSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbWxSec'); if(!s){ s=document.createElement('div'); s.id='sbWxSec'; s.className='sec'; s.dataset.sec='weather'; s.innerHTML='<h2>Sky & weather</h2><div class="body"></div>'; }
+  if(s.parentNode!==side) side.appendChild(s); return s; }
+function wxPanel(){ var s=wxSec(); if(!s) return; var b=s.querySelector('.body'), S=wxS(); if(!S){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return; } var sun=wxSun();
+  var sl=function(id, lab, min, max, step, v, show, tip){ return '<div class="row" title="'+(tip||'')+'"><label>'+lab+'</label><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"><span class="mini" id="'+id+'V">'+show+'</span></div>'; };
+  var pc=function(v){ return v<=0?'off':Math.round(v*100)+'%'; }, tg=function(id, lab, on, tip){ return '<div class="row" title="'+(tip||'')+'"><label>'+lab+'</label><div class="sbLSeg"><button data-tg="'+id+'" data-v="1" class="'+(on?'on':'')+'">On</button><button data-tg="'+id+'" data-v="0" class="'+(!on?'on':'')+'">Off</button></div></div>'; };
+  b.innerHTML=tg('on','Sky & weather', S.on, 'Show the sky and weather in the 3D view')+
+    '<div class="wxH">Presets</div><div class="wxGrid"><button data-wp="misty">Misty morning</button><button data-wp="storm">Stormy evening</button><button data-wp="winter">Winter’s day</button><button data-wp="night">Clear night</button><button data-wp="clear">Clear day</button></div>'+
+    sl('wxStr','Strength',0.2,1.5,0.05,S.strength==null?1:S.strength, S.strength<0.6?'subtle':S.strength>1.15?'dramatic':'normal','From a light touch to dramatic')+
+    '<div class="wxH">Sky</div>'+(sun.own?sl('wxTime','Time',0,24,0.25,S.time==null?12:S.time, ltHM(sun.h),'The sky follows the time: dawn, day, sunset, dusk, night'):'<p class="mini">Time follows the sun in the Light panel: <b>'+ltHM(sun.h)+'</b>.</p>')+
+    sl('wxClouds','Clouds',0,1,0.05,S.clouds,S.clouds<0.1?'clear':S.clouds>0.8?'overcast':pc(S.clouds),'From a clear sky to overcast')+sl('wxSpeed','Cloud speed',0,2,0.05,S.speed==null?0.3:S.speed,pc((S.speed==null?0.3:S.speed)/2),'How fast the clouds drift')+
+    tg('stars','Stars & moon', S.stars!==false, 'Stars and a moon after dark')+
+    '<div class="wxH">Weather</div>'+sl('wxRain','Rain',0,1,0.05,S.rain,S.rain<=0?'off':S.rain<0.3?'drizzle':S.rain>0.75?'downpour':'rain','From drizzle to a downpour')+
+    sl('wxSnow','Snow',0,1,0.05,S.snow,S.snow<=0?'off':S.snow>0.75?'blizzard':pc(S.snow),'From a few flakes to a blizzard')+sl('wxFog','Fog',0,1,0.05,S.fog,pc(S.fog),'Distance fades into fog')+sl('wxMist','Ground mist',0,1,0.05,S.mist,pc(S.mist),'Low mist lying on the ground')+
+    tg('lightning','Lightning', S.lightning, 'Flashes in a storm, lighting the scene for a moment')+tg('wet','Wet ground', S.wet!==false, 'In the rain the ground goes darker with a damp sheen')+tg('splash','Splashes', S.splash!==false, 'Little splashes where the rain lands')+
+    '<div class="wxH">Lights</div>'+tg('dusk','Lamps on at dusk', S.dusk!==false, 'Lamps and beams in the Light panel switch on as the sun goes down')+tg('anim','Animate', S.anim!==false, 'Keep rain, snow and clouds moving in the 3D view (switch off on a slow computer; videos always move)')+
+    '<p class="mini">Pictures, clips and walk-through videos include the sky and weather. Fog and the wet look show on splat scans. Saved with the job.</p>';
+  var q=function(id){ return document.getElementById(id); }, live=function(){ requestRender(false); if(wxAnimNeed()) wxLoop(); }, commit=function(){ afterEdit(); };
+  b.querySelectorAll('[data-tg]').forEach(function(x){ x.onclick=function(){ pushUndo(); S[x.dataset.tg]=x.dataset.v==='1'; commit(); wxPanel(); live(); }; });
+  b.querySelectorAll('[data-wp]').forEach(function(x){ x.onclick=function(){ wxPreset(x.dataset.wp); live(); }; });
+  var bind=function(id, key, fmt){ var el=q(id); if(!el) return; el.onpointerdown=function(){ pushUndo(); }; el.oninput=function(){ S[key]=+this.value; if(key!=='strength'||true) S.on=true; q(id+'V').textContent=fmt(+this.value); live(); }; el.onchange=function(){ commit(); }; };
+  bind('wxStr','strength',function(v){ return v<0.6?'subtle':v>1.15?'dramatic':'normal'; }); bind('wxTime','time',ltHM); bind('wxClouds','clouds',function(v){ return v<0.1?'clear':v>0.8?'overcast':pc(v); }); bind('wxSpeed','speed',function(v){ return pc(v/2); });
+  bind('wxRain','rain',function(v){ return v<=0?'off':v<0.3?'drizzle':v>0.75?'downpour':'rain'; }); bind('wxSnow','snow',function(v){ return v<=0?'off':v>0.75?'blizzard':pc(v); }); bind('wxFog','fog',pc); bind('wxMist','mist',pc); }
+SKIN_IC.cloud='M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.2 4.4 4.4 0 0 0 7 18z';
+SBP_ITEMS.push(['weather','Sky & weather','cloud','A sky that follows the sun, clouds, stars, rain, snow, fog and lightning']);
+sbAfter('sbPanel', function(r){ try{ if(SBP.key==='weather') wxPanel(); }catch(e){} return r; });
+(function(){ sbAfter('buildSidebar', function(r){ try{ wxPanel(); }catch(e){} return r; }); try{ wxPanel(); }catch(e){}
+  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=weather] #side .sec[data-sec=weather]{display:block}body.sbSkin:not(.sbPanelOn) #sbWxSec,body:not(.hasScan) #sbWxSec{display:none}'+
+    '#sbWxSec .wxH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:10px 0 4px}#sbWxSec .wxGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0}'+
+    '#sbWxSec .wxGrid button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 4px;cursor:pointer;font:inherit;font-size:12px}#sbWxSec .wxGrid button:hover{border-color:var(--acc)}';
+  document.head.appendChild(c); })();
 
 
 </script>

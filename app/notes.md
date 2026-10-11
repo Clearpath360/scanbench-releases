@@ -1,4 +1,10 @@
-# Scan Bench r309
+# Scan Bench r310
 
-- Lights: red, green and blue arrows on the picked light move it along X, Y or up/down
-- Lights: Position X, Y and Height boxes in the light settings
+- New Sky & weather panel on the left rail
+- Sky follows the sun clock: dawn, day, sunset, dusk, night
+- Drifting clouds from clear to overcast, stars and moon at night
+- Rain (drizzle to downpour) with darker light, wet ground and splashes
+- Snow, fog, ground mist and lightning
+- Strength slider from subtle to dramatic
+- Presets: Misty morning, Stormy evening, Winter's day, Clear night, Clear day
+- Lamps on at dusk
