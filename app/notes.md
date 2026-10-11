@@ -1,3 +1,4 @@
-# Scan Bench r302
+# Scan Bench r303
 
-onlineupdate
+- Test release to check the automatic publish workflow
+- No changes from r302
