@@ -1,10 +1,10 @@
-Scan Bench r318
+Scan Bench r319
 
-- Section split: new button in the bottom bar (Plan and 3D) opens the A-A or B-B section under the view, live as you drag the line.
-- Slice tab: a top-down strip either side of the line (width 250 mm to 20 m), coloured by height with contours and spot heights.
-- Spot heights along the ground line; Spots sets the spacing (Auto or 0.5 to 10 m).
-- Falls: click two points on the section to read the fall or rise in mm, % and 1 in X.
-- Step through: arrow keys or the arrow buttons move the line by the step you pick (100 mm to 5 m).
-- 3D cutaway: one click opens the 3D scan at the line; Flip shows the other side.
-- DXF export now includes the outline of the scan points in each section (layer SECTION_SCAN).
-- Volume: small fix so sparse scans measure every cell.
+- Sections is now a tool on the left rail; its panel holds all the section settings.
+- The section or slice sits side by side with the plan or 3D (right half, drag its left edge to resize).
+- Linked cursor: hover the section and a red marker shows the spot on the plan or 3D, and the other way round.
+- Band in 3D: the slab or slice is drawn see-through in the 3D view.
+- Map on plan: the slice height map and contours are drawn on the plan inside the band.
+- Height scale: Auto stretches heights (x2 to x10) so level changes show; True, x2, x5, x10 to pick.
+- Bigger, fewer labels on spot heights.
+- The bottom bar Section split button is gone (use Sections on the rail).
