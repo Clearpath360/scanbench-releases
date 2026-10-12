@@ -1,6 +1,6 @@
-# Scan Bench r313
+Scan Bench r314
 
-- Snow depth slider: snow builds up into a deep blanket on the ground, roofs and wall tops
-- Puddles now mirror the buildings, lamps and sky (Reflections on/off)
-- Light shafts is now a slider: sunbeams round the sun in the sky and shafts down to the ground
-- Sound: add your own rain, thunder and wind recordings; the made-up rain is now built from single drops
+- Puddles: Reflections no longer hide the puddles; the mirror leaves out the ground itself, so puddles show the sky, walls and cars above them.
+- Puddles: mirror height follows the real ground level, so reflections line up on sloped car parks.
+- Puddles and rain: faint floater splats no longer count as cover, so open ground gets puddles, wet sheen and snow again.
+- Snow depth: now one continuous snow surface lifted from the ground, roofs and wall tops instead of separate circles; drifts pile against walls and stay thin on narrow wall tops.
