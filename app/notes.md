@@ -1,5 +1,5 @@
-Scan Bench r324
+Scan Bench r325
 
-- Sections panel: new PDF export button. Page 1 the section with the scan in it, ground line, spot heights and falls; page 2 the height-map slice with its key; page 3 a key plan showing the line.
-- The PDF draws exactly the view you have on screen (zoom and height scale included), at A3.
-- Sections panel: CSV button saves the ground line every 100 mm and the spot heights.
+- Plan backdrop: Scan photo shows the plan as a top-down photo of the splats, so the height map and contours sit on the real ground (Sections panel).
+- 3D contours: coloured contour lines lie on the scan in the 3D view, with level pins along the line (Sections panel, On by default).
+- Height colours now ignore buildings and roofs in the band, so the ground gets the colours by default.
