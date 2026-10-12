@@ -1,5 +1,6 @@
-# Scan Bench r312
+# Scan Bench r313
 
-- Puddles slider: puddles on open flat ground mirror the sky and ripple in the rain
-- Light shafts: soft sunbeams through gaps in the cloud
-- Sound in videos: rain, wind and thunder after each lightning flash, with Volume and a Listen button
+- Snow depth slider: snow builds up into a deep blanket on the ground, roofs and wall tops
+- Puddles now mirror the buildings, lamps and sky (Reflections on/off)
+- Light shafts is now a slider: sunbeams round the sun in the sky and shafts down to the ground
+- Sound: add your own rain, thunder and wind recordings; the made-up rain is now built from single drops
