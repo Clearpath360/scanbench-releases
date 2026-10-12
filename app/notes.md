@@ -1,3 +1,4 @@
-# Scan Bench r329
+# Scan Bench r330
 
-- Compare: + Add scans opens a choice: Choose LCC folder (straight to a folder picker) or PLY files.
+- Compare: second scan no longer goes black while the camera moves.
+- Timelapse: new Wipe change (default) with a white line sweeping old to new.

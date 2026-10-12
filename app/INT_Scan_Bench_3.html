@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r329';
+var SB_BUILD='2026-10-12 r330';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -18375,6 +18375,8 @@ function lccSkyDraw(){ var S=LCCI.sky; if(!S||!S.on||!APP.res||!SPL.prog||APP.lo
   gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, Sx.n);
   gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND); gl.bindVertexArray(null); gl.activeTexture(gl.TEXTURE0); }
 /* the lighter level, cut back to what is left of the scan after cleaning and cropping (cells of 25 cm) */
+/* the lighter level holds the first scan only: never swap it in while other scans are shown with it */
+function lccCmpBusy(){ try{ return (typeof cmpList==='function'&&cmpList().length>1)||(typeof MS!=='undefined'&&MS.on); }catch(e){ return false; } }
 function lccLodReady(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.res) return null; var k=lccXfKey()+'|'+SPL.n; if(S.set&&S.key===k&&S.srcRef===SPL.src) return S.set;
   lccDrop(S); var P=SPL.src.pos, n=SPL.src.n, mn=[1e30,1e30,1e30], mx=[-1e30,-1e30,-1e30], i, a;
   for(i=0;i<n;i++) for(a=0;a<3;a++){ var v=P[i*3+a]; if(v<mn[a]) mn[a]=v; if(v>mx[a]) mx[a]=v; }
@@ -18384,7 +18386,7 @@ function lccLodReady(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP
     for(var dz=-1;dz<=1;dz++) for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) if(G[gx+dx+(gy+dy)*X+(gz+dz)*XY]) return true; return false; }
   S.set=lccSet(lccToRes(S.raw, keep)); S.key=k; S.srcRef=SPL.src; return S.set; }
 sbAround('splatDraw', function(next, zmax){ try{ lccSkyDraw(); }catch(e){ console.warn(e); }
-    var L=null; try{ if(glMoving&&!(typeof DRV!=='undefined'&&DRV.on)) L=lccLodReady(); }catch(e){ console.warn(e); L=null; }
+    var L=null; try{ if(glMoving&&!(typeof DRV!=='undefined'&&DRV.on)&&!lccCmpBusy()) L=lccLodReady(); }catch(e){ console.warn(e); L=null; }
     if(!L) return next();
     lccSort(L, false); var o={tex:SPL.tex, vao:SPL.vao, n:SPL.n}; SPL.tex=L.tex; SPL.vao=L.vao; SPL.n=L.n; try{ return next(); } finally{ SPL.tex=o.tex; SPL.vao=o.vao; SPL.n=o.n; } });
 (function(){ var st=document.createElement('style'); st.textContent='#lcDlg{position:fixed;inset:0;z-index:98;background:rgba(10,14,20,.5);display:flex;align-items:center;justify-content:center;padding:20px}#lcDlg[hidden]{display:none}#lcDlg .lcBox{background:#fbfaf7;color:#22201c;border-radius:12px;width:min(520px,100%);box-shadow:0 24px 60px rgba(0,0,0,.4);border-top:4px solid #7c5a1e;font-size:13px;overflow:hidden}#lcDlg .lcHead{display:flex;align-items:center;padding:12px 16px 4px}#lcDlg .lcHead b{flex:1;font-size:16px}#lcDlg .lcHead button{border:0;background:none;font-size:17px;cursor:pointer;color:inherit}#lcDlg .lcBody{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px;line-height:1.45}#lcDlg p{margin:0}#lcDlg .lcErr{color:#a3261b;font-weight:600}#lcDlg .lcName{font-weight:700;font-size:14px}#lcDlg .lcName span{font-weight:400;color:#6b655b}#lcDlg .lcSec{display:flex;flex-direction:column;gap:6px;background:#fff;border:1px solid #e4dfd4;border-radius:8px;padding:10px}#lcDlg .lcSec>b{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#6b655b}#lcDlg label{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;cursor:pointer}#lcDlg label span{color:#6b655b;font-size:12px;font-variant-numeric:tabular-nums}#lcDlg .lcBtns{display:flex;gap:8px;flex-wrap:wrap}#lcDlg .lcBtns button{padding:8px 14px;border-radius:7px;border:1px solid #cfc8ba;background:#f3f0ea;cursor:pointer;font:inherit;color:inherit}#lcDlg .lcBtns .lcP{background:#7c5a1e;border-color:#7c5a1e;color:#fff}'; document.head.appendChild(st); })();
@@ -18947,7 +18949,7 @@ function patchRebuild(){ if(!PATCH.noMerge){ PATCH.mver++; PROPS.active=true; } 
 
 /* drawn before the scan: solid cores write depth, so scan behind a filled wall stays hidden; the scan in front lays over it */
 function patchDraw(zmax){ if(!PATCH.list.length||!SPL.ready||!SPL.prog||miniVP||APP.view!=='3d') return;
-  var all=glMoving&&typeof LCCI!=='undefined'&&LCCI.lod&&LCCI.lod.on&&!(typeof DRV!=='undefined'&&DRV.on), list=all?PATCH.list:PATCH.list.filter(function(p){ return p._live&&!p.off&&!(p._liveBase&&p._liveBase===PROPS.base&&!p._liveFail); });
+  var all=glMoving&&typeof LCCI!=='undefined'&&LCCI.lod&&LCCI.lod.on&&!(typeof lccCmpBusy==='function'&&lccCmpBusy())&&!(typeof DRV!=='undefined'&&DRV.on), list=all?PATCH.list:PATCH.list.filter(function(p){ return p._live&&!p.off&&!(p._liveBase&&p._liveBase===PROPS.base&&!p._liveFail); });
   var sets=patchSetsNow(list); if(sets.length) patchDrawSets(sets, zmax); }
 sbAround('splatDraw', function(next, zmax){ var on=false; try{ if(PATCH.list.length){ patchDraw(zmax); on=true; } }catch(e){ console.warn(e); } var r=next(); if(on){ GL.depthFunc(GL.LESS); } return r; });
 /* points look: the fills as points */
@@ -21244,7 +21246,7 @@ window.addEventListener('keydown', function(e){ if(!tlxOn()||e.key!==' ') return
    Compare (one view, slider between two scans), Timelapse (one view, camera keyframes on a timeline, scans fading in order, render a video).
    It uses the scans added as compare scans (loaded once), and bakes each alignment into the scan itself so every view agrees. ===== */
 var MS={on:false, tab:'align', k:1, cams:[null,null], act:0, snap:[null,null], pairs:[], sel:-1, cmpL:0, cmpR:1, sx:0.5,
-  keys:[], t:0, play:false, per:4, fade:1.5, kind:'fade', names:true, res:'1080', fps:30, ksel:-1, busy:false, cancel:false};
+  keys:[], t:0, play:false, per:4, fade:1.5, kind:'wipe', names:true, res:'1080', fps:30, ksel:-1, busy:false, cancel:false};
 var MS_COL=['#dc2626','#16a34a','#2563eb','#ca8a04','#9333ea','#0891b2','#ea580c','#db2777'];
 function msS(){ return cmpList(); }
 function msCap(){ var S=msS(); return S[Math.max(1, Math.min(S.length-1, MS.k))]||null; }
@@ -21309,7 +21311,8 @@ sbAround('gl_render', function(next){ if(!MS.on) return next(); var kg=APP.showG
     if(MS.tab==='time'){ var st=MS.st||msState(MS.t);
       if(st.wipe&&S.length>1){ var w=st.wipe, dis3=gl.disable; CMPV._force=S.map(function(_,j){ return j===w.L?1:0; }); try{ r=gr.apply(this, arguments); } finally{ CMPV._force=null; }
         var x1=Math.round(glCv.width*w.sx); gl.enable(gl.SCISSOR_TEST); gl.scissor(x1, 0, glCv.width-x1, glCv.height); gl.disable=function(c){ if(c===gl.SCISSOR_TEST) return; return dis3.call(gl, c); };
-        CMPV._force=S.map(function(_,j){ return j===w.R?1:0; }); try{ gr.apply(this, arguments); } finally{ CMPV._force=null; gl.disable=dis3; dis3.call(gl, gl.SCISSOR_TEST); } return r; }
+        CMPV._force=S.map(function(_,j){ return j===w.R?1:0; }); try{ gr.apply(this, arguments); } finally{ CMPV._force=null; gl.disable=dis3; dis3.call(gl, gl.SCISSOR_TEST); }
+        if(w.sx>0.002&&w.sx<0.998){ var lw=Math.max(2, Math.round(glCv.height/360)), cc=gl.getParameter(gl.COLOR_CLEAR_VALUE); gl.enable(gl.SCISSOR_TEST); gl.scissor(x1-(lw>>1), 0, lw, glCv.height); gl.clearColor(1,1,1,1); gl.clear(gl.COLOR_BUFFER_BIT); gl.clearColor(cc[0],cc[1],cc[2],cc[3]); gl.disable(gl.SCISSOR_TEST); } return r; }
       CMPV._force=st.a; CMPV._modes=st.modes; try{ return gr.apply(this, arguments); } finally{ CMPV._force=null; CMPV._modes=null; } }
     CMPV._force=S.map(function(_,j){ return j===0?1:0; }); try{ return gr.apply(this, arguments); } finally{ CMPV._force=null; } }; })();
 /* the shader honours forced amounts with fade modes only when asked; points drawn per scan follow the same amounts (see sb80) */
@@ -21378,7 +21381,8 @@ function msSliderPos(){ var u=msUI(); if(!u) return; var d=u.querySelector('.msS
 function msTT(){ return Math.max(1, msAligned().length)*MS.per; }
 function msState(t){ var L=msAligned(), S=msS(), a=S.map(function(){ return 0; }), modes=S.map(function(){ return 0; }), N=L.length, per=MS.per, f=MS.kind==='cut'?0:Math.min(MS.fade, per*0.9), cur=Math.min(N-1, Math.max(0, Math.floor(t/per))), nxt=-1, u=0;
   if(N){ a[L[cur].k]=1; for(var i=1;i<N;i++){ var b=i*per, lo=b-f/2, hi=b+f/2; if(f>0&&t>=lo&&t<hi){ u=(t-lo)/f; u=u*u*(3-2*u); a=S.map(function(){ return 0; }); a[L[i-1].k]=1-u; a[L[i].k]=u; cur=i-1; nxt=i; if(MS.kind==='fade'){ modes[L[i-1].k]=1; modes[L[i].k]=1; } break; } } }
-  return {a:a, modes:modes, cur:N?L[cur]:null, nxt:nxt>=0?L[nxt]:null, u:u}; }
+  var wipe=(MS.kind==='wipe'&&nxt>=0)?{L:L[nxt].k, R:L[cur].k, sx:u}:null;
+  return {a:a, modes:modes, cur:N?L[cur]:null, nxt:nxt>=0?L[nxt]:null, u:u, wipe:wipe}; }
 function msCamAt(t){ var K=MS.keys.slice().sort(function(x,y){ return x.t-y.t; }); if(!K.length) return null; if(K.length===1||t<=K[0].t) return Object.assign({}, K[0].cam); if(t>=K[K.length-1].t) return Object.assign({}, K[K.length-1].cam);
   var i=0; while(i<K.length-2&&t>K[i+1].t) i++; var u=(t-K[i].t)/Math.max(1e-6, K[i+1].t-K[i].t), g=function(j){ return K[Math.max(0, Math.min(K.length-1, j))]; }; if(i===0) u=u<0.5?2*u*u:u; if(i===K.length-2) u=u>0.5?1-2*(1-u)*(1-u):u;
   var E=function(k){ return wtEyeOf(k.cam); }, T=function(k){ return [k.cam.tx, k.cam.ty, k.cam.tz]; }; return wtCamOf(wtCR(E(g(i-1)), E(g(i)), E(g(i+1)), E(g(i+2)), u), wtCR(T(g(i-1)), T(g(i)), T(g(i+1)), T(g(i+2)), u)); }
@@ -21449,7 +21453,7 @@ function msDraw(){ var d=msUI(); if(!d) return; d.style.display=MS.on?'block':'n
     var h='<div class="msTl"><button class="pri msPlay" id="msPlayB">'+(MS.play?'❚❚':'▶')+'</button><span id="msTm" class="msTm"></span><div id="msTrack"><div class="msBands">'+L2.map(function(o,i){ return '<div class="msBand" style="left:'+(i*MS.per/T*100)+'%;width:'+(MS.per/T*100)+'%;background:'+TLX_COL[o.k%5]+'">'+msEsc(o.s.label||o.s.name)+'</div>'; }).join('')+
       L2.slice(1).map(function(o,i){ var b2=(i+1)*MS.per, f=MS.kind==='cut'?0:Math.min(MS.fade, MS.per*0.9); return f?'<div class="msFade" style="left:'+((b2-f/2)/T*100)+'%;width:'+(f/T*100)+'%"></div>':''; }).join('')+'</div><div class="msKeys">'+MS.keys.map(function(k,i){ return '<div class="msKf'+(i===MS.ksel?' on':'')+'" data-k="'+i+'" style="left:'+(k.t/T*100)+'%"></div>'; }).join('')+'</div><div id="msPh"></div></div>'+
       '<button id="msKeyB" title="Use the view you see now at this moment">◆ Keyframe</button><button id="msOrbB" title="Half a turn round the middle of the view over the whole timelapse">↻ Orbit</button><button id="msSetB" title="Timing, change and video size">⚙</button><button class="pri" id="msRenB">Render</button></div>';
-    if(MS.showSet) h+='<div class="msSet"><label>Seconds per scan <input id="msPer" type="number" min="1" max="30" step="0.5" value="'+MS.per+'"></label><label>Change <select id="msKind">'+[['fade','Fade'],['dissolve','Dissolve'],['cut','Cut']].map(function(o){ return '<option value="'+o[0]+'"'+(MS.kind===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></label><label>Change takes <input id="msFade" type="number" min="0.2" max="10" step="0.1" value="'+MS.fade+'"> s</label><label><input id="msNames" type="checkbox"'+(MS.names?' checked':'')+'> scan names</label><label>Size <select id="msRes">'+[['720','720p'],['1080','1080p'],['2160','4K']].map(function(o){ return '<option value="'+o[0]+'"'+(MS.res===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></label>'+(MS.ksel>=0&&MS.keys[MS.ksel]?'<button id="msKUp">Keyframe '+(MS.ksel+1)+': use this view</button><button id="msKDel">Remove keyframe</button>':'')+'<button id="msKClr"'+(MS.keys.length?'':' disabled')+'>Clear keyframes</button></div>';
+    if(MS.showSet) h+='<div class="msSet"><label>Seconds per scan <input id="msPer" type="number" min="1" max="30" step="0.5" value="'+MS.per+'"></label><label>Change <select id="msKind">'+[['wipe','Wipe'],['fade','Fade'],['dissolve','Dissolve'],['cut','Cut']].map(function(o){ return '<option value="'+o[0]+'"'+(MS.kind===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></label><label>Change takes <input id="msFade" type="number" min="0.2" max="10" step="0.1" value="'+MS.fade+'"> s</label><label><input id="msNames" type="checkbox"'+(MS.names?' checked':'')+'> scan names</label><label>Size <select id="msRes">'+[['720','720p'],['1080','1080p'],['2160','4K']].map(function(o){ return '<option value="'+o[0]+'"'+(MS.res===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></label>'+(MS.ksel>=0&&MS.keys[MS.ksel]?'<button id="msKUp">Keyframe '+(MS.ksel+1)+': use this view</button><button id="msKDel">Remove keyframe</button>':'')+'<button id="msKClr"'+(MS.keys.length?'':' disabled')+'>Clear keyframes</button></div>';
     if(miss.length) h+='<div class="msWarn">Not aligned yet, so not in the timelapse: '+miss.map(function(s){ return '<b>'+msEsc(s.label||s.name)+'</b>'; }).join(', ')+'. Align them in the Align tab.</div>';
     q('.msBottom').innerHTML=h; var g=function(id){ return document.getElementById(id); };
     g('msPlayB').onclick=msPlay; g('msKeyB').onclick=msKey; g('msOrbB').onclick=msOrbit; g('msRenB').onclick=msRender; g('msSetB').onclick=function(){ MS.showSet=!MS.showSet; msDraw(); };
@@ -21568,8 +21572,8 @@ function msExport(){ var S=msS(), X=APP.res.xf||{M:[1,0,0,0,1,0,0,0,1], zOff:0, 
   toast((done?done+' lined-up cop'+(done>1?'ies':'y')+' saved to Downloads. Open them with the first scan in any splat viewer.':'Nothing saved.')+(skip.length?' Could not save: '+skip.join(', ')+' (only binary PLY files can be rewritten).':''), 7000); }
 /* ---------- saved with the job: captures, names, views and alignments; re-adding a file puts it back where it was ---------- */
 sbAfter('ceiJob', function(o){ try{ if(o.model&&o.model.props) o.model.props=o.model.props.filter(function(p){ return !p.cmp; }); var S=msS();
-      o.compare={scans:S.slice(1).map(function(s){ var p=cmpProp(s); return {file:p?p.file:s.name, src:p?p.src:'', label:s.label||'', aligned:!!s.msAligned, M:s.msM||null, view:s.msView==null?255:s.msView}; }), refLabel:S[0].label||'', keys:MS.keys, per:MS.per, fade:MS.fade, kind:MS.kind}; }catch(e){ console.warn(e); } return o; });
-sbAfter('ceiApplyJob', function(r, o){ try{ var C=o.compare; if(C&&C.scans&&C.scans.length){ MS.pend=C.scans.slice(); if(C.refLabel) CMPV.labelA=C.refLabel; if(C.keys) MS.keys=C.keys; ['per','fade','kind'].forEach(function(k){ if(C[k]!=null) MS[k]=C[k]; });
+      o.compare={scans:S.slice(1).map(function(s){ var p=cmpProp(s); return {file:p?p.file:s.name, src:p?p.src:'', label:s.label||'', aligned:!!s.msAligned, M:s.msM||null, view:s.msView==null?255:s.msView}; }), refLabel:S[0].label||'', keys:MS.keys, per:MS.per, fade:MS.fade, kind:MS.kind, kindSet:true}; }catch(e){ console.warn(e); } return o; });
+sbAfter('ceiApplyJob', function(r, o){ try{ var C=o.compare; if(C&&C.scans&&C.scans.length){ MS.pend=C.scans.slice(); if(C.refLabel) CMPV.labelA=C.refLabel; if(C.keys) MS.keys=C.keys; ['per','fade','kind'].forEach(function(k){ if(C[k]!=null) MS[k]=C[k]; }); if(MS.kind==='fade'&&!C.kindSet) MS.kind='wipe';
         toast('This job has '+C.scans.length+' compare scan'+(C.scans.length>1?'s':'')+'. Open Compare and add '+(C.scans.length>1?'them':'it')+' again: '+(C.scans.length>1?'they line':'it lines')+' up by '+(C.scans.length>1?'themselves':'itself')+'.', 8000); } }catch(e){ console.warn(e); } return r; });
 sbAfter('cmpAddFile', function(r, f){ if(MS.pend&&MS.pend.length&&f){ var name=f.name, size=f.size, n=0; (function wait(){ var S=msS(), s=S.filter(function(x){ var p=cmpProp(x); return p&&p.file===name&&!x.msRestored; }).pop();
         if(!s){ if(n++<600) setTimeout(wait, 200); return; } var i=MS.pend.findIndex(function(q){ return q.file===name; }); if(i<0) return; var q=MS.pend.splice(i,1)[0]; s.msRestored=true; if(q.label) s.label=q.label;
