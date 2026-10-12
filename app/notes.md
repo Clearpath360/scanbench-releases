@@ -1,4 +1,6 @@
-Scan Bench r316
+Scan Bench r317
 
-- LCC and LCC2 scans now open in metres, so Volume shows m3 and m2 straight away.
-- The Scale panel says so, and setting a scale there still corrects it.
+- Volume areas can now be edited on the plan or the 3D scan: drag a corner to move it.
+- Drag the small mid point on an edge to add a corner.
+- Double-click a corner, or select it and press Delete, to take it off.
+- Ctrl+Z undoes each edit; totals update when you let go.
