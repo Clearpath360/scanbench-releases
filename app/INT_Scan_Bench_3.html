@@ -2217,7 +2217,7 @@ function buildSidebar(){
       '<div class="row"><button class="btn p" id="btnScale">Set scale</button><button class="btn sm" id="btnScaleClear">Clear</button></div>'+
       '<div class="row"><label title="Measure something you know (a door, a paving slab, a kerb) with Measure (M), then type its real length here">Last measure is really</label><input type="number" id="cRealLen" step="0.01" placeholder="e.g. 0.90"><span class="mini">m</span></div>'+
       '<div class="row"><button class="btn sm" id="btnScaleLen">Scale from last measure</button></div>'+
-      (APP.scaleSet ? '<div class="okbox">Scaled. Factor '+fmt(P.scaleFactor,5)+'. All figures are metres.</div>' : '')+
+      (APP.scaleSet ? '<div class="okbox">'+(APP.scaleAuto&&P.scaleFactor===1?'LCC scan from the scanner: already in metres. Set a scale below only to correct it.':'Scaled. Factor '+fmt(P.scaleFactor,5)+'. All figures are metres.')+'</div>' : '')+
       '<div class="hint">Ceiling is found by plan coverage per height slice, taking the lowest full-plan surface above the floor block. Never by point density.</div>');
 
   var cr = P.crop, rb = R? R.raw : null;
@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r315';
+var SB_BUILD='2026-10-12 r316';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -18320,7 +18320,7 @@ async function lccOpen(R, level, sky, lod){ try{
     if(sky){ setStatus('Reading the sky'); skyR=await lccEnvRows(R); }
     if(lod){ var tgt=Math.max(250000, R.counts[level]/4), lv=level; while(lv<R.counts.length-1&&R.counts[lv]>tgt) lv++; if(lv>level){ setStatus('Reading the lighter level for moving'); lodR=await lccLevelRows(R, lv); lodR.level=lv; } }
     LCCI.sky=skyR?{raw:skyR, on:true, set:null, key:''}:null; LCCI.lod=lodR?{raw:lodR, on:true, set:null, key:''}:null; LCCI.info={name:R.name, kind:R.kind, level:level, counts:R.counts.slice()};
-    APP.busy=false; LCCI.pass=true; try{ openFile(new File([out], R.name.replace(/\.lcc2?$/i,'')+'.ply', {type:'application/octet-stream'})); } finally{ LCCI.pass=false; }
+    APP.busy=false; LCCI.pass=true; /* LCC and LCC2 come from the XGRIDS scanners in true metres */ if(!APP.scaleSet||APP.scaleAuto){ APP.scaleSet=true; APP.scaleAuto=true; } try{ openFile(new File([out], R.name.replace(/\.lcc2?$/i,'')+'.ply', {type:'application/octet-stream'})); } finally{ LCCI.pass=false; }
     var fi=document.getElementById('fileinfo'); if(fi) fi.textContent=R.name+'  '+(R.kind==='lcc2'?'LCC2':'LCC')+(level?' level '+level:' full detail');
   }catch(e){ APP.busy=false; setProgress(null); setStatus(''); toast('Could not open the LCC: '+e.message, 8000); } }
 /* any other file opened: the LCC extras go */
@@ -23414,6 +23414,10 @@ sbAfter('sbPanel', function(r){ try{ if(SBP.key==='volume') volPanel(); else if(
     '#sbVolSec .vRes{display:grid;grid-template-columns:1fr 1fr;gap:6px}#sbVolSec .vRes div{border:1px solid var(--sbLn);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column}#sbVolSec .vRes span{font-size:11px;color:var(--sbTx2)}#sbVolSec .vRes b{font-size:15px}#sbVolSec .vCut{color:#c62828}#sbVolSec .vFill{color:#2c5fd8}'+
     '#sbVolSec .vKey{margin:8px 0}#sbVolSec .vKey span{display:block;height:8px;border-radius:4px}#sbVolSec .vKey div{display:flex;justify-content:space-between}#sbVolSec .vWarn{color:#b45309}';
   document.head.appendChild(c); })();
+
+/* a scale taken automatically from an LCC import does not carry over to the next, non-LCC file */
+sbBefore('openFile', function(f){ try{ if(APP.scaleAuto&&!(typeof LCCI!=='undefined'&&LCCI.pass)&&(APP.params.scaleFactor||1)===1){ APP.scaleSet=false; APP.scaleAuto=false; } }catch(e){} });
+['#btnScale','#btnScaleLen'].forEach(function(id){ window.addEventListener('click', function(e){ if(e.target&&e.target.closest&&e.target.closest(id)) APP.scaleAuto=false; }, true); });
 
 
 </script>
