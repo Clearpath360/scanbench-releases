@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r331';
+var SB_BUILD='2026-10-12 r332';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -21402,8 +21402,7 @@ async function msRender(){ if(MS.busy) return; if(msAligned().length<2){ toast('
   var box=msProg(), enc=new VideoEncoder({output:function(chunk, meta){ var b=new Uint8Array(chunk.byteLength); chunk.copyTo(b); samples.push({data:b, key:chunk.type==='key'}); if(meta&&meta.decoderConfig&&meta.decoderConfig.description) desc=meta.decoderConfig.description; }, error:function(e){ err=e; }}); enc.configure(cfg);
   try{ glCv.width=Wd; glCv.height=H; GL.viewport(0,0,Wd,H);
     for(var f=0; f<N; f++){ if(MS.cancel||err) break; var t=f/fps; msApply(t); if(typeof splatSort==='function'&&SPL.ready) splatSort(); await msWait(); gl_render(); x.drawImage(glCv, 0, 0);
-      if(MS.names&&MS.st&&MS.st.cur){ var st=MS.st, one=function(s, al){ if(!s||al<=0.01) return; var txt=s.label||s.name, fs=Math.round(H*0.04), pad=Math.round(H*0.025); x.save(); x.globalAlpha=al; x.font='600 '+fs+'px system-ui,Segoe UI,sans-serif'; var w=x.measureText(txt).width; x.fillStyle='rgba(15,20,28,0.6)'; x.fillRect(pad, pad, w+pad*2, fs+pad); x.fillStyle='#fff'; x.textBaseline='middle'; x.fillText(txt, pad*2, pad+(fs+pad)/2); x.restore(); };
-        if(st.nxt){ one(st.cur.s, 1-st.u); one(st.nxt.s, st.u); } else one(st.cur.s, 1); }
+      if(MS.names&&MS.st&&MS.st.cur){ if(typeof tlpCapDraw==='function') tlpCapDraw(x, Wd, H, t); }
       var fr=new VideoFrame(cv, {timestamp:Math.round(f*1e6/fps), duration:Math.round(1e6/fps)}); enc.encode(fr, {keyFrame:f%(fps*2)===0}); fr.close();
       while(enc.encodeQueueSize>3) await new Promise(function(r){ setTimeout(r, 2); }); if(f%3===0){ box.set(f/N, cv); await new Promise(function(r){ setTimeout(r, 0); }); } }
     await enc.flush(); }catch(e){ err=e; }
@@ -23325,7 +23324,7 @@ sbAfter('gl_render', function(r){ try{ if(!miniVP) volOvDraw(); }catch(e){ conso
 
 /* ---------- drawing an area: click round it, click the first point (or press Enter) to finish ---------- */
 function volStartDraw(){ VOL.drawing=true; VOL.draft=[]; VOL.hover=null; toast('Click round the area. Click the first point or press Enter to finish, Backspace takes the last point off, Esc cancels.', 5000); volPanel(); }
-function volFinish(){ var V=volM(), L=VOL.draft; VOL.drawing=false; VOL.hover=null; if(L.length>=3&&V){ pushUndo(); V.areas.push({name:'Area '+(V.areas.length+1), pts:L.map(function(q){ return [+q[0].toFixed(3), +q[1].toFixed(3), +(q[2]||0).toFixed(3)]; })}); afterEdit(); } VOL.draft=[]; volRunSoon(); volPanel(); planDrawSoon(); requestRender(false); }
+function volFinish(){ var V=volM(), L=VOL.draft; VOL.drawing=false; try{ var tt=document.getElementById('toast'); if(tt) tt.classList.remove('on'); }catch(e){} VOL.hover=null; if(L.length>=3&&V){ pushUndo(); V.areas.push({name:'Area '+(V.areas.length+1), pts:L.map(function(q){ return [+q[0].toFixed(3), +q[1].toFixed(3), +(q[2]||0).toFixed(3)]; })}); afterEdit(); } VOL.draft=[]; volRunSoon(); volPanel(); planDrawSoon(); requestRender(false); }
 function volCancel(){ VOL.drawing=false; VOL.draft=[]; VOL.hover=null; volPanel(); planDrawSoon(); requestRender(false); }
 function volWorldAt(e){ if(APP.view==='3d'){ if(e.target!==glCv) return null; var r=glCv.getBoundingClientRect(), h=stScanHit(mdl3Ctx().ray(e.clientX-r.left, e.clientY-r.top)); return h?h.p.slice():null; }
   if(e.target!==planCv) return null; var p=evPos(e), z=VOL.out?volZat(VOL.out.Zb, VOL.out.g, p.wx, p.wy):NaN; return [p.wx, p.wy, z===z?z:(typeof mdlFloor==='function'?mdlFloor():0)]; }
@@ -23488,7 +23487,9 @@ function secSliceGrid(D){ var n=D.X.length; if(!n) return null; var lo=1e30, hi=
 
 /* ---------- drawing the panel ---------- */
 /* turbo-style rainbow: many clearly different colours from deep blue through green and yellow to dark red */
-function secRamp(t){ t=0.08+0.86*Math.max(0,Math.min(1,t)); var r=34.61+t*(1172.33-t*(10793.56-t*(33300.12-t*(38394.49-t*14825.05)))), g=23.31+t*(557.33+t*(1225.33-t*(3574.96-t*(1073.77+t*707.56)))), b=27.2+t*(3211.1-t*(15327.97-t*(27814-t*(22569.18-t*6838.66)))); return [Math.max(0,Math.min(255,r)), Math.max(0,Math.min(255,g)), Math.max(0,Math.min(255,b))]; }
+/* low to high reads blue, pale, red: one direction of change per colour family, no greens or yellows to read as 'good' or 'bad' */
+var SEC_STOPS=[[0,[33,64,120]],[0.17,[52,113,174]],[0.33,[128,178,212]],[0.5,[240,236,224]],[0.67,[245,187,118]],[0.83,[219,113,61]],[1,[150,36,30]]];
+function secRamp(t){ t=Math.max(0,Math.min(1,t)); for(var k=1;k<SEC_STOPS.length;k++){ if(t<=SEC_STOPS[k][0]){ var a=SEC_STOPS[k-1], b=SEC_STOPS[k], u=(t-a[0])/(b[0]-a[0]); return [a[1][0]+(b[1][0]-a[1][0])*u, a[1][1]+(b[1][1]-a[1][1])*u, a[1][2]+(b[1][2]-a[1][2])*u]; } } return SEC_STOPS[SEC_STOPS.length-1][1].slice(); }
 /* in Bands each contour step gets its own colour, so a few millimetres reads as a different colour */
 function secCol(z, S0){ var t=(z-S0.zl)/(S0.zh-S0.zl); if(SEC.cmode!=='smooth'){ var nb=Math.max(1, Math.round((S0.zh-S0.zl)/S0.ci)), k=Math.max(0, Math.min(nb-1, Math.floor(t*nb))); t=nb>1?k/(nb-1):0.5; } return secRamp(t); }
 function secFitView(lo, hi, ylo, yhi, W, H){ var m=0.06, ppm=Math.min(W/((hi-lo)*(1+2*m)||1), H/((yhi-ylo)*(1+2*m)||1)); return {cx:(lo+hi)/2, cy:(ylo+yhi)/2, ppm:ppm}; }
@@ -23931,7 +23932,7 @@ window.addEventListener('mouseup', function(e){ if(levOpen()&&e.button===0&&e.ta
 window.addEventListener('keydown', function(e){ if(!levOpen()) return; var t=e.target&&e.target.tagName; if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA') return;
   if(e.key==='Escape'&&(LEV.drawing||LEV.tool)){ LEV.drawing=false; LEV.draft=[]; LEV.tool=null; LEV.p1=null; levPanel(); planDrawSoon(); e.stopImmediatePropagation(); }
   else if(e.key==='Enter'&&LEV.drawing){ levFinish(); e.stopImmediatePropagation(); } else if((e.key==='Backspace'||e.key==='Delete')&&LEV.drawing){ LEV.draft.pop(); planDrawSoon(); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
-function levFinish(){ var V=levM(); LEV.drawing=false; if(LEV.draft.length>=3){ pushUndo(); V.area=LEV.draft.slice(); afterEdit(); } LEV.draft=[]; levRunSoon(); levPanel(); planDrawSoon(); }
+function levFinish(){ var V=levM(); LEV.drawing=false; try{ var tt=document.getElementById('toast'); if(tt) tt.classList.remove('on'); }catch(e){} if(LEV.draft.length>=3){ pushUndo(); V.area=LEV.draft.slice(); afterEdit(); } LEV.draft=[]; levRunSoon(); levPanel(); planDrawSoon(); }
 
 /* ---------- exports ---------- */
 function levBoxAround(){ var V=levM(), xs=V.area.map(function(q){ return q[0]; }), ys=V.area.map(function(q){ return q[1]; }), b=[Math.min.apply(null,xs)-2, Math.min.apply(null,ys)-2, Math.max.apply(null,xs)+2, Math.max.apply(null,ys)+2]; b.only='lev'; return b; }
@@ -24028,6 +24029,109 @@ function cmpAddPick(){ var d=document.getElementById('lcDlg'); if(!d){ d=documen
   d.querySelectorAll('[data-k]').forEach(function(b){ b.onclick=function(){ var k=b.dataset.k; d.hidden=true; if(k==='x'){ LCCI.toCmp=false; return; }
     if(k==='dir'){ LCCI.toCmp=true; lccPickDir(); return; }
     LCCI.toCmp=false; var fi=document.getElementById('msFile'); if(typeof MS!=='undefined'&&MS.on&&fi){ fi.click(); return; } var a=document.getElementById('cmpAdd'); if(a){ cmpAddPick._ply=true; try{ a.click(); } finally{ cmpAddPick._ply=false; } } }; }); }
+
+/* ===== Timelapse polish: capture dates as captions, one clean caption box with a progress bar, a slow camera move when no keyframes are set,
+   and the stray splats round the outside trimmed off while the timelapse plays or renders ===== */
+if(MS.autoMove==null) MS.autoMove=true; if(MS.trim==null) MS.trim=true;
+/* the date each scan was saved: XGRIDS folders carry no capture date, so it is the .lcc2 (or PLY) file's own date */
+function tlpDate(ms){ if(!ms) return ''; try{ return new Date(ms).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}); }catch(e){ return ''; } }
+sbBefore('lccFrom', function(list){ try{ var a=Array.prototype.slice.call(list||[]).map(function(it){ return it.file||it; }).filter(function(f){ return f&&/\.lcc2?$/i.test(f.name); })[0]; LCCI.lastDate=a?a.lastModified:0; }catch(e){} });
+sbBefore('openFile', function(f){ try{ if(f&&!/\.lcc2?$/i.test(f.name)) APP.fileDate=(typeof LCCI!=='undefined'&&LCCI.pass&&LCCI.lastDate)?LCCI.lastDate:(f.lastModified||0); }catch(e){} });
+sbBefore('cmpAddFile', function(f){ try{ CMPV._addDate=(typeof LCCI!=='undefined'&&LCCI._cmpDate)?LCCI._cmpDate:(f&&f.lastModified)||0; LCCI._cmpDate=0; }catch(e){} });
+sbAfter('cmpAddFile', function(r){ var d=CMPV._addDate, n0=CMPV.scans.length; CMPV._addDate=0; var k=0; (function wait(){ var s=CMPV.scans[CMPV.scans.length-1]; if(CMPV.scans.length>n0&&s){ if(s.date==null) s.date=d; return; } if(k++<600) setTimeout(wait, 200); })(); return r; });
+sbBefore('lccOpen', function(){ try{ if(LCCI.toCmp) LCCI._cmpDate=LCCI.lastDate||0; }catch(e){} });
+sbAfter('cmpList', function(L){ try{ if(L&&L[0]) L[0].date=APP.fileDate||0; }catch(e){} return L; });
+/* what a scan is called on screen and in the video: a name typed in wins, otherwise its date */
+function tlpCap(s){ if(!s) return ''; var lab=s.label||'', def=!lab||/^Scan \d+$/.test(lab), d=tlpDate(s.date); return def&&d?d:(lab||s.name||''); }
+sbAfter('msLab', function(r){ try{ var u=msUI(); if(!u) return r; var d=u.querySelector('.msLab'), st=MS.st; if(d&&d.style.display!=='none'&&st&&st.cur){ var s=(st.nxt&&st.u>0.5)?st.nxt.s:st.cur.s; d.textContent=tlpCap(s); } }catch(e){} return r; });
+/* the caption in the video: one box bottom left, the old date giving way to the new, and a thin bar along the bottom showing how far through it is */
+function tlpCapDraw(x, W, H, t){ var st=MS.st; if(!st||!st.cur) return; var a=tlpCap(st.cur.s), b=st.nxt?tlpCap(st.nxt.s):'', u=st.nxt?st.u:0, fs=Math.round(H*0.045), pad=Math.round(H*0.022), x0=Math.round(H*0.035), y1=H-Math.round(H*0.06);
+  x.save(); x.font='700 '+fs+'px system-ui,Segoe UI,sans-serif'; var w=Math.max(x.measureText(a).width, b?x.measureText(b).width:0)+pad*2, h=fs+pad*1.4, y0=y1-h;
+  x.fillStyle='rgba(255,255,255,0.92)'; x.beginPath(); if(x.roundRect) x.roundRect(x0, y0, w, h, Math.round(h*0.22)); else x.rect(x0, y0, w, h); x.fill();
+  x.textBaseline='middle'; x.fillStyle='#14202b'; x.globalAlpha=1-u; x.fillText(a, x0+pad, y0+h/2); if(b){ x.globalAlpha=u; x.fillText(b, x0+pad, y0+h/2); } x.globalAlpha=1;
+  var T=msTT(), L=msAligned(), bw=W-x0*2, by=H-Math.round(H*0.028), bh=Math.max(3, Math.round(H*0.006)); x.fillStyle='rgba(255,255,255,0.35)'; x.fillRect(x0, by, bw, bh); x.fillStyle='#ffffff'; x.fillRect(x0, by, bw*Math.min(1, t/T), bh);
+  x.fillStyle='rgba(20,32,43,0.9)'; for(var i=1;i<L.length;i++){ var mx=x0+bw*(i*MS.per/T); x.fillRect(mx-1, by-bh, 2, bh*3); } x.restore(); }
+/* a slow push in with a small turn when the timelapse has no keyframes, so the video is not a still picture */
+function tlpAutoKeys(){ var c=msCamCopy(), T=msTT(), a=Object.assign({}, c), b=Object.assign({}, c); a.dist=c.dist*1.06; a.yaw=c.yaw-0.10; b.dist=c.dist*0.90; b.yaw=c.yaw+0.10; return [{t:0, cam:a}, {t:T, cam:b}]; }
+function tlpEnsureMove(){ if(MS.autoMove===false||(MS.keys&&MS.keys.length)) return; MS.keys=tlpAutoKeys(); MS._autoKeys=true; MS.ksel=-1; try{ msApply(MS.t, true); msDraw(); }catch(e){} toast('Added a slow camera move. Set your own keyframes, or untick Slow move in ⚙, to change it.', 5000); }
+sbBefore('msPlay', function(){ if(!MS.play) tlpEnsureMove(); });
+sbBefore('msRender', function(){ if(!MS.busy) tlpEnsureMove(); });
+/* stray splats round the outside: while the timelapse is showing, keep to the scan's own footprint plus a metre */
+sbAfter('waUniforms', function(o){ try{ if(!o||o.boxOn||!MS.trim||!MS.on||MS.tab!=='time'||!APP.res||!APP.res.robust) return o; var R=APP.res.robust, m=1.0; if(!R.x||!R.y) return o; o.boxOn=1; o.box=[R.x[0]-m, R.y[0]-m, R.x[1]+m, R.y[1]+m]; }catch(e){} return o; });
+/* the two settings, beside the timing ones */
+sbAfter('msDraw', function(r){ try{ var u=msUI(), S=u&&u.querySelector('.msSet'); if(!S||S.querySelector('#tlpMove')) return r; var mk=function(id, txt, on, fn){ var l=document.createElement('label'); l.innerHTML='<input type="checkbox" id="'+id+'"'+(on?' checked':'')+'> '+txt; l.querySelector('input').onchange=function(){ fn(this.checked); }; S.appendChild(l); };
+    mk('tlpMove', 'Slow move when no keyframes', MS.autoMove!==false, function(v){ MS.autoMove=v; if(!v&&MS._autoKeys){ MS.keys=[]; MS._autoKeys=false; msDraw(); } });
+    mk('tlpTrim', 'Trim stray splats round the edge', MS.trim!==false, function(v){ MS.trim=v; requestRender(false); }); }catch(e){ console.warn(e); } return r; });
+
+/* ===== Sections export, rebuilt as a long section in the usual site drawing layout:
+   a plan strip on top (scan photo when there is one), the ground profile in the middle, and the level table underneath,
+   all on the same chainage so a level in the table sits straight under its point on the profile and the plan.
+   Then the height map on the photo with a stepped key that says the level range of every colour, then the key plan. ===== */
+function secxStations(L){ var sp=SEC.spot>0?SEC.spot:secNiceStep(L, 12); while(L/sp>24) sp*=2; return sp; }
+function secxFall(dz, dx){ if(!(dx>0)) return ''; var g=Math.abs(dz)/dx; if(g<1e-4) return 'level'; return '1 in '+(1/g>=1000?'1000+':Math.round(1/g)); }
+/* the plan strip: photo from above along the line, or the height map in greys when the scan has no photo */
+function secxStrip(W, Hs, x0, x1, hw){ var G=secGeom(SEC.which), L=x1-x0, xc=(x0+x1)/2, c0=G.at(xc,0), up3=SEC.which==='A'?[ceiN()[0],ceiN()[1],0]:[CEI.axis[0],CEI.axis[1],0], rb=APP.res.robust, zt=(APP.zCutOn&&CEI.zhi!=null)?CEI.zhi:rb.z[1];
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=Hs; var c=cv.getContext('2d'); c.fillStyle='#e7e5e0'; c.fillRect(0,0,W,Hs); var photo=null;
+  if(APP.canSplat){ try{ photo=splatSnapshot({halfW:L/2, halfH:hw, px:W, py:Hs, eye:[c0[0],c0[1],zt+1], target:[c0[0],c0[1],zt-10], up:up3, slab:[0,1000], zmax:zt, zmin:-1e9}); }catch(e){ console.warn(e); } }
+  if(photo) c.drawImage(photo, 0, 0, W, Hs);
+  else { var S0=secSlice3(); if(S0){ var g=S0.g, s=W/L, im=c.createImageData(W, Hs), d=im.data, lo=S0.zl, hi=S0.zh; for(var py=0;py<Hs;py++){ var T=(Hs/2-py)/s; for(var px=0;px<W;px++){ var X=x0+px/s, z=volZat(S0.Z, g, X, T), o=(py*W+px)*4; if(!(z===z)){ d[o]=d[o+1]=d[o+2]=231; d[o+3]=255; continue; } var v=Math.round(90+140*Math.max(0,Math.min(1,(z-lo)/(hi-lo||1)))); d[o]=d[o+1]=d[o+2]=v; d[o+3]=255; } } c.putImageData(im, 0, 0); } }
+  return {cv:cv, photo:!!photo}; }
+function secxLongSheet(){ var D=SEC.data, Gd=D.gd||(D.gd=secGround(D)); if(!Gd) return null; var nm=SEC.which==='A'?'A':'B', x0=Gd.lo, x1=Gd.hi, L=x1-x0, sp=secxStations(L);
+  var W=3000, H=1900, mL=330, mR=70, PW=W-mL-mR, sx=PW/L, X=function(x){ return mL+(x-x0)*sx; };
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var c=cv.getContext('2d'); c.fillStyle='#ffffff'; c.fillRect(0,0,W,H); c.textBaseline='middle';
+  /* stations and their levels */ var st=[]; for(var x=Math.ceil(x0/sp-1e-6)*sp; x<=x1+1e-6; x+=sp) st.push(x); if(st[0]-x0>sp*0.3) st.unshift(x0); if(x1-st[st.length-1]>sp*0.3) st.push(x1);
+  var lev=st.map(function(x){ return secGroundAt(Gd, x); }), zs=[]; for(var i=0;i<Gd.z.length;i++) if(Gd.z[i]===Gd.z[i]) zs.push(Gd.z[i]); zs.sort(function(a,b){ return a-b; }); if(!zs.length) return null;
+  var zlo=zs[Math.floor(zs.length*0.01)], zhi=zs[Math.floor(zs.length*0.99)];
+  /* 1. plan strip */ var sTop=40, sH=440, hw=Math.max(SEC.band*0.5+1.0, L*sH/PW/2); var S=secxStrip(PW, sH, x0, x1, hw); c.drawImage(S.cv, mL, sTop); c.strokeStyle='#9ca3af'; c.lineWidth=2; c.strokeRect(mL, sTop, PW, sH);
+  c.strokeStyle=SEC.which==='A'?'#f59e0b':'#16a34a'; c.lineWidth=6; c.beginPath(); c.moveTo(mL, sTop+sH/2); c.lineTo(mL+PW, sTop+sH/2); c.stroke();
+  c.font='800 46px system-ui'; c.fillStyle='#111827'; c.textAlign='center'; [[mL-40, nm],[mL+PW+30, nm]].forEach(function(q){ c.fillText(q[1], q[0], sTop+sH/2); });
+  c.font='600 26px system-ui'; c.textAlign='left'; c.fillStyle='#374151'; c.fillText('Plan along the line'+(S.photo?' (scan photo)':' (heights in grey)'), 8, sTop-18>8?sTop-18:12);
+  st.forEach(function(x){ var px=X(x); c.fillStyle='#111827'; c.fillRect(px-2, sTop+sH/2-16, 4, 32); });
+  /* 2. profile */ var pTop=sTop+sH+70, pH=760, pad=(zhi-zlo)*0.18+0.02, ylo=zlo-pad, yhi=zhi+pad, ey=Math.max(1, (pH/(yhi-ylo))/sx), eyN=ey<1.5?1:ey<3?2:ey<7.5?5:ey<15?10:ey<35?20:ey<75?50:100; ylo=(zlo+zhi)/2-pH/(sx*eyN)/2; yhi=ylo+pH/(sx*eyN); var Y=function(z){ return pTop+pH-(z-ylo)/(yhi-ylo)*pH; };
+  var tk=secNiceStep(yhi-ylo, 6); c.font='500 26px system-ui'; c.textAlign='right'; for(var z=Math.ceil(ylo/tk)*tk; z<=yhi; z+=tk){ var py=Y(z); c.strokeStyle='#e5e7eb'; c.lineWidth=2; c.beginPath(); c.moveTo(mL, py); c.lineTo(mL+PW, py); c.stroke(); c.fillStyle='#4b5563'; c.fillText(levN(z), mL-14, py); }
+  st.forEach(function(x){ c.strokeStyle='#f1f2f4'; c.lineWidth=2; c.beginPath(); c.moveTo(X(x), pTop); c.lineTo(X(x), pTop+pH); c.stroke(); });
+  /* the ground: filled, with a bold top line; gaps under half a metre are bridged, longer ones (no scan) are left open */ var GZ=Float32Array.from(Gd.z), gapB=Math.max(2, Math.round(0.5/Gd.bw)), lastI=-1; for(var b0=0;b0<GZ.length;b0++){ if(GZ[b0]===GZ[b0]){ if(lastI>=0&&b0-lastI>1&&b0-lastI<=gapB){ for(var q0=lastI+1;q0<b0;q0++) GZ[q0]=GZ[lastI]+(GZ[b0]-GZ[lastI])*(q0-lastI)/(b0-lastI); } lastI=b0; } }
+  var segs=[], cur=null; for(var b=0;b<GZ.length;b++){ var zz=GZ[b], xx=x0+b*Gd.bw; if(zz===zz&&xx<=x1){ if(!cur){ cur=[]; segs.push(cur); } cur.push([X(xx), Y(Math.max(ylo, Math.min(yhi, zz)))]); } else cur=null; }
+  c.save(); c.beginPath(); c.rect(mL, pTop, PW, pH); c.clip(); segs.forEach(function(q){ if(q.length<2) return; c.beginPath(); c.moveTo(q[0][0], pTop+pH); q.forEach(function(p){ c.lineTo(p[0], p[1]); }); c.lineTo(q[q.length-1][0], pTop+pH); c.closePath(); c.fillStyle='#e9dfcf'; c.fill(); c.beginPath(); q.forEach(function(p,k){ if(k) c.lineTo(p[0],p[1]); else c.moveTo(p[0],p[1]); }); c.strokeStyle='#1f2937'; c.lineWidth=5; c.lineJoin='round'; c.stroke(); }); c.restore();
+  c.strokeStyle='#6b7280'; c.lineWidth=2; c.strokeRect(mL, pTop, PW, pH);
+  st.forEach(function(x, k){ var z=lev[k]; if(!(z===z)) return; var px=X(x), py=Y(z); c.fillStyle='#ffffff'; c.strokeStyle='#1f2937'; c.lineWidth=4; c.beginPath(); c.arc(px, py, 9, 0, 7); c.fill(); c.stroke(); });
+  if(SEC.fp&&SEC.fp.length===2){ var fa=SEC.fp[0], fb=SEC.fp[1], za=secGroundAt(Gd, x0+fa), zb=secGroundAt(Gd, x0+fb); if(za===za&&zb===zb){ var ax=X(x0+fa), bx=X(x0+fb); c.strokeStyle='#2563eb'; c.lineWidth=6; c.beginPath(); c.moveTo(ax, Y(za)); c.lineTo(bx, Y(zb)); c.stroke(); var t=(zb<za?'falls ':'rises ')+mm(Math.abs(zb-za))+' · '+secxFall(zb-za, Math.abs(fb-fa)); c.font='700 30px system-ui'; c.textAlign='center'; var tw=c.measureText(t).width+28, mx=(ax+bx)/2, my=Math.min(Y(za),Y(zb))-40; c.fillStyle='#2563eb'; c.fillRect(mx-tw/2, my-24, tw, 48); c.fillStyle='#fff'; c.fillText(t, mx, my); } }
+  c.font='700 30px system-ui'; c.textAlign='left'; c.fillStyle='#111827'; c.fillText('Long section '+nm+'-'+nm+'   ·   levels in mm   ·   heights drawn ×'+eyN+' (true numbers)', mL, pTop-30);
+  /* 3. the level table, one column per station */ var tTop=pTop+pH+40, rowH=[90, 150, 130], rows=['Chainage (m)', 'Ground level (mm)', 'Fall to next'], ty=tTop;
+  c.textAlign='left'; rows.forEach(function(r, k){ c.fillStyle=k%2?'#ffffff':'#f6f7f9'; c.fillRect(0, ty, W, rowH[k]); c.fillStyle='#111827'; c.font='700 28px system-ui'; c.fillText(r, 16, ty+rowH[k]/2); ty+=rowH[k]; }); c.strokeStyle='#9ca3af'; c.lineWidth=2; c.strokeRect(0, tTop, W, ty-tTop);
+  var colW=PW/Math.max(1, st.length-1), big=colW>110; st.forEach(function(x, k){ var px=X(x); c.strokeStyle='#d1d5db'; c.lineWidth=2; c.beginPath(); c.moveTo(px, tTop); c.lineTo(px, tTop+rowH[0]+rowH[1]); c.stroke();
+    var y0=tTop, put=function(t, y, h, bold){ c.save(); c.translate(px, y+h/2); if(!big) c.rotate(-Math.PI/2); c.textAlign='center'; c.font=(bold?'700 ':'500 ')+(big?32:28)+'px system-ui'; c.fillStyle='#111827'; c.fillText(t, 0, 0); c.restore(); };
+    put(fmt(x-x0, sp<1?2:1), y0, rowH[0]); put(lev[k]===lev[k]?levN(lev[k]):'no scan', y0+rowH[0], rowH[1], true);
+    if(k<st.length-1){ var z2=lev[k+1], mx=(px+X(st[k+1]))/2, yy=y0+rowH[0]+rowH[1]; if(lev[k]===lev[k]&&z2===z2){ var dz=z2-lev[k], t1=(dz<0?'↓ ':dz>0?'↑ ':'')+Math.abs(Math.round(dz*1000))+' mm', t2=secxFall(dz, st[k+1]-x); c.save(); c.translate(mx, yy+rowH[2]/2); if(colW<170) c.rotate(-Math.PI/2); c.textAlign='center'; c.fillStyle=dz<0?'#1d4ed8':dz>0?'#b45309':'#374151'; c.font='700 27px system-ui'; c.fillText(t1, 0, -17); c.font='500 24px system-ui'; c.fillText(t2, 0, 17); c.restore(); } } });
+  var Hc=Math.ceil(ty+20), out=document.createElement('canvas'); out.width=W; out.height=Hc; out.getContext('2d').drawImage(cv, 0, 0); 
+  return {cv:out, st:st, lev:lev, eyN:eyN, zlo:zs[0], zhi:zs[zs.length-1], L:L, sp:sp}; }
+/* the height map on the photo, with the stepped key giving each colour's level range */
+function secxHeightSheet(){ var S0=secSlice3(); if(!S0) return null; var g=S0.g, x0=g.x0, x1=g.x0+g.nx*g.cell, L=x1-x0, W=3000, mL=60, PW0=W-2*mL, hw=SEC.band*0.5+0.6, rows=Math.max(1, Math.min(5, Math.round(Math.sqrt(0.45*L/(2*hw))))), PW=Math.min(14000, PW0*rows), sH=Math.max(160, Math.round(PW*2*hw/L)), s=PW/L, top=0;
+  var cv=document.createElement('canvas'), keyH=230; cv.width=PW+2*mL; cv.height=sH; var c=cv.getContext('2d'); c.fillStyle='#ffffff'; c.fillRect(0,0,cv.width,cv.height);
+  var S=secxStrip(PW, sH, x0, x1, hw); c.drawImage(S.cv, mL, top);
+  var ci=S0.ci, zl=S0.zl, zh=S0.zh, nb=Math.max(1, Math.round((zh-zl)/ci)), im=c.getImageData(mL, top, PW, sH), d=im.data, al=S.photo?0.55:0.85;
+  for(var py=0;py<sH;py++){ var T=(sH/2-py)/s; for(var px=0;px<PW;px++){ var z=volZat(S0.Z, g, x0+px/s, T); if(!(z===z)) continue; var C=secCol(z, S0), o=(py*PW+px)*4; d[o]=d[o]*(1-al)+C[0]*al; d[o+1]=d[o+1]*(1-al)+C[1]*al; d[o+2]=d[o+2]*(1-al)+C[2]*al; } } c.putImageData(im, mL, top);
+  if(!S0.cont3){ var kw=S0.win; S0.win=null; S0.cont3=secContours(S0); S0.win=kw; } var Sx=function(X,T){ return [mL+(X-x0)*s, top+sH/2-T*s]; }; c.save(); c.beginPath(); c.rect(mL, top, PW, sH); c.clip(); c.lineCap='round'; S0.cont3.forEach(function(Lc){ var maj=Math.abs(Math.round(Lc.z/ci)%5)===0; c.strokeStyle=maj?'rgba(17,24,39,.85)':'rgba(17,24,39,.35)'; c.lineWidth=maj?3:1.5; c.beginPath(); Lc.segs.forEach(function(q){ var a=Sx(q[0],q[1]), b=Sx(q[2],q[3]); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); }); c.stroke(); }); c.restore();
+  c.strokeStyle='#6b7280'; c.lineWidth=2; c.strokeRect(mL, top, PW, sH); c.setLineDash([18,10]); c.strokeStyle=SEC.which==='A'?'#f59e0b':'#16a34a'; c.lineWidth=4; c.beginPath(); c.moveTo(mL, top+sH/2); c.lineTo(mL+PW, top+sH/2); c.stroke(); c.setLineDash([]);
+  /* a long line is laid out in rows so the map is big enough to read */ var rw=PW/rows, rh=Math.round(sH*PW0/rw), gap=70, mapH=rows*rh+(rows-1)*gap+50, sheet=document.createElement('canvas'); sheet.width=W; sheet.height=mapH+keyH+60; var oc=sheet.getContext('2d'); oc.fillStyle='#ffffff'; oc.fillRect(0,0,sheet.width,sheet.height);
+  for(var r=0;r<rows;r++){ var y=r*(rh+gap); oc.drawImage(cv, mL+r*rw, 0, rw, sH, mL, y, PW0, rh); oc.strokeStyle='#6b7280'; oc.lineWidth=2; oc.strokeRect(mL, y, PW0, rh); oc.fillStyle='#111827'; oc.font='600 26px system-ui'; oc.textAlign='left'; oc.textBaseline='top'; oc.fillText(fmt(r*L/rows,1)+' m', mL, y+rh+8); oc.textAlign='right'; oc.fillText(fmt((r+1)*L/rows,1)+' m', mL+PW0, y+rh+8); }
+  cv=sheet; c=oc; c.textBaseline='middle'; PW=PW0; s=PW0/(L/rows);
+  /* the key: one box per colour step with its level range written in it */ var nK=Math.min(nb, 14), stepK=(zh-zl)/nK, kx=mL, ky=mapH+50, kw=PW/nK; c.font='700 26px system-ui'; c.textAlign='left'; c.fillStyle='#111827'; c.fillText('Ground level (mm)  ·  each colour is '+mm(stepK)+(SEC.show==='bumps'?' above or below the local average':''), mL, ky-18);
+  for(var k=0;k<nK;k++){ var za=zl+k*stepK, zb=za+stepK, C=secCol(za+stepK*0.5, S0); c.fillStyle='rgb('+C.map(Math.round).join(',')+')'; c.fillRect(kx+k*kw, ky, kw-4, 70); var lum=0.3*C[0]+0.59*C[1]+0.11*C[2]; c.fillStyle=lum>150?'#111827':'#ffffff'; c.textAlign='center'; c.font='700 '+(kw>200?24:20)+'px system-ui'; c.fillText(levN(za)+' to '+levN(zb), kx+k*kw+kw/2-2, ky+35); }
+  c.textAlign='left'; c.font='500 24px system-ui'; c.fillStyle='#4b5563'; c.fillText('Blue is low, pale is middle, red is high. Bold contour every '+mm(ci*5)+', fine every '+mm(ci)+'.', mL, ky+120);
+  var sb=secNiceStep(L, 6); c.fillStyle='#111827'; c.fillRect(mL+PW-sb*s-20, ky+150, sb*s, 8); c.textAlign='right'; c.fillText(fmt(sb, sb<1?1:0)+' m', mL+PW-20, ky+185);
+  return {cv:cv, L:L, w:2*hw, ci:ci, zl:zl, zh:zh}; }
+function secPdf(){ if(!APP.res||!SEC.data){ toast('Open Sections on a scan first.'); return; } setStatus('Making the section PDF'); setTimeout(function(){ try{
+    var nm=SEC.which==='A'?'A-A':'B-B', base=(typeof baseName==='function'?baseName():'scan').replace(/^(INT_|EXT_)+/,''), sub=base.replace(/[_-]+/g,' '), pages=[];
+    var LS=secxLongSheet(); if(LS){ var lines=[['h','Section '+nm],['Length', fmt(LS.L,2)+' m'],['Stations every', fmt(LS.sp, LS.sp<1?2:1)+' m'],['Heights drawn', LS.eyN>1?'×'+LS.eyN+' (numbers true)':'true scale'],['Lowest', levN(LS.zlo)+' mm'],['Highest', levN(LS.zhi)+' mm'],['Difference', mm(LS.zhi-LS.zlo), true]];
+      var fst=LS.lev[0], lst=LS.lev[LS.lev.length-1]; if(fst===fst&&lst===lst){ lines.push(['h','End to end'],[(lst<fst?'Falls ':'Rises ')+mm(Math.abs(lst-fst)), secxFall(lst-fst, LS.L), true]); }
+      if(SEC.fp&&SEC.fp.length===2&&SEC.fallTxt) lines.push(['h','Measured fall'],[SEC.fallTxt.split('  ·  ')[0], ''],[SEC.fallTxt.split('  ·  ').slice(1).join('  ·  '), '', true]);
+      lines.push(['h','Reading it'],['','Top: the line on plan'],['','Middle: the ground along it'],['','Bottom: level at each station'],['','and the fall to the next']);
+      pages.push(laySheet('Long section '+nm, sub+' · levels in mm from the scan datum', {cv:LS.cv}, lines)); }
+    try{ var HS=secxHeightSheet(); if(HS) pages.push(laySheet('Height map along '+nm, sub+' · seen from above, '+fmt(HS.w,1)+' m wide', {cv:HS.cv}, [['h','Height map'],['Length', fmt(HS.L,2)+' m'],['Width shown', fmt(HS.w,2)+' m'],['Colour steps', mm(HS.ci)],['Colours run', levN(HS.zl)+' to '+levN(HS.zh)],['Heights of', SEC.ground?'ground only':'everything'],['','The key under the map gives'],['','the level range of each colour']])); }catch(e){ console.warn(e); }
+    try{ var d3=sec3DShot(2400, 1500); if(d3) pages.push(laySheet('Contours on the scan in 3D, along '+nm, sub, {cv:d3}, [['h','3D view'],['Contours every', SEC._s3ci?mm(SEC._s3ci):''],['Pins','ground level in mm'],['', 'Colours as on the height map']])); }catch(e){ console.warn(e); }
+    var rb=APP.res.robust, box=[rb.x[0]-2, rb.y[0]-2, rb.x[1]+2, rb.y[1]+2]; try{ var kp=layPlanCanvas(box); pages.push(laySheet('Key plan', 'where section '+nm+' runs', kp, [['h','Line '+nm],['Position', fmt(SEC.which==='A'?CEI.lc:CEI.st,3)+' m'],['Axis', fmt(Math.atan2(CEI.axis[1],CEI.axis[0])*180/Math.PI,1)+'°']])); }catch(e){ console.warn(e); }
+    download('EXT_'+base+'_section_'+nm+'.pdf', pdfFromCanvases(pages)); toast('PDF saved: '+pages.length+' pages.', 2500); }catch(e){ console.warn(e); toast('Could not make the PDF: '+e.message, 4000); } setStatus('Ready'); }, 30); }
 
 
 </script>
