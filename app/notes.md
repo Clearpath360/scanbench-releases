@@ -1,4 +1,4 @@
-# Scan Bench r330
+# Scan Bench r331
 
-- Compare: second scan no longer goes black while the camera moves.
-- Timelapse: new Wipe change (default) with a white line sweeping old to new.
+- Timelapse: Fade now really fades (it was running as Dissolve).
+- Timelapse: Dissolve is fine grain, no more square holes.

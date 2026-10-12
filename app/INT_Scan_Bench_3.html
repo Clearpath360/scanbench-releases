@@ -4966,7 +4966,7 @@ function splatEnsure(){
 ' if(uGrOn>0.5){ rgb=rgb*(1.0+uGr.x); rgb=(rgb-0.5)*uGr.y+0.5; float gl0=dot(rgb,vec3(0.3,0.59,0.11)); rgb=mix(vec3(gl0),rgb,uGr.z); rgb+=vec3(uGr.w*0.08, -uGrT*0.06, -uGr.w*0.08); rgb=clamp(rgb,0.0,1.0); }\n'+
     ' if(uIso>0.5&&(sty>=255||(sty&8)==0)){ fa*=0.08; rgb=vec3(dot(rgb,vec3(0.3,0.59,0.11))); }\n'+
     ' if(uTbOn>0.5){ vec3 dd=A.xyz-uTbC; if(abs(dot(dd,uTbU))<=uTbH.x&&abs(dot(dd,uTbV))<=uTbH.y&&abs(dot(dd,uTbW))<=uTbH.z) rgb=mix(rgb, vec3(1.0,0.45,0.1), 0.55); }\n'+
-    ' float hA=uHideA; float fm=0.0; if(hA>1.5){ hA-=2.0; fm=1.0; } float al=1.0-hA; float fi=float(aI); for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ al=1.0-uRng[k].z; fm=uRng[k].w; } } if(al<0.003) return; if(al<0.997){ if(fm>0.5) fa*=al; else { float hh=fract(sin(fi*12.9898)*43758.5453); if(hh>al) return; } }\n'+
+    ' float hA=uHideA; float fm=0.0; if(hA>1.5){ hA-=2.0; fm=1.0; } float al=1.0-hA; float fi=float(aI); for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ al=1.0-uRng[k].z; fm=uRng[k].w; } } if(al<0.003) return; if(al<0.997){ if(fm>0.5) fa*=al; else { uint hu=aI*747796405u+2891336453u; hu=((hu>>((hu>>28u)+4u))^hu)*277803737u; hu=(hu>>22u)^hu; float hh=float(hu&16777215u)/16777215.0; if(hh>al) return; } }\n'+
     ' vec2 ext=(abs(M1)+abs(M2))*4.0/uVp; if(abs(ndc.x)-ext.x>1.0||abs(ndc.y)-ext.y>1.0) return;\n'+
     ' if(uVolB.w>0.5){ vec2 tv=(A.xy-uVolB.xy)*uVolB.z; if(tv.x>=0.0&&tv.y>=0.0&&tv.x<uVolS.x&&tv.y<uVolS.y){ float vz=texelFetch(uVolZ,ivec2(tv),0).r; if(abs(A.z-vz)<uVolS.z){ vec4 vc=texelFetch(uVolTex,ivec2(tv),0); rgb=mix(rgb, vc.rgb, vc.a); } } }\n'+
     ' vCol=vec4(rgb*uBright, min(1.0, A.w*fa)); vPos=aQ;\n'+
@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r330';
+var SB_BUILD='2026-10-12 r331';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -20513,7 +20513,7 @@ function cmpAlphas(){ var L=cmpList(), a=L.map(function(s){ return s.hidden?0:1;
   if(CMPV.on&&CMPV.align&&CMPV.align.show!=null){ a=L.map(function(s, k){ return k===CMPV.align.show?1:0; }); }
   return a; }
 function cmpUniforms(alphas){ if(!GL||!SPL.prog) return; var gl=GL, L=SPL.loc; if(L.uRng===undefined){ L.uRng=gl.getUniformLocation(SPL.prog,'uRng[0]'); L.uRngN=gl.getUniformLocation(SPL.prog,'uRngN'); L.uHideA=gl.getUniformLocation(SPL.prog,'uHideA'); }
-  var S=cmpList(), A=alphas||cmpAlphas(), M=CMPV._force?null:(CMPV._modes||((CPATH.st&&cpOn())?CPATH.st.modes:null)), f=new Float32Array(16), n=0;
+  var S=cmpList(), A=alphas||cmpAlphas(), M=CMPV._modes||(CMPV._force?null:((CPATH.st&&cpOn())?CPATH.st.modes:null)), f=new Float32Array(16), n=0;
   for(var k=1;k<S.length&&n<4;k++){ var sg=cmpSeg(S[k]); if(!sg) continue; f[n*4]=sg.at; f[n*4+1]=sg.at+sg.n; f[n*4+2]=1-(A[k]==null?1:A[k]); f[n*4+3]=M&&M[k]?1:0; n++; }
   gl.useProgram(SPL.prog); if(L.uRng) gl.uniform4fv(L.uRng, f); if(L.uRngN) gl.uniform1f(L.uRngN, n); if(L.uHideA) gl.uniform1f(L.uHideA, (M&&M[0]?2:0)+1-(A[0]==null?1:A[0])); }
 
