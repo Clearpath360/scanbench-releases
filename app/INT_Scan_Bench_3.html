@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r323';
+var SB_BUILD='2026-10-12 r324';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -23469,7 +23469,7 @@ function secGround(D){ var n=D.X.length; if(!n) return null; var lo=1e30, hi=-1e
   for(i=0;i<n;i++) B[Math.floor((D.X[i]-lo)/bw)].push(D.Z[i]); var g=new Float32Array(nb).fill(NaN); for(b=0;b<nb;b++){ var L=B[b]; if(L.length<2) continue; L.sort(function(p,q){ return p-q; }); g[b]=L[Math.floor(L.length*0.15)]; }
   var s=new Float32Array(nb).fill(NaN); for(b=0;b<nb;b++){ var w=[]; for(var k=-2;k<=2;k++){ var v=g[b+k]; if(v===v) w.push(v); } if(g[b]===g[b]&&w.length){ w.sort(function(p,q){ return p-q; }); s[b]=w[w.length>>1]; } }
   return {lo:lo, hi:hi, bw:bw, z:s}; }
-function secGroundAt(Gd, X){ if(!Gd) return NaN; var b=Math.round((X-Gd.lo)/Gd.bw); for(var k=0;k<6;k++){ var v=Gd.z[b+k]; if(v===v) return v; v=Gd.z[b-k]; if(v===v) return v; } return NaN; }
+function secGroundAt(Gd, X){ if(!Gd) return NaN; var b=Math.round((X-Gd.lo)/Gd.bw); for(var k=0;k<6;k++){ var v=Gd.z[b+k]; if(v!=null&&v===v) return v; v=Gd.z[b-k]; if(v!=null&&v===v) return v; } return NaN; }
 function secNiceStep(span, target){ var raw=span/target, p=Math.pow(10, Math.floor(Math.log10(raw))), m=raw/p; return (m<1.5?1:m<3.5?2:m<7.5?5:10)*p; }
 
 /* slice: a height grid over the band, rows across the line, columns along it */
@@ -23585,6 +23585,7 @@ function secPanel(){ var s=secSec(); if(!s) return; var b=s.querySelector('.body
   h+='<div class="row" title="How often spot heights are shown"><label>Spot heights</label><select id="secSpot">'+o(0,'Auto',SEC.spot)+[0.5,1,2,5,10].map(function(v){ return o(v, v+' m', SEC.spot); }).join('')+'</select></div>'+
     '<div class="row" title="The slab or slice drawn see-through in the 3D view"><label>Band in 3D</label>'+seg('band3d', SEC.band3d?1:0, [[1,'On'],[0,'Off']])+'</div>'+
     '<div class="row" title="Open the 3D scan at the line"><label>3D cutaway</label>'+seg('cutOn', SEC.cut?1:0, [[1,'On'],[0,'Off']])+(SEC.cut?'<button id="secFlip" class="sBtn" title="Show the other side">Flip</button>':'')+'</div>'+
+    '<div class="sH">Export</div><div class="row" style="gap:6px"><button id="secPdf" class="sBtn" style="flex:1;padding:7px" title="PDF: the section with the scan in it, spot heights and falls, the height-map slice, and a key plan">PDF export</button><button id="secCsv" class="sBtn" style="flex:1;padding:7px" title="Spreadsheet of the ground line and spot heights along the line">CSV</button></div>'+
     '<p class="mini">Hover the section to see the same spot on the plan or 3D, and the other way round.</p>';
   b.innerHTML=h; secWireSettings(b); }
 function secWireSettings(b){ var q=function(id){ return b.querySelector('#'+id); }, again=function(){ secSavePrefs(); secBar(); secPanel(); planDrawSoon(); requestRender(false); secOvDraw(); };
@@ -23595,7 +23596,7 @@ function secWireSettings(b){ var q=function(id){ return b.querySelector('#'+id);
   if(q('secCi')) q('secCi').onchange=function(){ SEC.cint=+this.value; SEC.key=''; again(); }; if(q('secEx')) q('secEx').onchange=function(){ SEC.ex=+this.value; secSavePrefs(); SEC.vs=null; secDraw(); }; if(q('secBr')) q('secBr').onchange=function(){ SEC.bumpR=+this.value; again(); }; if(q('secCr')) q('secCr').onchange=function(){ SEC.crange=this.value; if(this.value==='custom'&&SEC.slice&&SEC.cmin==null){ var b=SEC.show==='bumps'?1000:1; SEC.cmin=+(SEC.slice.zl*b).toFixed(3); SEC.cmax=+(SEC.slice.zh*b).toFixed(3); } if(SEC.slice) SEC.slice.rkey=''; again(); secDraw(); };
   ['secCmin','secCmax'].forEach(function(id){ if(q(id)) q(id).onchange=function(){ SEC[id==='secCmin'?'cmin':'cmax']=parseFloat(this.value); if(SEC.slice) SEC.slice.rkey=''; secSavePrefs(); secDraw(); planDrawSoon(); }; });
   if(q('secSpot')) q('secSpot').onchange=function(){ SEC.spot=+this.value; secSavePrefs(); secDraw(); };
-  if(q('secFlip')) q('secFlip').onclick=function(){ SEC.flip=!SEC.flip; requestRender(false); }; }
+  if(q('secPdf')) q('secPdf').onclick=function(){ secPdf(); }; if(q('secCsv')) q('secCsv').onclick=function(){ secCsv(); }; if(q('secFlip')) q('secFlip').onclick=function(){ SEC.flip=!SEC.flip; requestRender(false); }; }
 /* moving the plan or 3D over so the scan sits in the half that is still showing */
 function secShift(dir){ try{ var f=SEC.w/2*dir; if(APP.view==='3d'){ var asp=glCv.width/Math.max(1,glCv.height), half=cam.dist*Math.tan(0.45)*asp, s=half*f*2; cam.tx+=-Math.sin(cam.yaw)*s; cam.ty+=Math.cos(cam.yaw)*s; requestRender(false); }
     else if(typeof planView!=='undefined'){ planView.cx+=planView.w*f/planView.z; planDraw(); } SEC.shiftView=dir>0?APP.view:null; }catch(e){} }
@@ -23694,6 +23695,32 @@ function secDxfLayout(){ try{ var xs=[], ys=[], a=CEI.axis, n=ceiN(); CEI.zones.
     var rng=function(view){ var lo=1e9, hi=-1e9; if(view==='long'){ CEI.zones.forEach(function(Z){ var s=ceiStats(Z); if(s){ lo=Math.min(lo,s.smin-2); hi=Math.max(hi,s.smax+2); } }); if(lo>hi){ lo=Math.min(bx0*a[0]+by0*a[1], bx1*a[0]+by1*a[1]); hi=Math.max(bx0*a[0]+by0*a[1], bx1*a[0]+by1*a[1]); } }
       else { CEI.zones.forEach(function(Z){ var s=ceiStats(Z); if(s){ lo=Math.min(lo,-s.tmax-3); hi=Math.max(hi,-s.tmin+3); } }); if(lo>hi){ lo=-CEI.lc-8; hi=-CEI.lc+8; } } return [lo,hi]; };
     var rl=rng('long'), rc=rng('cross'); return {long:{x0:bx0, lo:rl[0], hi:rl[1], oy:oy}, cross:{x0:bx0+(rl[1]-rl[0])+4, lo:rc[0], hi:rc[1], oy:oy}}; }catch(e){ console.warn(e); return null; } }
+
+/* ---------- export: what you see in the split, drawn big, on A3 sheets ---------- */
+function secRenderTo(tab, W, H){ var cvS=document.getElementById('secCv'), sw=cvS&&cvS.width||1400, keep={tab:SEC.tab, vs:SEC.vs, vl:SEC.vl, slice:SEC.slice, cur:SEC.cur, hovIn:SEC.hovIn}, f=W/sw, cv=document.createElement('canvas'); cv.width=W; cv.height=H; var c=cv.getContext('2d');
+  try{ SEC.tab=tab; SEC.cur=null; SEC.hovIn=null; if(!SEC.full) secRebuild(false); if(tab==='slice'&&!SEC.slice){ var D=secGather(SEC.band,false); SEC.slice=D.X.length?secSliceGrid(D):null; }
+    /* the same view as on screen, scaled up to the page */ var cp=function(V){ if(!V) return null; var o={}; for(var k in V) o[k]=V[k]; o.ppm=V.ppm*f; o.key='export'; return o; };
+    if(tab==='slice'){ SEC.vl=cp(keep.vl); if(SEC.vl) SEC.vl.key=SEC.which+'|'+W+'|'+H+'|'+SEC.band; if(SEC.slice){ SEC.slice.rkey=''; } } else { SEC.vs=cp(keep.vs); if(SEC.vs) SEC.vs.key=SEC.which+'|'+W+'|'+H+'|'+SEC.ex; }
+    c.fillStyle='#ffffff'; c.fillRect(0,0,W,H); var k=Math.max(1.5, W/900); if(tab==='slice') secDrawSlice(c, W, H, k); else secDrawSection(c, W, H, k); }
+  catch(e){ console.warn(e); }
+  finally{ var sl=SEC.slice; SEC.tab=keep.tab; SEC.vs=keep.vs; SEC.vl=keep.vl; SEC.slice=keep.slice||null; if(keep.slice) keep.slice.rkey=''; SEC.cur=keep.cur; SEC.hovIn=keep.hovIn; SEC._expSlice=sl; } return cv; }
+function secSpots(){ var D=SEC.data, Gd=D&&(D.gd||(D.gd=secGround(D))); if(!Gd) return []; var span=Gd.hi-Gd.lo, sp=SEC.spot>0?SEC.spot:secNiceStep(span, 12), out=[]; for(var X=Math.ceil(Gd.lo/sp)*sp; X<=Gd.hi; X+=sp){ var z=secGroundAt(Gd, X); if(z===z) out.push([X-Gd.lo, z]); } return out; }
+function secPdf(){ if(!APP.res||!SEC.data){ toast('Open Sections on a scan first.'); return; } setStatus('Making the section PDF'); setTimeout(function(){ try{
+    var nm=SEC.which==='A'?'A-A':'B-B', base=(typeof baseName==='function'?baseName():'scan').replace(/^(INT_|EXT_)+/,''), D=SEC.data, Gd=D.gd||(D.gd=secGround(D)), pages=[], zs=[], i;
+    for(i=0;i<Gd.z.length;i++) if(Gd.z[i]===Gd.z[i]) zs.push(Gd.z[i]); zs.sort(function(p,q){ return p-q; });
+    var secCv=secRenderTo('section', 2600, 1700), EY=(SEC.vs&&SEC.vs.ey)||1, lines=[['h','Section '+nm],['Length', fmt(Gd.hi-Gd.lo,2)+' m'],['Slab', Math.round(D.G.slab*1000)+' mm thick'],['Heights drawn', EY>1?'×'+EY+' (numbers true)':'true scale']];
+    if(zs.length) lines.push(['Ground lowest', levN(zs[0])+' mm'],['Ground highest', levN(zs[zs.length-1])+' mm'],['Difference', mm(zs[zs.length-1]-zs[0]), true]);
+    if(SEC.fp.length===2&&SEC.fallTxt) lines.push(['h','Falls'],[SEC.fallTxt.split('  ·  ')[0], ''],[SEC.fallTxt.split('  ·  ').slice(1).join('  ·  '), '', true]);
+    var spots=secSpots(); if(spots.length){ lines.push(['h','Spot heights (along, level)']); spots.slice(0,18).forEach(function(q){ lines.push([fmt(q[0],2)+' m', levN(q[1])]); }); if(spots.length>18) lines.push(['…and '+(spots.length-18)+' more in the CSV','']); }
+    pages.push(laySheet('Section '+nm, base.replace(/[_-]+/g,' ')+' · levels in mm from the scan datum', {cv:secCv}, lines));
+    var slCv=secRenderTo('slice', 2600, 1700), S0=SEC._expSlice; if(S0){ var l2=[['h','Slice along '+nm],['Width', fmt(SEC.band,2)+' m'],['Colour by', SEC.show==='bumps'?'Bumps against the '+fmt(SEC.bumpR,1)+' m average':'Height'],['Colour steps', mm(S0.ci)],['Colours run', levN(S0.zl)+' to '+levN(S0.zh)],['Heights of', SEC.ground?'ground only':'everything']];
+      if(S0.zmin!=null) l2.push(['Lowest in slice', levN(S0.zmin)],['Highest in slice', levN(S0.zmax)]); l2.push(['h','Key'],['sw','Low','rgb(48,18,59)'],['sw','High','rgb(122,4,3)']); pages.push(laySheet('Height map along '+nm, base.replace(/[_-]+/g,' '), {cv:slCv}, l2)); }
+    /* key plan with the line and band */ var rb=APP.res.robust, box=[rb.x[0]-2, rb.y[0]-2, rb.x[1]+2, rb.y[1]+2]; try{ var kp=layPlanCanvas(box); pages.push(laySheet('Key plan', 'where section '+nm+' runs', kp, [['h','Line '+nm],['Position', fmt(SEC.which==='A'?CEI.lc:CEI.st,3)+' m'],['Axis', fmt(Math.atan2(CEI.axis[1],CEI.axis[0])*180/Math.PI,1)+'°']])); }catch(e){ console.warn(e); }
+    download('EXT_'+base+'_section_'+nm+'.pdf', pdfFromCanvases(pages)); toast('PDF saved: '+pages.length+' pages.', 2500); }catch(e){ console.warn(e); toast('Could not make the PDF: '+e.message, 4000); } setStatus('Ready'); }, 30); }
+function secCsv(){ var D=SEC.data, Gd=D&&(D.gd||(D.gd=secGround(D))); if(!Gd){ toast('Open Sections on a scan first.'); return; } var nm=SEC.which==='A'?'A-A':'B-B', G=secGeom(SEC.which), L=['Scan Bench section '+nm, 'Along (m),X,Y,Ground level (m)'];
+  for(var b=0;b<Gd.z.length;b+=Math.max(1, Math.round(0.1/Gd.bw))){ var z=Gd.z[b]; if(!(z===z)) continue; var X=Gd.lo+b*Gd.bw, p=G.at(X,0); L.push([(X-Gd.lo).toFixed(3), p[0].toFixed(3), p[1].toFixed(3), z.toFixed(4)].join(',')); }
+  L.push('', 'Spot heights', 'Along (m),Level (m)'); secSpots().forEach(function(q){ L.push(q[0].toFixed(3)+','+q[1].toFixed(4)); }); if(SEC.fp.length===2&&SEC.fallTxt) L.push('', 'Falls,'+JSON.stringify(SEC.fallTxt));
+  download('INT_'+(baseName()||'scan').replace(/^(INT_|EXT_)+/,'')+'_section_'+nm+'.csv', new Blob([L.join('\r\n')], {type:'text/csv'})); toast('CSV saved.', 2000); }
 
 
 </script>

@@ -1,5 +1,5 @@
-Scan Bench r323
+Scan Bench r324
 
-- Slice and section now show a live readout under the pointer: level, bump in mm (in Bumps), and distance along and across.
-- On a section the readout gives the pointer height, the ground level there and the height above ground.
-- Band in 3D is now a coloured strip on the ground that follows the terrain and runs off the scene, and stays when you zoom right in.
+- Sections panel: new PDF export button. Page 1 the section with the scan in it, ground line, spot heights and falls; page 2 the height-map slice with its key; page 3 a key plan showing the line.
+- The PDF draws exactly the view you have on screen (zoom and height scale included), at A3.
+- Sections panel: CSV button saves the ground line every 100 mm and the spot heights.
