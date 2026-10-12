@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r328';
+var SB_BUILD='2026-10-12 r329';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -20647,7 +20647,7 @@ function cmpDraw(){ var b=document.getElementById('cmpBar'); if(!b) return; b.st
   b.querySelectorAll('[data-lab]').forEach(function(inp){ inp.onkeydown=function(e){ e.stopPropagation(); }; inp.onchange=function(){ var k=+inp.dataset.lab; if(k===0) CMPV.labelA=inp.value; else S[k].label=inp.value; cmpSplitPos(); }; });
   b.querySelectorAll('[data-rm]').forEach(function(x){ x.onclick=function(){ cmpRemove(x.dataset.rm); }; });
   b.querySelectorAll('[data-tab]').forEach(function(x){ x.onclick=function(){ CMPV.tab=x.dataset.tab; if(CMPV.tab!=='side') CMPV.split=false; if(CMPV.tab!=='time') cmpStop(); if(CMPV.tab==='side'&&S.length>1) CMPV.split=true; CMPV.align=null; cmpDraw(); requestRender(false); }; });
-  q('cmpClose').onclick=function(){ cmpOpen(false); }; q('cmpAdd').onclick=function(){ var inp=document.createElement('input'); inp.type='file'; inp.accept='.ply,.PLY,.lcc,.LCC,.lcc2,.LCC2'; inp.multiple=true; inp.onchange=function(){ var A=Array.from(inp.files||[]); if(typeof cmpLccPicked==='function'&&cmpLccPicked(A)) return; A.reduce(function(pr, f){ return pr.then(function(){ return cmpAddFile(f); }); }, Promise.resolve()); }; inp.click(); };
+  q('cmpClose').onclick=function(){ cmpOpen(false); }; q('cmpAdd').onclick=function(){ if(typeof cmpAddPick==='function'&&!cmpAddPick._ply){ cmpAddPick(); return; } var inp=document.createElement('input'); inp.type='file'; inp.accept='.ply,.PLY,.lcc,.LCC,.lcc2,.LCC2'; inp.multiple=true; inp.onchange=function(){ var A=Array.from(inp.files||[]); if(typeof cmpLccPicked==='function'&&cmpLccPicked(A)) return; A.reduce(function(pr, f){ return pr.then(function(){ return cmpAddFile(f); }); }, Promise.resolve()); }; inp.click(); };
   if(q('cmpWhich')) q('cmpWhich').onchange=function(){ CMPV.R=+this.value; };
   if(q('cmpMatch')) q('cmpMatch').onclick=function(){ cmpAlignStart(CMPV.R); }; if(q('cmpAutoB')) q('cmpAutoB').onclick=cmpAuto;
   if(q('cmpUse')) q('cmpUse').onclick=cmpAlignUse; if(q('cmpUndo')) q('cmpUndo').onclick=cmpAlignUndo; if(q('cmpCancel')) q('cmpCancel').onclick=function(){ CMPV.align=null; cmpDraw(); requestRender(false); };
@@ -21422,11 +21422,11 @@ function msDraw(){ var d=msUI(); if(!d) return; d.style.display=MS.on?'block':'n
   var q=function(c){ return d.querySelector(c); }, two=S.length>1;
   q('.msTop').innerHTML='<div class="msTabs">'+[['align','Align'],['compare','Compare'],['time','Timelapse']].map(function(t){ return '<button data-t="'+t[0]+'" class="'+(MS.tab===t[0]?'on':'')+'">'+t[1]+'</button>'; }).join('')+'</div><span class="msBuild">build '+String(SB_BUILD).split(' ').pop()+'</span><button class="msX" title="Leave Compare">Done ✕</button>';
   q('.msTop').querySelectorAll('[data-t]').forEach(function(b){ b.onclick=function(){ msTab(b.dataset.t); }; }); q('.msX').onclick=msClose;
-  var e=q('.msEmpty'); e.style.display=two?'none':'flex'; if(!two) e.innerHTML='<b>Add your other scans of this place</b><span>Taken on different days. You line each one up with this first scan, then compare or make a timelapse.</span><button class="pri">+ Add scans</button>'; if(!two) e.querySelector('button').onclick=function(){ document.getElementById('msFile').click(); };
+  var e=q('.msEmpty'); e.style.display=two?'none':'flex'; if(!two) e.innerHTML='<b>Add your other scans of this place</b><span>Taken on different days. You line each one up with this first scan, then compare or make a timelapse.</span><button class="pri">+ Add scans</button>'; if(!two) e.querySelector('button').onclick=function(){ cmpAddPick(); };
   /* align */ var al=MS.tab==='align'&&two; q('.msMid').style.display=al?'block':'none'; q('.msCaps').style.display=two&&MS.tab!=='time'?'block':'none'; q('.msRef').style.display=al?'block':'none'; q('.msPins').style.display=al?'block':'none';
   q('.msRef').innerHTML='<div class="msHd">REFERENCE <span>'+MS.pairs.filter(function(p){ return p.a; }).length+' points</span></div><div class="msNm">'+msEsc(S[0].label||S[0].name)+'</div>';
   q('.msCaps').innerHTML='<div class="msHd">Captures <button class="msAdd" title="Add scans">+</button></div>'+S.slice(1).map(function(s, i){ var k=i+1; return '<div class="msCap'+(k===MS.k?' on':'')+'" data-k="'+k+'"><span class="msDot" style="background:'+(s.msAligned?'#16a34a':'#d1d5db')+'" title="'+(s.msAligned?'Aligned':'Not aligned yet')+'"></span><input value="'+msEsc(s.label||s.name)+'" data-lab="'+k+'" title="Name it (a date works well)"><button data-rm="'+k+'" title="Remove">✕</button></div>'; }).join('');
-  q('.msCaps .msAdd').onclick=function(){ document.getElementById('msFile').click(); };
+  q('.msCaps .msAdd').onclick=function(){ cmpAddPick(); };
   q('.msCaps').querySelectorAll('.msCap').forEach(function(x){ x.onclick=function(ev){ if(ev.target.tagName==='INPUT'||ev.target.tagName==='BUTTON') return; var k=+x.dataset.k; if(k===MS.k) return; var was=msPaneKs().join(); if(MS.tab==='align') MS.cams[MS.act]=msCamCopy(); msSwitchCap(k); if(MS.tab==='align'&&msPaneKs().join()!==was){ msPanesReset(); msSettleOther(); } msDraw(); }; });
   q('.msCaps').querySelectorAll('[data-lab]').forEach(function(x){ x.onkeydown=function(ev){ ev.stopPropagation(); }; x.onchange=function(){ S[+x.dataset.lab].label=x.value; msDraw(); }; });
   q('.msCaps').querySelectorAll('[data-rm]').forEach(function(x){ x.onclick=function(){ var s=S[+x.dataset.rm]; msStore(); var rid=msPid(+x.dataset.rm); delete MS.bBy[rid]; delete MS.errBy[rid]; var wasK=(+x.dataset.rm===MS.k); cmpRemove(s.id); if(wasK||MS.k>=msS().length){ MS.k=1; } else if(+x.dataset.rm<MS.k) MS.k--; msView(); msPanesReset(); msSettleOther(); msDraw(); }; });
@@ -24016,6 +24016,14 @@ sbInstead('lccOpen', function(R, level){ if(!LCCI.toCmp||!cmpLccOn()) return SB_
     cmpAddFile(new File([out], nm, {type:'application/octet-stream'}));
     /* the rebuilt Compare panel wants to switch to the new scan once it is in */ var n=0; (function wait(){ if(cmpList().length>before){ try{ if(typeof MS!=='undefined'&&MS.on&&typeof msS==='function'){ var S=msS(); msSwitchCap(S.length-1); msPanesReset(); msSettleOther(); msDraw(); } else if(typeof cmpDraw==='function') cmpDraw(); }catch(e){ console.warn(e); } return; } if(n++<900) setTimeout(wait, 200); })();
   }catch(e){ setProgress(null); setStatus('Ready'); toast('Could not add the LCC: '+e.message, 8000); } })(); });
+/* one Add button for both kinds: an XGRIDS LCC / LCC2 folder goes straight to a folder picker, PLY files to the file picker */
+function cmpAddPick(){ var d=document.getElementById('lcDlg'); if(!d){ d=document.createElement('div'); d.id='lcDlg'; document.body.appendChild(d); } d.hidden=false; LCCI.toCmp=true;
+  d.innerHTML='<div class="lcBox" role="dialog" aria-label="Add a scan to compare"><div class="lcHead"><b>Add a scan to compare</b><button data-k="x" title="Close">&#10005;</button></div><div class="lcBody">'+
+    '<p>For an XGRIDS scan, choose its folder: the one holding the <b>.lcc2</b> (or <b>.lcc</b>) file, usually called <b>lcc2-result</b>. The folder above it works too.</p>'+
+    '<div class="lcBtns"><button class="lcP" data-k="dir">Choose LCC folder...</button><button data-k="ply">PLY files...</button><button data-k="x">Cancel</button></div><p class="mini">You can also drag the folder onto the scan.</p></div></div>';
+  d.querySelectorAll('[data-k]').forEach(function(b){ b.onclick=function(){ var k=b.dataset.k; d.hidden=true; if(k==='x'){ LCCI.toCmp=false; return; }
+    if(k==='dir'){ LCCI.toCmp=true; lccPickDir(); return; }
+    LCCI.toCmp=false; var fi=document.getElementById('msFile'); if(typeof MS!=='undefined'&&MS.on&&fi){ fi.click(); return; } var a=document.getElementById('cmpAdd'); if(a){ cmpAddPick._ply=true; try{ a.click(); } finally{ cmpAddPick._ply=false; } } }; }); }
 
 
 </script>
