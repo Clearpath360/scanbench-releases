@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r317';
+var SB_BUILD='2026-10-12 r318';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -23222,7 +23222,7 @@ function volSurface(src, g, ground){ var nx=g.nx, ny=g.ny, N=nx*ny, cnt=new Uint
   for(var i=0;i<n;i++){ cid[i]=-1; var z=P[i*3+2]; if(!(z>-9000)||(DL&&DL[i])||(O&&O[i]<60)) continue; var cx=Math.floor((P[i*3]-g.x0)/c), cy=Math.floor((P[i*3+1]-g.y0)/c); if(cx<0||cy<0||cx>=nx||cy>=ny) continue; var q=cy*nx+cx; cid[i]=q; cnt[q+1]++; }
   for(var q2=0;q2<N;q2++) cnt[q2+1]+=cnt[q2]; var zs=new Float32Array(cnt[N]), fill=cnt.slice(0,N);
   for(i=0;i<n;i++){ var cq=cid[i]; if(cq<0) continue; zs[fill[cq]++]=P[i*3+2]; }
-  var Z=new Float32Array(N); for(q2=0;q2<N;q2++){ var a=cnt[q2], b=cnt[q2+1], m=b-a; if(m<2){ Z[q2]=NaN; continue; } var sub=zs.subarray(a,b); sub.sort(); Z[q2]=m&1?sub[m>>1]:0.5*(sub[(m>>1)-1]+sub[m>>1]); }
+  var Z=new Float32Array(N); for(q2=0;q2<N;q2++){ var a=cnt[q2], b=cnt[q2+1], m=b-a; if(m<1){ Z[q2]=NaN; continue; } var sub=zs.subarray(a,b); sub.sort(); Z[q2]=m&1?sub[m>>1]:0.5*(sub[(m>>1)-1]+sub[m>>1]); }
   if(ground) volGroundOnly(Z, g); volFillHoles(Z, g, 3.0); return Z; }
 
 /* ground only: a morphological opening (lowest then highest within 1.25 m) finds the bare ground; anything standing more than
@@ -23444,6 +23444,170 @@ window.addEventListener('click', function(e){ if(volEditOn()&&VOL.hov&&(e.target
 function volDelVertex(ai, k){ var V=volM(), A=V&&V.areas[ai]; if(!A) return; if(A.pts.length<=3){ toast('An area needs at least 3 corners. Use ✕ in the panel to delete the whole area.', 3000); return; } pushUndo(); A.pts.splice(k,1); VOL.selV=null; VOL.hov=null; afterEdit(); volRunSoon(); volRedraw(); }
 window.addEventListener('dblclick', function(e){ if(!volEditOn()) return; var h=volHandleAt(e); if(!h||h.mid) return; e.preventDefault(); e.stopImmediatePropagation(); volDelVertex(h.ai, h.k); }, true);
 window.addEventListener('keydown', function(e){ if(!volEditOn()||!VOL.selV) return; var t=e.target&&e.target.tagName; if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return; if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); e.stopImmediatePropagation(); volDelVertex(VOL.selV.ai, VOL.selV.k); } else if(e.key==='Escape'){ VOL.selV=null; volRedraw(); } }, true);
+
+/* ===== Sections, r318: a live split view under the plan or the 3D view.
+   Section tab: the A-A or B-B cut, redrawn as you drag the line, with the ground line, spot heights and falls between two points.
+   Slice tab: a top-down strip of the scan either side of the line (band width you set), coloured by height with contour lines and spot heights.
+   Arrow keys (or the arrow buttons) step the line through the building; 3D cutaway opens the 3D scan at the line. ===== */
+
+var SEC={open:false, which:'A', tab:'section', band:1, step:0.5, cint:0, spot:0, ground:true, falls:false, fp:[], cut:null, flip:false, key:'', last:0, data:null, slice:null, vs:null, vl:null, h:0.4, dragT:0};
+(function(){ try{ var o=JSON.parse(localStorage.getItem('sb_secsplit')||'null'); if(o){ ['which','tab','band','step','cint','spot','ground','h'].forEach(function(k){ if(o[k]!=null) SEC[k]=o[k]; }); } }catch(e){} })();
+function secSavePrefs(){ try{ localStorage.setItem('sb_secsplit', JSON.stringify({which:SEC.which, tab:SEC.tab, band:SEC.band, step:SEC.step, cint:SEC.cint, spot:SEC.spot, ground:SEC.ground, h:SEC.h})); }catch(e){} }
+
+/* the active line in plan terms: station along it (X) and offset across it (t) */
+function secGeom(which){ var a=CEI.axis, n=ceiN(); if(which==='A') return {X:function(x,y){ return x*a[0]+y*a[1]; }, T:function(x,y){ return x*n[0]+y*n[1]-CEI.lc; }, at:function(X,t){ return [a[0]*X+n[0]*(CEI.lc+t), a[1]*X+n[1]*(CEI.lc+t)]; }, nrm:[n[0],n[1]], off:CEI.lc, slab:CEI.slice>0?CEI.slice:0.3};
+  return {X:function(x,y){ return -(x*n[0]+y*n[1]); }, T:function(x,y){ return x*a[0]+y*a[1]-CEI.st; }, at:function(X,t){ return [-n[0]*X+a[0]*(CEI.st+t), -n[1]*X+a[1]*(CEI.st+t)]; }, nrm:[a[0],a[1]], off:CEI.st, slab:CEI.xslice>0?CEI.xslice:0.3}; }
+function secKey(){ var R=APP.res; return [CEI.lc, CEI.st, CEI.axis[0], CEI.axis[1], CEI.slice, CEI.xslice, SEC.which, SEC.band, SEC.ground, R&&R.n, R&&R.del?1:0].join('|'); }
+
+/* the points in the slab (section) or in the band (slice); a lighter pick while a line is being dragged */
+function secGather(width, fast){ var R=APP.res, P=R.pos, C=R.col, O=R.opa, DL=R.del, n=R.n, G=secGeom(SEC.which), st=fast?Math.max(1,Math.ceil(n/500000)):1, h=width/2, a=CEI.axis, nn=ceiN(), A=SEC.which==='A';
+  var X=[], Z=[], T=[], I=[];
+  for(var i=0;i<n;i+=st){ var x=P[i*3], y=P[i*3+1], z=P[i*3+2]; if(!(z>-9000)||(DL&&DL[i])||(O&&O[i]<40)) continue; var t=A?x*nn[0]+y*nn[1]-CEI.lc:x*a[0]+y*a[1]-CEI.st; if(t<-h||t>h) continue; X.push(A?x*a[0]+y*a[1]:-(x*nn[0]+y*nn[1])); Z.push(z); T.push(t); I.push(i); }
+  return {X:Float32Array.from(X), Z:Float32Array.from(Z), T:Float32Array.from(T), I:Int32Array.from(I), G:G}; }
+/* ground line along the section: per short bin the low (15th percentile) height, a small median to steady it */
+function secGround(D){ var n=D.X.length; if(!n) return null; var lo=1e30, hi=-1e30; for(var i=0;i<n;i++){ if(D.X[i]<lo) lo=D.X[i]; if(D.X[i]>hi) hi=D.X[i]; } var bw=Math.max(0.05, (hi-lo)/1500), nb=Math.max(1, Math.ceil((hi-lo)/bw)+1), B=[]; for(var b=0;b<nb;b++) B.push([]);
+  for(i=0;i<n;i++) B[Math.floor((D.X[i]-lo)/bw)].push(D.Z[i]); var g=new Float32Array(nb).fill(NaN); for(b=0;b<nb;b++){ var L=B[b]; if(L.length<2) continue; L.sort(function(p,q){ return p-q; }); g[b]=L[Math.floor(L.length*0.15)]; }
+  var s=new Float32Array(nb).fill(NaN); for(b=0;b<nb;b++){ var w=[]; for(var k=-2;k<=2;k++){ var v=g[b+k]; if(v===v) w.push(v); } if(g[b]===g[b]&&w.length){ w.sort(function(p,q){ return p-q; }); s[b]=w[w.length>>1]; } }
+  return {lo:lo, hi:hi, bw:bw, z:s}; }
+function secGroundAt(Gd, X){ if(!Gd) return NaN; var b=Math.round((X-Gd.lo)/Gd.bw); for(var k=0;k<6;k++){ var v=Gd.z[b+k]; if(v===v) return v; v=Gd.z[b-k]; if(v===v) return v; } return NaN; }
+function secNiceStep(span, target){ var raw=span/target, p=Math.pow(10, Math.floor(Math.log10(raw))), m=raw/p; return (m<1.5?1:m<3.5?2:m<7.5?5:10)*p; }
+
+/* slice: a height grid over the band, rows across the line, columns along it */
+function secSliceGrid(D){ var n=D.X.length; if(!n) return null; var lo=1e30, hi=-1e30; for(var i=0;i<n;i++){ if(D.X[i]<lo) lo=D.X[i]; if(D.X[i]>hi) hi=D.X[i]; }
+  var dens=Math.sqrt(SEC.band*Math.max(0.1,hi-lo)/n)*1.6, cell=Math.max(0.02, dens, Math.min(0.25, SEC.band/40, (hi-lo)/1500)), nx=Math.max(1, Math.ceil((hi-lo)/cell)), ny=Math.max(1, Math.ceil(SEC.band/cell)), g={x0:lo, y0:-SEC.band/2, cell:cell, nx:nx, ny:ny};
+  var src={P:new Float32Array(n*3), n:n, opa:null, del:null}; for(i=0;i<n;i++){ src.P[i*3]=D.X[i]; src.P[i*3+1]=D.T[i]; src.P[i*3+2]=D.Z[i]; }
+  var Z=volSurface(src, g, SEC.ground); var zl=1e30, zh=-1e30; for(i=0;i<Z.length;i++){ var v=Z[i]; if(v===v){ if(v<zl) zl=v; if(v>zh) zh=v; } } if(!(zh>zl)){ zh=zl+0.1; }
+  var ci=SEC.cint>0?SEC.cint:[0.05,0.1,0.25,0.5,1,2,5].filter(function(c){ return (zh-zl)/c<=14; })[0]||5; return {g:g, Z:Z, zl:zl, zh:zh, ci:ci}; }
+
+/* ---------- drawing the panel ---------- */
+function secRamp(t){ var S=[[44,123,182],[0,166,202],[0,204,188],[144,235,157],[255,255,140],[249,208,87],[242,158,46],[231,104,40],[215,25,28]], f=Math.max(0,Math.min(1,t))*(S.length-1), i=Math.min(S.length-2, Math.floor(f)), k=f-i; return [S[i][0]+(S[i+1][0]-S[i][0])*k, S[i][1]+(S[i+1][1]-S[i][1])*k, S[i][2]+(S[i+1][2]-S[i][2])*k]; }
+function secFitView(lo, hi, ylo, yhi, W, H){ var m=0.06, ppm=Math.min(W/((hi-lo)*(1+2*m)||1), H/((yhi-ylo)*(1+2*m)||1)); return {cx:(lo+hi)/2, cy:(ylo+yhi)/2, ppm:ppm}; }
+function secDraw(){ var cv=document.getElementById('secCv'); if(!cv||!SEC.open||!APP.res) return; var box=cv.parentNode.getBoundingClientRect(), k=window.devicePixelRatio||1, W=Math.max(50,Math.round(box.width*k)), H=Math.max(50,Math.round(box.height*k)); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }
+  var c=cv.getContext('2d'); c.setTransform(1,0,0,1,0,0); c.fillStyle='#f6f7f9'; c.fillRect(0,0,W,H); if(SEC.tab==='slice') secDrawSlice(c, W, H, k); else secDrawSection(c, W, H, k); }
+function secDrawSection(c, W, H, k){ var D=SEC.data; if(!D||!D.X.length){ c.fillStyle='#6b7280'; c.font=(13*k)+'px system-ui'; c.fillText('No scan points on this line. Move it over the scan.', 16*k, 30*k); return; }
+  var Gd=D.gd||(D.gd=secGround(D)), zl=1e30, zh=-1e30; for(var i=0;i<D.Z.length;i++){ if(D.Z[i]<zl) zl=D.Z[i]; if(D.Z[i]>zh) zh=D.Z[i]; }
+  if(!SEC.vs||SEC.vs.key!==SEC.which+'|'+W+'|'+H){ SEC.vs=secFitView(Gd.lo, Gd.hi, zl, zh, W, H); SEC.vs.key=SEC.which+'|'+W+'|'+H; } var V=SEC.vs, S=function(X,Z){ return [W/2+(X-V.cx)*V.ppm, H/2-(Z-V.cy)*V.ppm]; };
+  /* level grid */ var gs=secNiceStep(H/V.ppm, 6), z0=V.cy-H/2/V.ppm, z1=V.cy+H/2/V.ppm; c.font=(10*k)+'px system-ui'; c.lineWidth=1; for(var zz=Math.ceil(z0/gs)*gs; zz<=z1; zz+=gs){ var y=S(0,zz)[1]; c.strokeStyle='#e3e6eb'; c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); c.fillStyle='#8a93a0'; c.fillText(levN(zz), 4*k, y-3*k); }
+  /* scan points: nearest to the cut wins */ var im=c.getImageData(0,0,W,H), Dd=im.data, zb=new Float32Array(W*H).fill(1e9), ps=Math.max(1, Math.min(5, Math.round(0.02*V.ppm))), Cc=APP.res.col;
+  for(i=0;i<D.X.length;i++){ var p=S(D.X[i], D.Z[i]), px=p[0]|0, py=p[1]|0; if(px<-ps||py<-ps||px>=W||py>=H) continue; var dt=Math.abs(D.T[i]), ci=D.I[i]*3; for(var a=0;a<ps;a++) for(var b=0;b<ps;b++){ var X2=px+a, Y2=py+b; if(X2<0||Y2<0||X2>=W||Y2>=H) continue; var q=Y2*W+X2; if(dt>=zb[q]) continue; zb[q]=dt; Dd[q*4]=Cc[ci]; Dd[q*4+1]=Cc[ci+1]; Dd[q*4+2]=Cc[ci+2]; } }
+  c.putImageData(im,0,0);
+  /* ground line */ c.strokeStyle='#111827'; c.lineWidth=2*k; c.beginPath(); var on=false; for(var bI=0;bI<Gd.z.length;bI++){ var gz=Gd.z[bI]; if(!(gz===gz)){ on=false; continue; } var gp=S(Gd.lo+bI*Gd.bw, gz); if(on) c.lineTo(gp[0],gp[1]); else { c.moveTo(gp[0],gp[1]); on=true; } } c.stroke();
+  /* spot heights along the ground */ var span=W/V.ppm, sp=SEC.spot>0?SEC.spot:secNiceStep(span, 12), x0=V.cx-W/2/V.ppm, x1=V.cx+W/2/V.ppm, lastR=-1e9; c.font='600 '+(10*k)+'px system-ui'; c.textAlign='center';
+  for(var X=Math.ceil(Math.max(x0,Gd.lo)/sp)*sp; X<=Math.min(x1,Gd.hi); X+=sp){ var z=secGroundAt(Gd, X); if(!(z===z)) continue; var s=S(X,z), t=levN(z), tw=c.measureText(t).width+6*k; c.strokeStyle='#111827'; c.lineWidth=1*k; c.beginPath(); c.moveTo(s[0], s[1]-3*k); c.lineTo(s[0], s[1]-14*k); c.stroke(); c.beginPath(); c.arc(s[0], s[1], 2.5*k, 0, 7); c.fillStyle='#111827'; c.fill();
+    if(s[0]-tw/2>lastR){ c.fillStyle='rgba(255,255,255,.88)'; c.fillRect(s[0]-tw/2, s[1]-28*k, tw, 13*k); c.fillStyle='#111827'; c.fillText(t, s[0], s[1]-18*k); lastR=s[0]+tw/2; } }
+  /* station scale */ c.textAlign='left'; c.fillStyle='#6b7280'; c.font=(10*k)+'px system-ui'; var ss=secNiceStep(span, 8); for(X=Math.ceil(x0/ss)*ss; X<=x1; X+=ss){ var sx=S(X,0)[0]; c.fillRect(sx, H-6*k, 1, 6*k); c.fillText(fmt(X-Gd.lo,ss<1?1:0)+' m', sx+2*k, H-8*k); }
+  /* the other line crossing here */ var o=SEC.which==='A'?CEI.st:-CEI.lc, ox=S(o,0)[0]; c.setLineDash([6*k,5*k]); c.strokeStyle=SEC.which==='A'?'#16a34a':'#f59e0b'; c.lineWidth=1.5*k; c.beginPath(); c.moveTo(ox,0); c.lineTo(ox,H); c.stroke(); c.setLineDash([]); c.fillStyle=c.strokeStyle; c.font='700 '+(11*k)+'px system-ui'; c.fillText(SEC.which==='A'?'B':'A', ox+4*k, 14*k);
+  /* falls between two picked points */ if(SEC.fp.length){ var F=SEC.fp.map(function(Xf){ return [Xf, secGroundAt(Gd, Xf)]; }).filter(function(q){ return q[1]===q[1]; }); c.fillStyle='#2563eb'; F.forEach(function(q){ var s2=S(q[0],q[1]); c.beginPath(); c.arc(s2[0],s2[1],5*k,0,7); c.fill(); });
+    if(F.length===2){ var a2=S(F[0][0],F[0][1]), b2=S(F[1][0],F[1][1]), dz=F[1][1]-F[0][1], dx=Math.abs(F[1][0]-F[0][0]), pc=dx>1e-6?dz/dx*100:0, oneIn=Math.abs(dz)>1e-4?Math.round(dx/Math.abs(dz)):0; c.strokeStyle='#2563eb'; c.lineWidth=2.5*k; c.beginPath(); c.moveTo(a2[0],a2[1]); c.lineTo(b2[0],b2[1]); c.stroke();
+      var tx=(Math.abs(dz)<0.0005?'Level':(dz<0?'Falls ':'Rises ')+mm(Math.abs(dz))+' over '+fmt(dx,2)+' m  ·  '+Math.abs(pc).toFixed(2)+'%'+(oneIn?'  ·  1 in '+oneIn:'')); c.font='700 '+(12*k)+'px system-ui'; var tw2=c.measureText(tx).width+12*k, mx=(a2[0]+b2[0])/2, my=Math.min(a2[1],b2[1])-24*k; c.fillStyle='rgba(37,99,235,.95)'; c.fillRect(mx-tw2/2, my-14*k, tw2, 20*k); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(tx, mx, my); c.textAlign='left'; SEC.fallTxt=tx; } }
+  c.fillStyle='#111827'; c.font='700 '+(12*k)+'px system-ui'; c.fillText((SEC.which==='A'?'Section A-A':'Section B-B')+'  ·  slab '+Math.round(D.G.slab*1000)+' mm', 8*k, 16*k); }
+function secDrawSlice(c, W, H, k){ var S0=SEC.slice; if(!S0){ c.fillStyle='#6b7280'; c.font=(13*k)+'px system-ui'; c.fillText('No scan points in this band.', 16*k, 30*k); return; } var g=S0.g, Z=S0.Z;
+  if(!SEC.vl||SEC.vl.key!==SEC.which+'|'+W+'|'+H+'|'+SEC.band){ SEC.vl=secFitView(g.x0, g.x0+g.nx*g.cell, g.y0, g.y0+g.ny*g.cell, W, H-30*k); SEC.vl.cy-=15*k/SEC.vl.ppm; SEC.vl.key=SEC.which+'|'+W+'|'+H+'|'+SEC.band; } var V=SEC.vl, S=function(X,T){ return [W/2+(X-V.cx)*V.ppm, H/2-(T-V.cy)*V.ppm]; };
+  /* height colours with a little hill shading, drawn into a picture one pixel per cell */ if(!S0.img){ var cv=document.createElement('canvas'); cv.width=g.nx; cv.height=g.ny; var x=cv.getContext('2d'), im=x.createImageData(g.nx, g.ny), d=im.data;
+    for(var j=0;j<g.ny;j++) for(var i=0;i<g.nx;i++){ var z=Z[j*g.nx+i], o=((g.ny-1-j)*g.nx+i)*4; if(!(z===z)){ d[o+3]=0; continue; } var zx=Z[j*g.nx+Math.min(g.nx-1,i+1)], zy=Z[Math.min(g.ny-1,j+1)*g.nx+i], sh=1; if(zx===zx&&zy===zy){ var gx=(zx-z)/g.cell, gy=(zy-z)/g.cell; sh=Math.max(0.6, Math.min(1.15, 1-0.35*(gx*0.6-gy*0.8)/Math.sqrt(1+gx*gx+gy*gy))); }
+      var C=secRamp((z-S0.zl)/(S0.zh-S0.zl)); d[o]=Math.min(255,C[0]*sh); d[o+1]=Math.min(255,C[1]*sh); d[o+2]=Math.min(255,C[2]*sh); d[o+3]=255; } x.putImageData(im,0,0); S0.img=cv; }
+  var tl=S(g.x0, g.y0+g.ny*g.cell); c.imageSmoothingEnabled=true; c.drawImage(S0.img, tl[0], tl[1], g.nx*g.cell*V.ppm, g.ny*g.cell*V.ppm);
+  /* contours (marching squares), every fifth one heavier and labelled */ if(!S0.cont) S0.cont=secContours(S0); c.lineCap='round'; S0.cont.forEach(function(L){ var maj=Math.abs(Math.round(L.z/S0.ci)%5)===0; c.strokeStyle=maj?'rgba(17,24,39,.85)':'rgba(17,24,39,.45)'; c.lineWidth=(maj?1.6:0.9)*k; c.beginPath(); L.segs.forEach(function(s){ var p=S(s[0],s[1]), q=S(s[2],s[3]); c.moveTo(p[0],p[1]); c.lineTo(q[0],q[1]); }); c.stroke(); });
+  /* the cut line along the middle */ var a=S(g.x0,0), b=S(g.x0+g.nx*g.cell,0); c.setLineDash([8*k,6*k]); c.strokeStyle=SEC.which==='A'?'#f59e0b':'#16a34a'; c.lineWidth=1.5*k; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.setLineDash([]);
+  /* spot heights on a grid */ var sp=SEC.spot>0?SEC.spot:secNiceStep(W/V.ppm, 10), rows=SEC.band>=1.5?[-SEC.band/2+g.cell*2, 0, SEC.band/2-g.cell*2]:[0]; c.font='600 '+(10*k)+'px system-ui'; c.textAlign='center'; var x0=V.cx-W/2/V.ppm, x1=V.cx+W/2/V.ppm;
+  rows.forEach(function(t){ var lastR=-1e9; for(var X=Math.ceil(Math.max(x0,g.x0)/sp)*sp; X<=Math.min(x1, g.x0+g.nx*g.cell); X+=sp){ var z=volZat(Z, g, X, t); if(!(z===z)) continue; var s=S(X,t), tt=levN(z), tw=c.measureText(tt).width+6*k; c.fillStyle='#111827'; c.beginPath(); c.arc(s[0],s[1],2.2*k,0,7); c.fill(); if(s[0]-tw/2<=lastR) continue; c.fillStyle='rgba(255,255,255,.85)'; c.fillRect(s[0]-tw/2, s[1]-16*k, tw, 12*k); c.fillStyle='#111827'; c.fillText(tt, s[0], s[1]-7*k); lastR=s[0]+tw/2; } });
+  /* key */ c.textAlign='left'; var kw=Math.min(260*k, W*0.4), ky=H-20*k; for(var q=0;q<kw;q++){ var C2=secRamp(q/kw); c.fillStyle='rgb('+(C2[0]|0)+','+(C2[1]|0)+','+(C2[2]|0)+')'; c.fillRect(10*k+q, ky, 1, 9*k); } c.fillStyle='#111827'; c.font=(10*k)+'px system-ui'; c.fillText(levN(S0.zl), 10*k, ky-3*k); c.textAlign='right'; c.fillText(levN(S0.zh), 10*k+kw, ky-3*k); c.textAlign='left';
+  c.fillText('Contours every '+mm(S0.ci)+(SEC.ground?'  ·  ground only':''), 20*k+kw, ky+8*k);
+  c.font='700 '+(12*k)+'px system-ui'; c.fillText('Slice along '+(SEC.which==='A'?'A-A':'B-B')+'  ·  '+fmt(SEC.band,2)+' m wide', 8*k, 16*k); }
+function secContours(S0){ var g=S0.g, Z=S0.Z, nx=g.nx, ny=g.ny, c=g.cell, out=[], ci=S0.ci;
+  for(var lv=Math.ceil(S0.zl/ci)*ci; lv<=S0.zh; lv+=ci){ var segs=[];
+    for(var j=0;j<ny-1;j++) for(var i=0;i<nx-1;i++){ var a=Z[j*nx+i], b=Z[j*nx+i+1], d=Z[(j+1)*nx+i], e=Z[(j+1)*nx+i+1]; if(!(a===a&&b===b&&d===d&&e===e)) continue; var x0=g.x0+(i+0.5)*c, y0=g.y0+(j+0.5)*c, pts=[];
+      var ed=function(za, zb, xa, ya, xb, yb){ if((za<lv)!==(zb<lv)){ var t=(lv-za)/(zb-za); pts.push([xa+(xb-xa)*t, ya+(yb-ya)*t]); } };
+      ed(a,b,x0,y0,x0+c,y0); ed(b,e,x0+c,y0,x0+c,y0+c); ed(e,d,x0+c,y0+c,x0,y0+c); ed(d,a,x0,y0+c,x0,y0); if(pts.length>=2) segs.push([pts[0][0],pts[0][1],pts[1][0],pts[1][1]]); if(pts.length===4) segs.push([pts[2][0],pts[2][1],pts[3][0],pts[3][1]]); }
+    if(segs.length) out.push({z:lv, segs:segs}); } return out; }
+
+/* ---------- keeping it live ---------- */
+function secRebuild(fast){ if(!APP.res) return; var G=secGeom(SEC.which); SEC.data=secGather(G.slab, fast); SEC.data.gd=null; if(SEC.tab==='slice'){ var D=SEC.band===G.slab?SEC.data:secGather(SEC.band, fast); SEC.slice=D.X.length?secSliceGrid(D):null; } else SEC.slice=null; SEC.full=!fast; }
+function secTick(){ if(!SEC.open){ SEC.raf=0; return; } SEC.raf=requestAnimationFrame(secTick); if(!APP.res) return; var k=secKey()+'|'+SEC.tab;
+  if(k!==SEC.key){ var prev=SEC.key.split('|'), cur=k.split('|'); if(SEC.key){ if(prev[0]!==cur[0]&&prev[1]===cur[1]) SEC.which='A'; else if(prev[1]!==cur[1]&&prev[0]===cur[0]) SEC.which='B'; }
+    SEC.key=secKey()+'|'+SEC.tab; SEC.dragT=performance.now(); if(prev[6]!==SEC.which){ SEC.vs=null; SEC.vl=null; SEC.fp=[]; } secRebuild(true); secDraw(); secBar(); return; }
+  if(!SEC.full&&performance.now()-SEC.dragT>250){ secRebuild(false); secDraw(); } }
+
+/* ---------- the panel ---------- */
+function secEl(){ var st=document.getElementById('stage'); if(!st) return null; var p=document.getElementById('secSplit'); if(!p){ p=document.createElement('div'); p.id='secSplit'; p.innerHTML='<div id="secBar"></div><div id="secBody"><canvas id="secCv"></canvas></div><div id="secGrip" title="Drag to make the split taller or shorter"></div>'; st.appendChild(p); secWire(p); } return p; }
+function secPlace(){ var p=document.getElementById('secSplit'); if(!p) return; var on=SEC.open&&APP.res&&(APP.view==='3d'||(typeof CEI!=='undefined'&&CEI.view==='plan'&&APP.view!=='ceil')); p.style.display=on?'flex':'none'; if(!on) return; var bi=typeof sbBottomInset==='function'?sbBottomInset():0; p.style.bottom=(bi+6)+'px'; p.style.height=Math.round(SEC.h*100)+'%'; }
+function secBar(){ var b=document.getElementById('secBar'); if(!b) return; var o=function(v,l,cur){ return '<option value="'+v+'"'+(+cur===v?' selected':'')+'>'+l+'</option>'; }, seg=function(k,v,items){ return '<span class="secSeg">'+items.map(function(it){ return '<button data-sk="'+k+'" data-sv="'+it[0]+'" class="'+(String(v)===String(it[0])?'on':'')+'">'+it[1]+'</button>'; }).join('')+'</span>'; };
+  b.innerHTML=seg('which', SEC.which, [['A','A-A'],['B','B-B']])+seg('tab', SEC.tab, [['section','Section'],['slice','Slice']])+
+    '<span class="secGrp" title="Step the line through the scan (or use the arrow keys)"><button data-step="-1">◀</button><select id="secStep">'+[0.1,0.25,0.5,1,2,5].map(function(v){ return o(v, v<1?Math.round(v*1000)+' mm':v+' m', SEC.step); }).join('')+'</select><button data-step="1">▶</button></span>'+
+    (SEC.tab==='slice'?'<label class="secL" title="How wide the slice is, across the line">Width <select id="secBand">'+[0.25,0.5,1,2,5,10,20].map(function(v){ return o(v, v<1?Math.round(v*1000)+' mm':v+' m', SEC.band); }).join('')+'</select></label><label class="secL">Contours <select id="secCi">'+o(0,'Auto',SEC.cint)+[0.05,0.1,0.25,0.5,1].map(function(v){ return o(v, Math.round(v*1000)+' mm', SEC.cint); }).join('')+'</select></label>'+seg('ground', SEC.ground?1:0, [[1,'Ground only'],[0,'All']]):
+      '<button id="secFalls" class="'+(SEC.falls?'on':'')+'" title="Click two points on the ground line to read the fall or rise between them">Falls</button>')+
+    '<label class="secL" title="How often spot heights are shown">Spots <select id="secSpot">'+o(0,'Auto',SEC.spot)+[0.5,1,2,5,10].map(function(v){ return o(v, v+' m', SEC.spot); }).join('')+'</select></label>'+
+    '<span class="secGrp" title="Open the 3D scan at this line"><button id="secCut" class="'+(SEC.cut?'on':'')+'">3D cutaway</button>'+(SEC.cut?'<button id="secFlip" title="Show the other side">Flip</button>':'')+'</span>'+
+    '<button id="secFit" title="Fit the view">Fit</button><span style="flex:1"></span><button id="secX" title="Close the split view">✕</button>';
+  var q=function(id){ return document.getElementById(id); };
+  b.querySelectorAll('[data-sk]').forEach(function(x){ x.onclick=function(){ var k=x.dataset.sk, v=x.dataset.sv; if(k==='ground') SEC.ground=v==='1'; else SEC[k]=v; if(k==='which'){ SEC.vs=null; SEC.vl=null; SEC.fp=[]; if(SEC.cut) SEC.cut=SEC.which; } secSavePrefs(); SEC.key=''; secBar(); requestRender(false); planDrawSoon(); }; });
+  b.querySelectorAll('[data-step]').forEach(function(x){ x.onclick=function(){ secStep(+x.dataset.step); }; });
+  q('secStep').onchange=function(){ SEC.step=+this.value; secSavePrefs(); }; if(q('secBand')) q('secBand').onchange=function(){ SEC.band=+this.value; SEC.vl=null; secSavePrefs(); SEC.key=''; planDrawSoon(); };
+  if(q('secCi')) q('secCi').onchange=function(){ SEC.cint=+this.value; secSavePrefs(); SEC.key=''; }; q('secSpot').onchange=function(){ SEC.spot=+this.value; secSavePrefs(); secDraw(); };
+  if(q('secFalls')) q('secFalls').onclick=function(){ SEC.falls=!SEC.falls; if(!SEC.falls) SEC.fp=[]; secBar(); secDraw(); if(SEC.falls) toast('Click two points on the section to read the fall between them.', 3000); };
+  q('secCut').onclick=function(){ SEC.cut=SEC.cut?null:SEC.which; secBar(); requestRender(false); if(SEC.cut&&APP.view!=='3d') toast('The 3D view is now cut open at '+(SEC.which==='A'?'A-A':'B-B')+'.', 3000); }; if(q('secFlip')) q('secFlip').onclick=function(){ SEC.flip=!SEC.flip; requestRender(false); };
+  q('secFit').onclick=function(){ SEC.vs=null; SEC.vl=null; secDraw(); }; q('secX').onclick=function(){ secToggle(false); }; }
+function secToggle(on){ SEC.open=on==null?!SEC.open:!!on; var p=secEl(); secPlace(); var bt=document.querySelectorAll('.btnSecSplit'); bt.forEach(function(x){ x.classList.toggle('on', SEC.open); });
+  if(SEC.open){ if(typeof ceiEnsure==='function'&&!CEI.axis) return; SEC.key=''; secBar(); if(!SEC.raf) SEC.raf=requestAnimationFrame(secTick); } planDrawSoon(); requestRender(false); }
+function secStep(dir){ var d=dir*SEC.step; if(SEC.which==='A') CEI.lc+=d; else CEI.st+=d; CEI.img=null; try{ ceiSave(); }catch(e){} planDrawSoon(); requestRender(false); if(typeof mdlOv==='function') mdlOv(); }
+function secWire(p){ var cv=p.querySelector('#secCv'), dn=null;
+  cv.addEventListener('wheel', function(e){ e.preventDefault(); var V=SEC.tab==='slice'?SEC.vl:SEC.vs; if(!V) return; var r=cv.getBoundingClientRect(), k=cv.width/r.width, mx=(e.clientX-r.left)*k, my=(e.clientY-r.top)*k, f=Math.exp(-e.deltaY*0.0015), wx=V.cx+(mx-cv.width/2)/V.ppm, wy=V.cy-(my-cv.height/2)/V.ppm; V.ppm*=f; V.cx=wx-(mx-cv.width/2)/V.ppm; V.cy=wy+(my-cv.height/2)/V.ppm; secDraw(); }, {passive:false});
+  cv.addEventListener('pointerdown', function(e){ dn={x:e.clientX, y:e.clientY, moved:false}; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', function(e){ if(!dn) return; var V=SEC.tab==='slice'?SEC.vl:SEC.vs; if(!V) return; var k=cv.width/cv.getBoundingClientRect().width, dx=e.clientX-dn.x, dy=e.clientY-dn.y; if(!dn.moved&&Math.hypot(dx,dy)<4) return; dn.moved=true; V.cx-=dx*k/V.ppm; V.cy+=dy*k/V.ppm; dn.x=e.clientX; dn.y=e.clientY; secDraw(); });
+  cv.addEventListener('pointerup', function(e){ var d=dn; dn=null; if(!d||d.moved) return; if(SEC.tab==='section'&&SEC.falls&&SEC.vs){ var r=cv.getBoundingClientRect(), k=cv.width/r.width, X=SEC.vs.cx+((e.clientX-r.left)*k-cv.width/2)/SEC.vs.ppm; if(SEC.fp.length>=2) SEC.fp=[]; SEC.fp.push(X); secDraw(); } });
+  var g=p.querySelector('#secGrip'), gd=null; g.addEventListener('pointerdown', function(e){ gd={y:e.clientY, h:SEC.h}; g.setPointerCapture(e.pointerId); e.preventDefault(); });
+  g.addEventListener('pointermove', function(e){ if(!gd) return; var st=document.getElementById('stage').getBoundingClientRect(); SEC.h=Math.max(0.2, Math.min(0.75, gd.h+(gd.y-e.clientY)/st.height)); secPlace(); secDraw(); });
+  g.addEventListener('pointerup', function(){ gd=null; secSavePrefs(); }); }
+window.addEventListener('keydown', function(e){ if(!SEC.open||!APP.res) return; var t=e.target&&e.target.tagName; if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return; if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(e.key==='ArrowRight'||e.key==='ArrowUp'){ secStep(1); e.preventDefault(); e.stopImmediatePropagation(); } else if(e.key==='ArrowLeft'||e.key==='ArrowDown'){ secStep(-1); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+window.addEventListener('resize', function(){ if(SEC.open){ secPlace(); secDraw(); } });
+
+/* the slice band on the plan */
+sbAfter('planDraw', function(r){ try{ if(!SEC.open||SEC.tab!=='slice'||!APP.res||typeof planCv==='undefined') return r; var c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), G=secGeom(SEC.which), rb=APP.res.robust, L=Math.hypot(rb.x[1]-rb.x[0], rb.y[1]-rb.y[0]), cx=(rb.x[0]+rb.x[1])/2, cy=(rb.y[0]+rb.y[1])/2, X0=G.X(cx,cy)-L/2, X1=X0+L, h=SEC.band/2, dpr=planView.dpr||1;
+    var P=[G.at(X0,-h), G.at(X1,-h), G.at(X1,h), G.at(X0,h)].map(function(q){ return w2s(q[0],q[1]); }); c.save(); c.fillStyle=SEC.which==='A'?'rgba(245,158,11,.12)':'rgba(22,163,74,.12)'; c.strokeStyle=SEC.which==='A'?'#f59e0b':'#16a34a'; c.lineWidth=1.5*dpr; c.setLineDash([5*dpr,4*dpr]); c.beginPath(); P.forEach(function(s,k){ if(k) c.lineTo(s[0],s[1]); else c.moveTo(s[0],s[1]); }); c.closePath(); c.fill(); c.stroke(); c.restore(); }catch(e){ console.warn(e); } return r; });
+/* 3D cutaway: one more cut plane on the scan, following the line */
+sbAround('waUniforms', function(next){ var o=next(); try{ if(SEC.cut&&APP.res&&!miniVP&&o.cutOn<4){ var G=secGeom(SEC.cut), s=SEC.flip?-1:1, i=o.cutOn; o.cl[i*4]=G.nrm[0]*s; o.cl[i*4+1]=G.nrm[1]*s; o.cl[i*4+2]=0; o.cl[i*4+3]=G.off*s; o.cutOn=i+1; } }catch(e){} return o; });
+sbAfter('gl_render', function(r){ try{ secPlace(); }catch(e){} return r; });
+sbAfter('wsView0', function(r){ try{ secPlace(); if(SEC.open){ SEC.vs=null; SEC.vl=null; setTimeout(secDraw, 50); } }catch(e){} return r; });
+(function(){ ['tools','tools3d'].forEach(function(id){ var t=document.getElementById(id); if(!t||t.querySelector('.btnSecSplit')) return; var b=document.createElement('button'); b.className='btnSecSplit'; b.title='Split view: the A-A or B-B section (or a height-map slice) under the plan or 3D, live as you move the line'; b.textContent='Section split'; b.onclick=function(){ secToggle(); }; t.appendChild(b); });
+  var c=document.createElement('style'); c.textContent='#secSplit{position:absolute;left:8px;right:8px;z-index:30;display:none;flex-direction:column;background:var(--sbBg,#fff);border:1px solid var(--sbLn,#d6dae1);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);overflow:hidden}'+
+    '#secBar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--sbLn,#d6dae1);font-size:12px;background:var(--bg3,#f3f4f6);color:var(--sbTx,#111827)}#secBar button{border:1px solid var(--sbLn,#d6dae1);background:var(--sbBg,#fff);color:inherit;border-radius:7px;padding:3px 8px;cursor:pointer;font:inherit}#secBar button.on{background:var(--acc,#2563eb);border-color:var(--acc,#2563eb);color:#fff}'+
+    '#secBar select{font:inherit;padding:2px 4px;border-radius:6px;border:1px solid var(--sbLn,#d6dae1);background:var(--sbBg,#fff);color:inherit}#secBar .secSeg{display:inline-flex}#secBar .secSeg button{border-radius:0}#secBar .secSeg button:first-child{border-radius:7px 0 0 7px}#secBar .secSeg button:last-child{border-radius:0 7px 7px 0}#secBar .secGrp{display:inline-flex;gap:3px;align-items:center}#secBar .secL{display:inline-flex;gap:4px;align-items:center}'+
+    '#secBody{flex:1;position:relative;min-height:0}#secCv{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}#secGrip{position:absolute;left:50%;top:0;width:60px;margin-left:-30px;height:6px;cursor:ns-resize}#secGrip:after{content:"";display:block;width:36px;height:3px;border-radius:2px;background:#9ca3af;margin:2px auto 0}'+
+    '.btnSecSplit.on{background:var(--acc,#2563eb)!important;color:#fff!important}';
+  document.head.appendChild(c); })();
+
+/* ---------- DXF: the outline of the scan points in each section slab, on its own layer ---------- */
+function secOutline(view){ var R=APP.res, P=R.pos, n=R.n, O=R.opa, DL=R.del, Fr=ceiFrame(view), sl=view==='long'?CEI.slice:CEI.xslice, half=(sl>0?sl:0.3)/2, X=[], Z=[];
+  for(var i=0;i<n;i++){ var x=P[i*3], y=P[i*3+1], z=P[i*3+2]; if(!(z>-9000)||(DL&&DL[i])||(O&&O[i]<60)) continue; var dp=x*Fr.w[0]+y*Fr.w[1]-Fr.d; if(Math.abs(dp)>half) continue; X.push(x*Fr.u[0]+y*Fr.u[1]); Z.push(z); }
+  if(X.length<20) return []; var x0=Math.min.apply(null,X), x1=Math.max.apply(null,X), z0=Math.min.apply(null,Z), z1=Math.max.apply(null,Z), c=Math.max(0.02, Math.max(x1-x0, z1-z0)/2500), nx=Math.ceil((x1-x0)/c)+3, nz=Math.ceil((z1-z0)/c)+3, G=new Uint8Array(nx*nz), cnt=new Uint16Array(nx*nz);
+  for(i=0;i<X.length;i++){ var gx=Math.floor((X[i]-x0)/c)+1, gz=Math.floor((Z[i]-z0)/c)+1, q=gz*nx+gx; if(cnt[q]<65000) cnt[q]++; }
+  /* a cell counts with 2 points, then one cell of growth joins the gaps between splats */ for(var q=0;q<G.length;q++) G[q]=cnt[q]>=2?1:0; var G2=new Uint8Array(G.length); for(var gz2=1;gz2<nz-1;gz2++) for(var gx2=1;gx2<nx-1;gx2++){ var k=gz2*nx+gx2; G2[k]=G[k]|G[k-1]|G[k+1]|G[k-nx]|G[k+nx]; }
+  /* marching squares on the 0.5 level, then chain the pieces into lines */ var segs=[], key=function(x,y){ return Math.round(x*1000)+','+Math.round(y*1000); };
+  for(gz2=0;gz2<nz-1;gz2++) for(gx2=0;gx2<nx-1;gx2++){ var a=G2[gz2*nx+gx2], b=G2[gz2*nx+gx2+1], d=G2[(gz2+1)*nx+gx2], e=G2[(gz2+1)*nx+gx2+1], m=a|(b<<1)|(e<<2)|(d<<3); if(m===0||m===15) continue; var cx=x0+(gx2-0.5)*c, cz=z0+(gz2-0.5)*c, T=[cx+c/2,cz], Rr=[cx+c,cz+c/2], B=[cx+c/2,cz+c], Lf=[cx,cz+c/2];
+    var tab={1:[[Lf,T]],2:[[T,Rr]],3:[[Lf,Rr]],4:[[Rr,B]],5:[[Lf,T],[Rr,B]],6:[[T,B]],7:[[Lf,B]],8:[[B,Lf]],9:[[B,T]],10:[[T,Rr],[B,Lf]],11:[[B,Rr]],12:[[Rr,Lf]],13:[[Rr,T]],14:[[T,Lf]]}[m]; tab.forEach(function(s){ segs.push(s); }); }
+  var ends={}; segs.forEach(function(s, i){ [0,1].forEach(function(j){ var kk=key(s[j][0],s[j][1]); (ends[kk]=ends[kk]||[]).push(i); }); }); var used=new Uint8Array(segs.length), lines=[];
+  for(var si=0;si<segs.length;si++){ if(used[si]) continue; used[si]=1; var L=[segs[si][0], segs[si][1]]; [true,false].forEach(function(fwd){ var guard=0; while(guard++<200000){ var p=fwd?L[L.length-1]:L[0], cand=(ends[key(p[0],p[1])]||[]).filter(function(t){ return !used[t]; }); if(!cand.length) break; var t2=cand[0]; used[t2]=1; var s2=segs[t2], nxp=key(s2[0][0],s2[0][1])===key(p[0],p[1])?s2[1]:s2[0]; if(fwd) L.push(nxp); else L.unshift(nxp); } });
+    if(L.length>=4){ var S2=L.length>3000?L:ceiSimplify(L, c*0.6); lines.push(S2); } } return lines; }
+sbAround('ceiDxf', function(next){ var keep=window.download, add={}; try{ add.long=secOutline('long'); add.cross=secOutline('cross'); }catch(e){ console.warn(e); }
+  /* the outline goes in under the existing section drawing: catch the file on its way out and splice the extra layer and lines in */
+  window.download=function(name, blob){ window.download=keep; if(!/\.dxf$/i.test(name)||!(add.long&&add.long.length||add.cross&&add.cross.length)) return keep(name, blob); blob.text().then(function(txt){ try{ keep(name, new Blob([secDxfSplice(txt, add)], {type:'application/dxf'})); }catch(e){ console.warn(e); keep(name, blob); } }); };
+  try{ return next(); } finally { if(window.download!==keep) window.download=keep; } });
+function secDxfSplice(txt, add){ var nl='\r\n', L=txt.split(/\r?\n/), U=1000, f=function(v){ return (v*U).toFixed(1); };
+  /* where the sections were laid out: read the SECTION_FLOOR polylines' first vertex per section (x0) is not stored, so place by the same rule ceiDxf uses */
+  var info=secDxfLayout(); if(!info) return txt; var out=[];
+  var put=function(I, R){ if(R.length<2) return; out.push('0','POLYLINE','8','SECTION_SCAN','66','1','70','0'); R.forEach(function(q){ out.push('0','VERTEX','8','SECTION_SCAN','10',f(I.x0+q[0]-I.lo),'20',f(I.oy+q[1]),'30','0.0'); }); out.push('0','SEQEND','8','SECTION_SCAN'); };
+  /* only the part inside each section's drawn length, so the two sections never overlap */
+  ['long','cross'].forEach(function(v){ var I=info[v]; (add[v]||[]).forEach(function(P){ var run=[]; P.forEach(function(q){ if(q[0]>=I.lo&&q[0]<=I.hi) run.push(q); else { put(I, run); run=[]; } }); put(I, run); }); });
+  var s=L.join(nl), lay='0'+nl+'LAYER'+nl+'2'+nl+'SECTION_SCAN'+nl+'70'+nl+'0'+nl+'62'+nl+'3'+nl+'6'+nl+'CONTINUOUS'+nl, li=s.indexOf('0'+nl+'ENDTAB'+nl, s.indexOf('LAYER')); if(li>0) s=s.slice(0,li)+lay+s.slice(li);
+  var ei=s.lastIndexOf('0'+nl+'ENDSEC'); if(ei<0) return s; return s.slice(0,ei)+out.join(nl)+nl+s.slice(ei); }
+/* the same layout rule as ceiDxf: plan box from zones/notes/walls or the scan, sections below it */
+function secDxfLayout(){ try{ var xs=[], ys=[], a=CEI.axis, n=ceiN(); CEI.zones.forEach(function(Z){ ceiPoly(Z).forEach(function(p){ xs.push(p[0]); ys.push(p[1]); }); }); (CEI.notes||[]).forEach(function(N){ xs.push(N.x); ys.push(N.y); });
+    if(APP.model.walls.length||(APP.model.cols||[]).length){ var D=buildDrawing(); D.prims.forEach(function(pr){ if(pr.p&&pr.p.length&&pr.t!=='text'){ pr.p.forEach(function(q){ xs.push(q[0]); ys.push(q[1]); }); } }); }
+    if(!xs.length){ var rb=APP.res.robust; xs=[rb.x[0],rb.x[1]]; ys=[rb.y[0],rb.y[1]]; } var bx0=Math.min.apply(null,xs)-3, bx1=Math.max.apply(null,xs)+3, by0=Math.min.apply(null,ys)-3, by1=Math.max.apply(null,ys)+3, f0=(APP.res.floorLayer||0), oy=by0-2.5-(f0+(APP.res.h2c||APP.res.ceil||3)*1.5);
+    var rng=function(view){ var lo=1e9, hi=-1e9; if(view==='long'){ CEI.zones.forEach(function(Z){ var s=ceiStats(Z); if(s){ lo=Math.min(lo,s.smin-2); hi=Math.max(hi,s.smax+2); } }); if(lo>hi){ lo=Math.min(bx0*a[0]+by0*a[1], bx1*a[0]+by1*a[1]); hi=Math.max(bx0*a[0]+by0*a[1], bx1*a[0]+by1*a[1]); } }
+      else { CEI.zones.forEach(function(Z){ var s=ceiStats(Z); if(s){ lo=Math.min(lo,-s.tmax-3); hi=Math.max(hi,-s.tmin+3); } }); if(lo>hi){ lo=-CEI.lc-8; hi=-CEI.lc+8; } } return [lo,hi]; };
+    var rl=rng('long'), rc=rng('cross'); return {long:{x0:bx0, lo:rl[0], hi:rl[1], oy:oy}, cross:{x0:bx0+(rl[1]-rl[0])+4, lo:rc[0], hi:rc[1], oy:oy}}; }catch(e){ console.warn(e); return null; } }
 
 
 </script>
