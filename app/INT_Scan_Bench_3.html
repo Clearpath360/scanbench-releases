@@ -4935,7 +4935,7 @@ function splatEnsure(){
   var VS='#version 300 es\nprecision highp float;precision highp int;precision highp usampler2D;\n'+
     'layout(location=0) in vec2 aQ; layout(location=1) in uint aI;\n'+
     'uniform highp sampler2D uA; uniform highp sampler2D uB; uniform highp sampler2D uC; uniform mediump sampler2D uD;\n'+
-    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform highp sampler2D uTopTex; uniform vec4 uTopB; uniform vec2 uTopS; uniform float uSnowC; uniform vec4 uPud; uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform sampler2D uRefl; uniform float uReflOn; uniform vec4 uMir; uniform vec2 uSnowD; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
+    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform highp sampler2D uTopTex; uniform vec4 uTopB; uniform vec2 uTopS; uniform float uSnowC; uniform vec4 uPud; uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform sampler2D uRefl; uniform float uReflOn; uniform vec4 uMir; uniform vec2 uSnowD; uniform sampler2D uVolTex; uniform sampler2D uVolZ; uniform vec4 uVolB; uniform vec4 uVolS; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
     'out vec4 vCol; out vec2 vPos;\n'+
     'float pzh(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); } float pzn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(pzh(i),pzh(i+vec2(1.0,0.0)),f.x), mix(pzh(i+vec2(0.0,1.0)),pzh(i+vec2(1.0,1.0)),f.x), f.y); }\n'+
     'void main(){ int W='+W+'; ivec2 tc=ivec2(int(aI)%W, int(aI)/W); vec4 A=texelFetch(uA,tc,0); vec4 B=texelFetch(uB,tc,0); vec2 C=texelFetch(uC,tc,0).xy; vec4 D=texelFetch(uD,tc,0);\n'+
@@ -4968,6 +4968,7 @@ function splatEnsure(){
     ' if(uTbOn>0.5){ vec3 dd=A.xyz-uTbC; if(abs(dot(dd,uTbU))<=uTbH.x&&abs(dot(dd,uTbV))<=uTbH.y&&abs(dot(dd,uTbW))<=uTbH.z) rgb=mix(rgb, vec3(1.0,0.45,0.1), 0.55); }\n'+
     ' float hA=uHideA; float fm=0.0; if(hA>1.5){ hA-=2.0; fm=1.0; } float al=1.0-hA; float fi=float(aI); for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ al=1.0-uRng[k].z; fm=uRng[k].w; } } if(al<0.003) return; if(al<0.997){ if(fm>0.5) fa*=al; else { float hh=fract(sin(fi*12.9898)*43758.5453); if(hh>al) return; } }\n'+
     ' vec2 ext=(abs(M1)+abs(M2))*4.0/uVp; if(abs(ndc.x)-ext.x>1.0||abs(ndc.y)-ext.y>1.0) return;\n'+
+    ' if(uVolB.w>0.5){ vec2 tv=(A.xy-uVolB.xy)*uVolB.z; if(tv.x>=0.0&&tv.y>=0.0&&tv.x<uVolS.x&&tv.y<uVolS.y){ float vz=texelFetch(uVolZ,ivec2(tv),0).r; if(abs(A.z-vz)<uVolS.z){ vec4 vc=texelFetch(uVolTex,ivec2(tv),0); rgb=mix(rgb, vc.rgb, vc.a); } } }\n'+
     ' vCol=vec4(rgb*uBright, min(1.0, A.w*fa)); vPos=aQ;\n'+
     ' gl_Position=vec4(ndc.xy+aQ.x*M1*2.0/uVp+aQ.y*M2*2.0/uVp, ndc.z, 1.0); }';
   var FS='#version 300 es\nprecision highp float;\nin vec4 vCol; in vec2 vPos; out vec4 o; uniform float uCut; uniform float uStoch;\nvoid main(){ float A=-dot(vPos,vPos); if(A<-4.0) discard; float B=exp(A)*vCol.a; if(B<0.004) discard; if(uCut>0.5&&B<(uCut>1.05?uCut-1.0:0.4)) discard; if(uStoch>0.5){ float hh=fract(sin(dot(gl_FragCoord.xy+vPos*41.3,vec2(12.9898,78.233)))*43758.5453); if(B<hh) discard; o=vec4(vCol.rgb,1.0); return; } o=vec4(vCol.rgb*B,B); }';
@@ -8421,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r314';
+var SB_BUILD='2026-10-12 r315';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -23187,6 +23188,232 @@ sbAfter('wxPanel', function(r){ try{ var s=document.getElementById('sbWxSec'), S
       var el=d.querySelector('input'); el.onpointerdown=function(){ pushUndo(); }; el.oninput=function(){ S.snowDepth=+this.value; S.on=true; if(S.snowDepth>0&&!(S.snowCover>0.05)){ S.snowCover=0.8; var c2=document.getElementById('wxCover'); if(c2){ c2.value=0.8; document.getElementById('wxCoverV').textContent='80%'; } } document.getElementById('wxSDepV').textContent=cm(S.snowDepth); requestRender(false); }; el.onchange=function(){ afterEdit(); }; }
     if(pud){ var e=document.createElement('div'); e.className='row'; e.title='Puddles mirror the buildings, lamps and sky around them (draws the scene twice, so it is a little slower)'; e.innerHTML='<label>Reflections</label><div class="sbLSeg"><button data-rf="1" class="'+(S.reflect!==false?'on':'')+'">On</button><button data-rf="0" class="'+(S.reflect===false?'on':'')+'">Off</button></div>'; var row2=pud.closest('.row'); row2.parentNode.insertBefore(e, row2.nextSibling);
       e.querySelectorAll('[data-rf]').forEach(function(x){ x.onclick=function(){ pushUndo(); S.reflect=x.dataset.rf==='1'; afterEdit(); wxPanel(); requestRender(false); }; }); } }catch(e){ console.warn(e); } return r; });
+
+/* ===== Volume (r315): cut & fill between two dated scans, stockpiles on one scan, cut & fill to a set level.
+   You draw each area round on the plan or the 3D view. The ground surface of each scan is read on a grid (auto size, can be set),
+   with an optional ground-only filter that drops cars, people, fences and plants and fills the gap from the ground around.
+   Result: a red (cut) / blue (fill) map on the plan and on the scan in 3D, totals per area, a PDF report and a CSV. ===== */
+
+var VOL={key:'', out:null, busy:false, drawing:false, draft:[], hover:null, wc:{}, tex:null, texKey:'', dn:null, err:''};
+function volM(){ var M=APP.model; if(!M) return null; if(!M.vol) M.vol={areas:[], mode:'cf', a:0, b:1, scan:0, level:null, cell:0, ground:true, dead:0.02, map:true};
+  var V=M.vol; if(!V.areas) V.areas=[]; return V; }
+function volScans(){ try{ return cmpList(); }catch(e){ return [{id:'A', name:'Scan', label:'Scan 1', main:true}]; } }
+function volUnits(){ return (APP.scaleSet||!(APP.info&&APP.info.isSplat))?'m':'units'; }
+function volFmtV(v){ var u=volUnits()==='m'?' m³':' units³', a=Math.abs(v); return (a>=1000?Math.round(v).toLocaleString('en-GB'):a>=10?v.toFixed(1):v.toFixed(2))+u; }
+function volFmtA(v){ return (v>=100?Math.round(v).toLocaleString('en-GB'):v.toFixed(1))+(volUnits()==='m'?' m²':' units²'); }
+function volShown(){ var V=volM(); return !!(V&&V.map&&V.areas.length&&VOL.out&&typeof SBP!=='undefined'&&SBP.key==='volume'); }
+
+/* ---------- points of a scan, in the main scan's coordinates ---------- */
+function volPts(k){ var S=volScans(), s=S[k]; if(!s) return null;
+  if(s.main){ var R=APP.res; return R&&R.pos?{P:R.pos, n:R.n, opa:R.opa, del:R.del, label:s.label||s.name, aligned:true}:null; }
+  var p=cmpProp(s), D=p&&PROPS.data[p.src]; if(!D) return null; var sig=[p.x,p.y,p.z,p.rot,p.s,p.up,p.tx,p.ty,D.n,D.pos.length?D.pos[0]:0].join('|'), c=VOL.wc[s.id];
+  if(!c||c.sig!==sig){ c={sig:sig, W:propWorld(p, D)}; VOL.wc[s.id]=c; }
+  return {P:c.W, n:D.n, opa:D.opa, del:null, label:s.label||s.name, aligned:!!(s.aligned||s.msAligned)}; }
+
+/* ---------- the grid ---------- */
+function volBox(V){ var x0=1e30, y0=1e30, x1=-1e30, y1=-1e30; V.areas.forEach(function(A){ A.pts.forEach(function(q){ x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); }); }); return x1>x0?[x0,y0,x1,y1]:null; }
+function volAutoCell(V){ var b=volBox(V); if(!b) return 0.1; var d=Math.max(b[2]-b[0], b[3]-b[1]); return d<12?0.05:d<30?0.1:d<80?0.25:0.5; }
+function volCell(V){ return V.cell>0?V.cell:volAutoCell(V); }
+function volGrid(V){ var b=volBox(V); if(!b) return null; var c=volCell(V), m=1.6+2*c; var x0=b[0]-m, y0=b[1]-m, nx=Math.ceil((b[2]-b[0]+2*m)/c), ny=Math.ceil((b[3]-b[1]+2*m)/c);
+  while(nx*ny>2.5e6){ c*=2; nx=Math.ceil((b[2]-b[0]+2*m)/c); ny=Math.ceil((b[3]-b[1]+2*m)/c); } return {x0:x0, y0:y0, cell:c, nx:nx, ny:ny}; }
+
+/* the scan surface in each cell: the middle (median) height, so loose splats do not count and slopes are not biased */
+function volSurface(src, g, ground){ var nx=g.nx, ny=g.ny, N=nx*ny, cnt=new Uint32Array(N+1), P=src.P, n=src.n, O=src.opa, DL=src.del, c=g.cell, cid=new Int32Array(n);
+  for(var i=0;i<n;i++){ cid[i]=-1; var z=P[i*3+2]; if(!(z>-9000)||(DL&&DL[i])||(O&&O[i]<60)) continue; var cx=Math.floor((P[i*3]-g.x0)/c), cy=Math.floor((P[i*3+1]-g.y0)/c); if(cx<0||cy<0||cx>=nx||cy>=ny) continue; var q=cy*nx+cx; cid[i]=q; cnt[q+1]++; }
+  for(var q2=0;q2<N;q2++) cnt[q2+1]+=cnt[q2]; var zs=new Float32Array(cnt[N]), fill=cnt.slice(0,N);
+  for(i=0;i<n;i++){ var cq=cid[i]; if(cq<0) continue; zs[fill[cq]++]=P[i*3+2]; }
+  var Z=new Float32Array(N); for(q2=0;q2<N;q2++){ var a=cnt[q2], b=cnt[q2+1], m=b-a; if(m<2){ Z[q2]=NaN; continue; } var sub=zs.subarray(a,b); sub.sort(); Z[q2]=m&1?sub[m>>1]:0.5*(sub[(m>>1)-1]+sub[m>>1]); }
+  if(ground) volGroundOnly(Z, g); volFillHoles(Z, g, 3.0); return Z; }
+
+/* ground only: a morphological opening (lowest then highest within 1.25 m) finds the bare ground; anything standing more than
+   about a metre above it with steep sides (a car, a person, a fence, a bush) is dropped and filled from the ground around.
+   A heap with sides up to about 35 degrees stays. */
+function volMinMax(A, nx, ny, R, isMin){ var T=new Float32Array(A.length), O=new Float32Array(A.length), x, y, k, v, m, i;
+  for(y=0;y<ny;y++){ var row=y*nx; for(x=0;x<nx;x++){ m=isMin?Infinity:-Infinity; for(k=Math.max(0,x-R);k<=Math.min(nx-1,x+R);k++){ v=A[row+k]; if(v===v){ if(isMin?v<m:v>m) m=v; } } T[row+x]=(m===Infinity||m===-Infinity)?NaN:m; } }
+  for(x=0;x<nx;x++){ for(y=0;y<ny;y++){ m=isMin?Infinity:-Infinity; for(k=Math.max(0,y-R);k<=Math.min(ny-1,y+R);k++){ v=T[k*nx+x]; if(v===v){ if(isMin?v<m:v>m) m=v; } } O[y*nx+x]=(m===Infinity||m===-Infinity)?NaN:m; } }
+  return O; }
+function volGroundOnly(Z, g){ var R=Math.max(1, Math.round(1.25/g.cell)), op=volMinMax(volMinMax(Z, g.nx, g.ny, R, true), g.nx, g.ny, R, false), thr=0.3+0.7*1.25;
+  var nx=g.nx, ny=g.ny, rm=new Uint8Array(Z.length), i, any=false; for(i=0;i<Z.length;i++){ if(Z[i]===Z[i]&&op[i]===op[i]&&Z[i]-op[i]>thr){ rm[i]=1; any=true; } } if(!any) return;
+  /* the sides of whatever was dropped go too (a car door reads lower than a metre), and the gap takes the bare ground height */
+  var D=Math.max(1, Math.round(0.45/g.cell)), rd=volMinMax(Float32Array.from(rm), nx, ny, D, false);
+  for(i=0;i<Z.length;i++){ if(!(op[i]===op[i])) continue; if(rm[i]||(rd[i]>0.5&&Z[i]===Z[i]&&Z[i]-op[i]>0.15)) Z[i]=op[i]; } }
+function volFillHoles(Z, g, reach){ var nx=g.nx, ny=g.ny, passes=Math.min(90, Math.ceil(reach/g.cell)), T=new Float32Array(Z.length);
+  for(var p=0;p<passes;p++){ var any=false; T.set(Z); for(var y=0;y<ny;y++) for(var x=0;x<nx;x++){ var i=y*nx+x; if(Z[i]===Z[i]) continue; var s=0, c=0, v;
+      if(x>0){ v=Z[i-1]; if(v===v){ s+=v; c++; } } if(x<nx-1){ v=Z[i+1]; if(v===v){ s+=v; c++; } } if(y>0){ v=Z[i-nx]; if(v===v){ s+=v; c++; } } if(y<ny-1){ v=Z[i+nx]; if(v===v){ s+=v; c++; } }
+      if(c>=2||(c===1&&p>2)){ T[i]=s/c; any=true; } } Z.set(T); if(!any) break; } }
+
+function volMask(V, g){ var M=new Uint8Array(g.nx*g.ny); V.areas.forEach(function(A, ai){ var poly=A.pts.map(function(q){ return [q[0],q[1]]; }); if(poly.length<3) return; var x0=1e30,y0=1e30,x1=-1e30,y1=-1e30; poly.forEach(function(q){ x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); });
+    var cx0=Math.max(0,Math.floor((x0-g.x0)/g.cell)), cx1=Math.min(g.nx-1,Math.ceil((x1-g.x0)/g.cell)), cy0=Math.max(0,Math.floor((y0-g.y0)/g.cell)), cy1=Math.min(g.ny-1,Math.ceil((y1-g.y0)/g.cell));
+    for(var cy=cy0;cy<=cy1;cy++) for(var cx=cx0;cx<=cx1;cx++){ if(pointInPoly(g.x0+(cx+0.5)*g.cell, g.y0+(cy+0.5)*g.cell, poly)) M[cy*g.nx+cx]=ai+1; } }); return M; }
+function volAreaCells(V, g){ return V.areas.map(function(A){ var poly=A.pts, L=[]; if(poly.length<3) return new Int32Array(0); var x0=1e30,y0=1e30,x1=-1e30,y1=-1e30; poly.forEach(function(q){ x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); });
+  var cx0=Math.max(0,Math.floor((x0-g.x0)/g.cell)), cx1=Math.min(g.nx-1,Math.ceil((x1-g.x0)/g.cell)), cy0=Math.max(0,Math.floor((y0-g.y0)/g.cell)), cy1=Math.min(g.ny-1,Math.ceil((y1-g.y0)/g.cell));
+  for(var cy=cy0;cy<=cy1;cy++) for(var cx=cx0;cx<=cx1;cx++){ if(pointInPoly(g.x0+(cx+0.5)*g.cell, g.y0+(cy+0.5)*g.cell, poly)) L.push(cy*g.nx+cx); } return Int32Array.from(L); }); }
+function volZat(Z, g, x, y){ var cx=Math.floor((x-g.x0)/g.cell), cy=Math.floor((y-g.y0)/g.cell); if(cx<0||cy<0||cx>=g.nx||cy>=g.ny) return NaN; return Z[cy*g.nx+cx]; }
+/* stockpile base: a best-fit plane through the ground along the drawn boundary */
+function volBasePlane(A, Z, g){ var xs=[], s=g.cell; for(var i=0;i<A.pts.length;i++){ var a=A.pts[i], b=A.pts[(i+1)%A.pts.length], L=Math.hypot(b[0]-a[0], b[1]-a[1]), k=Math.max(1, Math.ceil(L/s)); for(var j=0;j<k;j++){ var t=j/k, x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t, z=volZat(Z, g, x, y); if(z===z) xs.push([x,y,z]); } }
+  if(xs.length<3) return null; var mx=0,my=0,mz=0; xs.forEach(function(p){ mx+=p[0]; my+=p[1]; mz+=p[2]; }); mx/=xs.length; my/=xs.length; mz/=xs.length;
+  var sxx=0,sxy=0,syy=0,sxz=0,syz=0; xs.forEach(function(p){ var dx=p[0]-mx, dy=p[1]-my, dz=p[2]-mz; sxx+=dx*dx; sxy+=dx*dy; syy+=dy*dy; sxz+=dx*dz; syz+=dy*dz; }); var det=sxx*syy-sxy*sxy;
+  var a2=det>1e-9?(sxz*syy-syz*sxy)/det:0, b2=det>1e-9?(syz*sxx-sxz*sxy)/det:0; return {a:a2, b:b2, mx:mx, my:my, mz:mz, n:xs.length}; }
+
+/* ---------- measuring ---------- */
+function volKey(){ var V=volM(); if(!V) return ''; var S=volScans(); return JSON.stringify([V.areas, V.mode, V.a, V.b, V.scan, V.level, V.cell, V.ground, V.dead, S.length, S.map(function(s){ return s.id; }), APP.res&&APP.res.n]); }
+function volRun(){ var V=volM(); VOL.err=''; VOL.key=volKey(); VOL.out=null; if(!V||!APP.res||!V.areas.length) return null; var t0=performance.now(), g=volGrid(V); if(!g) return null; var S=volScans(), Za=null, Zb=null, srcA, srcB;
+  if(V.mode==='cf'){ if(S.length<2){ VOL.err='Add the second scan in Compare (step 4) first, then pick the two dates here.'; return null; } var ia=Math.min(V.a,S.length-1), ib=Math.min(V.b,S.length-1); if(ia===ib){ VOL.err='Pick two different scans.'; return null; }
+    srcA=volPts(ia); srcB=volPts(ib); if(!srcA||!srcB){ VOL.err='One of the scans is not loaded.'; return null; } Za=volSurface(srcA, g, V.ground); Zb=volSurface(srcB, g, V.ground); }
+  else { srcB=volPts(Math.min(V.scan, S.length-1)); if(!srcB){ VOL.err='No scan.'; return null; } Zb=volSurface(srcB, g, V.ground); }
+  var M=volMask(V, g), N=g.nx*g.ny, D=new Float32Array(N).fill(NaN), ca=g.cell*g.cell, tot=V.areas.map(function(A){ return {name:A.name, cut:0, fill:0, area:0, nodata:0, base:null, lo:1e9, hi:-1e9}; });
+  if(V.mode==='pile'){ V.areas.forEach(function(A, ai){ tot[ai].base=volBasePlane(A, Zb, g); }); }
+  var lev=V.level; if(V.mode==='level'&&!(lev===lev&&lev!=null)){ var s0=0, n0=0; for(var i=0;i<N;i++){ if(M[i]&&Zb[i]===Zb[i]){ s0+=Zb[i]; n0++; } } lev=n0?s0/n0:0; V.level=+lev.toFixed(3); }
+  var cellsOf=volAreaCells(V, g); for(var ai=0;ai<cellsOf.length;ai++){ var CL=cellsOf[ai]; for(var ci=0;ci<CL.length;ci++){ i=CL[ci]; var m=ai+1, T=tot[ai], zb=Zb[i], d=NaN; T.area+=ca;
+    if(V.mode==='cf'){ var za=Za[i]; if(za===za&&zb===zb) d=zb-za; }
+    else if(V.mode==='pile'){ var B=T.base; if(B&&zb===zb){ var x=g.x0+((i%g.nx)+0.5)*g.cell, y=g.y0+(Math.floor(i/g.nx)+0.5)*g.cell; d=zb-(B.mz+B.a*(x-B.mx)+B.b*(y-B.my)); } }
+    else { if(zb===zb) d=zb-lev; }
+    if(!(d===d)){ T.nodata+=ca; continue; } if(M[i]===m) D[i]=d; if(d>T.hi) T.hi=d; if(d<T.lo) T.lo=d; if(Math.abs(d)<V.dead) continue;
+    if(V.mode==='level'){ if(d>0) T.cut+=d*ca; else T.fill+=-d*ca; } else { if(d>0) T.fill+=d*ca; else T.cut+=-d*ca; } } }
+  var all={name:'All areas', cut:0, fill:0, area:0, nodata:0}; if(V.mode==='pile'){ tot.forEach(function(T){ all.cut+=T.cut; all.fill+=T.fill; all.area+=T.area; all.nodata+=T.nodata; }); }
+  else { /* overlapping areas are counted once in the total */ for(i=0;i<N;i++){ if(!M[i]) continue; all.area+=ca; var d2=D[i]; if(!(d2===d2)){ all.nodata+=ca; continue; } if(Math.abs(d2)<V.dead) continue; var up=d2>0; if(V.mode==='level') up=!up; if(up) all.fill+=Math.abs(d2)*ca; else all.cut+=Math.abs(d2)*ca; } }
+  var ab=[]; for(i=0;i<N;i++) if(D[i]===D[i]) ab.push(Math.abs(D[i])); ab.sort(function(a,b){ return a-b; }); var dmax=Math.max(0.05, ab.length?ab[Math.floor(ab.length*0.98)]:0.05);
+  VOL.out={g:g, Za:Za, Zb:Zb, D:D, M:M, tot:tot, all:all, dmax:dmax, mode:V.mode, lev:lev, ms:Math.round(performance.now()-t0), la:srcA?srcA.label:'', lb:srcB.label, alA:srcA?srcA.aligned:true, alB:srcB.aligned};
+  VOL.texKey=''; return VOL.out; }
+function volRunSoon(){ if(VOL._t) return; VOL._t=setTimeout(function(){ VOL._t=0; try{ volRun(); }catch(e){ console.warn(e); VOL.err='Could not measure: '+e.message; } volPanel(); planDrawSoon&&planDrawSoon(); requestRender(false); }, 30); }
+
+/* red = cut (material gone or to take away), blue = fill (material added or to bring in) */
+function volColour(d, dmax, mode){ var k=Math.min(1, Math.abs(d)/dmax), cut=mode==='level'?d>0:d<0; return cut?[220-40*k|0, 60-30*k|0, 50-20*k|0, 0.35+0.55*k]:[60-30*k|0, 110-50*k|0, 235-20*k|0, 0.35+0.55*k]; }
+function volImage(){ var O=VOL.out, V=volM(); if(!O) return null; if(VOL.img&&VOL.imgFor===O) return VOL.img; var g=O.g, c=document.createElement('canvas'); c.width=g.nx; c.height=g.ny; var x=c.getContext('2d'), im=x.createImageData(g.nx, g.ny), T=new Uint8Array(g.nx*g.ny*4);
+  for(var cy=0;cy<g.ny;cy++) for(var cx=0;cx<g.nx;cx++){ var i=cy*g.nx+cx, o=((g.ny-1-cy)*g.nx+cx)*4, t=i*4; if(!O.M[i]) continue; var d=O.D[i], r, gg, b, a;
+      if(!(d===d)){ r=150; gg=150; b=150; a=((cx+cy)&3)===0?0.6:0.15; } else if(Math.abs(d)<V.dead){ r=255; gg=255; b=255; a=0.12; } else { var C=volColour(d, O.dmax, O.mode); r=C[0]; gg=C[1]; b=C[2]; a=C[3]; }
+      im.data[o]=r; im.data[o+1]=gg; im.data[o+2]=b; im.data[o+3]=Math.round(a*255); T[t]=r; T[t+1]=gg; T[t+2]=b; T[t+3]=Math.round(Math.min(0.8,a)*255); }
+  x.putImageData(im,0,0); VOL.img=c; VOL.imgFor=O; VOL.texData=T; return c; }
+
+/* ---------- plan drawing ---------- */
+function volPlanDraw(){ var V=volM(); if(!V||!APP.res||(typeof planCv==='undefined')) return; var show=(typeof SBP!=='undefined'&&SBP.key==='volume')||window.LAY_ONLY==='vol'; if(!show) return; if(window.LAY_ONLY&&window.LAY_ONLY!=='vol') return;
+  var c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), z=planView.z, dpr=planView.dpr||1; if(VOL.key!==volKey()&&!VOL._t) volRunSoon();
+  if(V.map&&VOL.out){ var im=volImage(), g=VOL.out.g, tl=w2s(g.x0, g.y0+g.ny*g.cell); if(im){ c.save(); c.imageSmoothingEnabled=false; c.drawImage(im, tl[0], tl[1], g.nx*g.cell*z, g.ny*g.cell*z); c.restore(); } }
+  c.save(); c.lineWidth=2*dpr; V.areas.forEach(function(A, ai){ if(A.pts.length<2) return; c.strokeStyle='#111827'; c.setLineDash([]); c.beginPath(); A.pts.forEach(function(q,k){ var s=w2s(q[0],q[1]); if(k) c.lineTo(s[0],s[1]); else c.moveTo(s[0],s[1]); }); c.closePath(); c.stroke(); c.strokeStyle='#fde047'; c.setLineDash([6*dpr,6*dpr]); c.stroke();
+      var cx=0, cy=0; A.pts.forEach(function(q){ cx+=q[0]; cy+=q[1]; }); var s0=w2s(cx/A.pts.length, cy/A.pts.length), T=VOL.out&&VOL.out.tot[ai]; c.setLineDash([]); c.font='600 '+(12*dpr)+'px system-ui'; c.textAlign='center';
+      var lines=[A.name]; if(T){ lines.push((V.mode==='pile'?'Heap ':'Fill ')+volFmtV(V.mode==='level'?T.fill:T.fill)+(V.mode==='pile'?'':'  ·  Cut '+volFmtV(T.cut))); }
+      lines.forEach(function(t, k){ var y=s0[1]+(k-(lines.length-1)/2)*16*dpr, w=c.measureText(t).width+10*dpr; c.fillStyle='rgba(17,24,39,.78)'; c.fillRect(s0[0]-w/2, y-10*dpr, w, 19*dpr); c.fillStyle='#fff'; c.fillText(t, s0[0], y+4*dpr); }); });
+  if(VOL.drawing&&VOL.draft.length&&APP.view!=='3d'){ c.strokeStyle='#f59e0b'; c.setLineDash([]); c.beginPath(); VOL.draft.forEach(function(q,k){ var s=w2s(q[0],q[1]); if(k) c.lineTo(s[0],s[1]); else c.moveTo(s[0],s[1]); }); if(VOL.hover){ var h=w2s(VOL.hover[0],VOL.hover[1]); c.lineTo(h[0],h[1]); } c.stroke();
+    VOL.draft.forEach(function(q,k){ var s=w2s(q[0],q[1]); c.fillStyle=k===0?'#f59e0b':'#fff'; c.beginPath(); c.arc(s[0],s[1],(k===0?6:4)*dpr,0,7); c.fill(); c.stroke(); }); }
+  c.restore(); }
+sbAfter('planDraw', function(r){ try{ volPlanDraw(); }catch(e){ console.warn(e); } return r; });
+
+/* ---------- 3D: the map tints the scan itself, the outline is drawn over it ---------- */
+function volTex(){ var gl=GL, O=VOL.out; if(!O) return false; volImage(); if(VOL.texKey===VOL.imgFor&&VOL.tex) return true; try{ if(!VOL.tex) VOL.tex=gl.createTexture(); gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, VOL.tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,O.g.nx,O.g.ny,0,gl.RGBA,gl.UNSIGNED_BYTE,VOL.texData); ['TEXTURE_MIN_FILTER','TEXTURE_MAG_FILTER'].forEach(function(k){ gl.texParameteri(gl.TEXTURE_2D, gl[k], gl.NEAREST); }); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); var Zs=new Float32Array(O.Zb.length); for(var i=0;i<Zs.length;i++){ var z=O.Zb[i]; Zs[i]=z===z?z:-1e9; } if(!VOL.ztex) VOL.ztex=gl.createTexture(); gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, VOL.ztex); gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,O.g.nx,O.g.ny,0,gl.RED,gl.FLOAT,Zs);
+    ['TEXTURE_MIN_FILTER','TEXTURE_MAG_FILTER'].forEach(function(k){ gl.texParameteri(gl.TEXTURE_2D, gl[k], gl.NEAREST); }); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.activeTexture(gl.TEXTURE0); VOL.texKey=VOL.imgFor; return true; }catch(e){ console.warn(e); return false; } }
+sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL, L=SPL.loc; if(L.uVolB===undefined){ L.uVolB=gl.getUniformLocation(SPL.prog,'uVolB'); L.uVolS=gl.getUniformLocation(SPL.prog,'uVolS'); L.uVolTex=gl.getUniformLocation(SPL.prog,'uVolTex'); L.uVolZ=gl.getUniformLocation(SPL.prog,'uVolZ'); } if(!L.uVolB) return r; gl.useProgram(SPL.prog);
+    if(volShown()&&!(typeof WXR!=='undefined'&&WXR.inMirror)&&volTex()){ var g=VOL.out.g; gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D, VOL.tex); gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, VOL.ztex); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(L.uVolTex, 5); if(L.uVolZ) gl.uniform1i(L.uVolZ, 4); gl.uniform4f(L.uVolB, g.x0, g.y0, 1/g.cell, 1); gl.uniform4f(L.uVolS, g.nx, g.ny, Math.max(0.25, 2*g.cell), 0); }
+    else gl.uniform4f(L.uVolB, 0,0,0,0); }catch(e){ console.warn(e); } return r; });
+function volOvDraw(){ var st0=document.getElementById('stage'); if(!st0) return; var cv=document.getElementById('volOv'), V=volM(), on=V&&APP.view==='3d'&&typeof SBP!=='undefined'&&SBP.key==='volume'&&(V.areas.length||VOL.drawing);
+  if(!cv){ if(!on) return; cv=document.createElement('canvas'); cv.id='volOv'; cv.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:31'; st0.appendChild(cv); }
+  var dpr=window.devicePixelRatio||1, W=Math.round(st0.clientWidth*dpr), H=Math.round(st0.clientHeight*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=st0.clientWidth+'px'; cv.style.height=st0.clientHeight+'px'; }
+  var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!on) return; if(VOL.key!==volKey()&&!VOL._t) volRunSoon(); var sr=st0.getBoundingClientRect(), r=glCv.getBoundingClientRect();
+  var toS=function(p){ var q=projectWorld(p); return q?[(q[0]+r.left-sr.left)*dpr, (q[1]+r.top-sr.top)*dpr]:null; };
+  var path=function(L, close, col){ var S=L.map(toS); if(S.some(function(s){ return !s; })) return; c.beginPath(); S.forEach(function(s,k){ if(k) c.lineTo(s[0],s[1]); else c.moveTo(s[0],s[1]); }); if(close) c.closePath(); c.lineWidth=4*dpr; c.strokeStyle='rgba(17,24,39,.85)'; c.stroke(); c.lineWidth=2*dpr; c.strokeStyle=col; c.stroke(); };
+  V.areas.forEach(function(A, ai){ path(A.pts, true, '#fde047'); var cx=0,cy=0,cz=0; A.pts.forEach(function(q){ cx+=q[0]; cy+=q[1]; cz+=q[2]||0; }); var n=A.pts.length, s=toS([cx/n, cy/n, cz/n+0.5]), T=VOL.out&&VOL.out.tot[ai]; if(!s) return;
+    var t=A.name+(T?'  '+(V.mode==='pile'?'Heap '+volFmtV(T.fill):'Cut '+volFmtV(T.cut)+' · Fill '+volFmtV(T.fill)):''); c.font='600 '+(12*dpr)+'px system-ui'; c.textAlign='center'; var w=c.measureText(t).width+12*dpr; c.fillStyle='rgba(17,24,39,.8)'; c.fillRect(s[0]-w/2, s[1]-11*dpr, w, 21*dpr); c.fillStyle='#fff'; c.fillText(t, s[0], s[1]+4*dpr); });
+  if(VOL.drawing&&VOL.draft.length){ var L=VOL.draft.slice(); if(VOL.hover) L.push(VOL.hover); path(L, false, '#f59e0b'); VOL.draft.forEach(function(q,k){ var s=toS(q); if(!s) return; c.fillStyle=k===0?'#f59e0b':'#fff'; c.beginPath(); c.arc(s[0],s[1],(k===0?6:4)*dpr,0,7); c.fill(); }); } }
+sbAfter('gl_render', function(r){ try{ if(!miniVP) volOvDraw(); }catch(e){ console.warn(e); } return r; });
+
+/* ---------- drawing an area: click round it, click the first point (or press Enter) to finish ---------- */
+function volStartDraw(){ VOL.drawing=true; VOL.draft=[]; VOL.hover=null; toast('Click round the area. Click the first point or press Enter to finish, Backspace takes the last point off, Esc cancels.', 5000); volPanel(); }
+function volFinish(){ var V=volM(), L=VOL.draft; VOL.drawing=false; VOL.hover=null; if(L.length>=3&&V){ pushUndo(); V.areas.push({name:'Area '+(V.areas.length+1), pts:L.map(function(q){ return [+q[0].toFixed(3), +q[1].toFixed(3), +(q[2]||0).toFixed(3)]; })}); afterEdit(); } VOL.draft=[]; volRunSoon(); volPanel(); planDrawSoon(); requestRender(false); }
+function volCancel(){ VOL.drawing=false; VOL.draft=[]; VOL.hover=null; volPanel(); planDrawSoon(); requestRender(false); }
+function volWorldAt(e){ if(APP.view==='3d'){ if(e.target!==glCv) return null; var r=glCv.getBoundingClientRect(), h=stScanHit(mdl3Ctx().ray(e.clientX-r.left, e.clientY-r.top)); return h?h.p.slice():null; }
+  if(e.target!==planCv) return null; var p=evPos(e), z=VOL.out?volZat(VOL.out.Zb, VOL.out.g, p.wx, p.wy):NaN; return [p.wx, p.wy, z===z?z:(typeof mdlFloor==='function'?mdlFloor():0)]; }
+/* on the plan a left click only draws; in 3D a drag still turns the view and only a still click adds a point */
+window.addEventListener('pointerdown', function(e){ if(!VOL.drawing||e.button!==0) return; if(e.target!==glCv&&e.target!==planCv) return; if(e.target===planCv){ e.preventDefault(); e.stopImmediatePropagation(); } VOL.dn={x:e.clientX, y:e.clientY}; }, true);
+window.addEventListener('mousedown', function(e){ if(VOL.drawing&&e.button===0&&e.target===planCv){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+window.addEventListener('pointerup', function(e){ if(!VOL.dn) return; var d=VOL.dn; VOL.dn=null; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; e.preventDefault(); e.stopImmediatePropagation(); var p=volWorldAt(e); if(!p) return;
+  if(VOL.draft.length>=3){ var f=VOL.draft[0], near=false; if(APP.view==='3d'){ var a=projectWorld(f), r=glCv.getBoundingClientRect(); near=a&&Math.hypot(a[0]-(e.clientX-r.left), a[1]-(e.clientY-r.top))<12; } else { var s=w2s(f[0],f[1]), q=evPos(e); near=Math.hypot(s[0]-q.sx, s[1]-q.sy)<12*(planView.dpr||1); } if(near){ volFinish(); return; } }
+  VOL.draft.push(p); planDrawSoon(); requestRender(false); }, true);
+window.addEventListener('mouseup', function(e){ if(VOL.drawing&&e.button===0&&e.target===planCv){ e.stopImmediatePropagation(); } }, true);
+window.addEventListener('click', function(e){ if(VOL.drawing&&(e.target===glCv||e.target===planCv)){ e.stopImmediatePropagation(); } }, true);
+window.addEventListener('pointermove', function(e){ if(!VOL.drawing||!VOL.draft.length) return; if(e.target!==glCv&&e.target!==planCv) return; if(APP.view==='3d'){ if(VOL._mv) return; VOL._mv=requestAnimationFrame(function(){ VOL._mv=0; }); } var p=volWorldAt(e); if(p){ VOL.hover=p; if(APP.view==='3d') volOvDraw(); else planDrawSoon(); } }, true);
+window.addEventListener('keydown', function(e){ if(!VOL.drawing) return; var t=e.target&&e.target.tagName; if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return;
+  if(e.key==='Escape'){ volCancel(); e.preventDefault(); e.stopImmediatePropagation(); } else if(e.key==='Enter'){ volFinish(); e.preventDefault(); e.stopImmediatePropagation(); } else if(e.key==='Backspace'||e.key==='Delete'){ VOL.draft.pop(); planDrawSoon(); requestRender(false); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+
+/* ---------- exports ---------- */
+function volModeName(m){ return m==='cf'?'Cut & fill between two dates':m==='pile'?'Stockpile volume':'Cut & fill to a level'; }
+function volCSV(){ var O=VOL.out, V=volM(); if(!O){ toast('Measure first.'); return; } var u=volUnits(), L=['Scan Bench volume report','Mode,'+volModeName(O.mode)];
+  if(O.mode==='cf') L.push('Earlier scan,'+O.la, 'Later scan,'+O.lb); else L.push('Scan,'+O.lb); if(O.mode==='level') L.push('Level ('+u+'),'+O.lev.toFixed(3)); L.push('Grid ('+u+'),'+O.g.cell, 'Ground only,'+(V.ground?'yes':'no'), 'Changes ignored under ('+u+'),'+V.dead, '');
+  L.push('Area,Plan area ('+u+'2),Cut ('+u+'3),Fill ('+u+'3),Net ('+u+'3),No data ('+u+'2),Lowest change ('+u+'),Highest change ('+u+')');
+  O.tot.forEach(function(T){ L.push([JSON.stringify(T.name), T.area.toFixed(2), T.cut.toFixed(3), T.fill.toFixed(3), (T.fill-T.cut).toFixed(3), T.nodata.toFixed(2), T.lo<1e8?T.lo.toFixed(3):'', T.hi>-1e8?T.hi.toFixed(3):''].join(',')); });
+  L.push(['"All areas"', O.all.area.toFixed(2), O.all.cut.toFixed(3), O.all.fill.toFixed(3), (O.all.fill-O.all.cut).toFixed(3), O.all.nodata.toFixed(2)].join(','), '', 'Grid of changes', 'Area,X,Y,'+(O.mode==='cf'?'Earlier Z,Later Z,':'Z,')+'Change');
+  var g=O.g; for(var i=0;i<O.D.length;i++){ if(!O.M[i]) continue; var x=(g.x0+((i%g.nx)+0.5)*g.cell).toFixed(3), y=(g.y0+(Math.floor(i/g.nx)+0.5)*g.cell).toFixed(3), d=O.D[i];
+    L.push([JSON.stringify(V.areas[O.M[i]-1].name), x, y].concat(O.mode==='cf'?[O.Za[i]===O.Za[i]?O.Za[i].toFixed(3):'', O.Zb[i]===O.Zb[i]?O.Zb[i].toFixed(3):'']:[O.Zb[i]===O.Zb[i]?O.Zb[i].toFixed(3):'']).concat([d===d?d.toFixed(3):'no data']).join(',')); }
+  download('INT_'+baseName().replace(/^(INT_|EXT_)+/,'')+'_volume.csv', new Blob([L.join('\r\n')], {type:'text/csv'})); toast('CSV saved.', 2000); }
+/* a long section through each area: earlier surface grey, later surface (or base / level) in colour */
+/* the section runs through the biggest change in the area */
+function volSecLine(A, ai, alongX, bx, by){ var O=VOL.out, g=O.g, best=-1, at=alongX?(by[0]+by[1])/2:(bx[0]+bx[1])/2, cl=volAreaCells(volM(), g)[ai]||[];
+  for(var k=0;k<cl.length;k++){ var i=cl[k], d=O.D[i]; if(d===d&&Math.abs(d)>best){ best=Math.abs(d); at=alongX?g.y0+(Math.floor(i/g.nx)+0.5)*g.cell:g.x0+((i%g.nx)+0.5)*g.cell; } } return at; }
+function volSection(A, ai){ var O=VOL.out, g=O.g, W=3288, H=760, c=document.createElement('canvas'); c.width=W; c.height=H; var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H);
+  var xs=A.pts.map(function(q){ return q[0]; }), ys=A.pts.map(function(q){ return q[1]; }), bx=[Math.min.apply(null,xs), Math.max.apply(null,xs)], by=[Math.min.apply(null,ys), Math.max.apply(null,ys)], alongX=bx[1]-bx[0]>=by[1]-by[0], mid=volSecLine(A, ai, alongX, bx, by), a0=alongX?bx[0]:by[0], a1=alongX?bx[1]:by[1];
+  var n=Math.max(20, Math.min(1200, Math.round((a1-a0)/g.cell))), S1=[], S2=[], lo=1e9, hi=-1e9, T=O.tot[ai];
+  for(var k=0;k<=n;k++){ var t=a0+(a1-a0)*k/n, px=alongX?t:mid, py=alongX?mid:t, ins=pointInPoly(px,py,A.pts), zb=volZat(O.Zb, g, px, py), za=O.mode==='cf'?volZat(O.Za, g, px, py):O.mode==='pile'&&T.base?T.base.mz+T.base.a*(px-T.base.mx)+T.base.b*(py-T.base.my):O.lev;
+    S1.push(za===za?za:NaN); S2.push(zb===zb?zb:NaN); [za,zb].forEach(function(v){ if(v===v){ lo=Math.min(lo,v); hi=Math.max(hi,v); } }); S1[k]=ins?S1[k]:NaN; S2[k]=ins?S2[k]:NaN; }
+  if(!(hi>lo)){ hi=lo+1; } if(hi-lo<0.4){ var mm=(hi+lo)/2; lo=mm-0.2; hi=mm+0.2; } var pad=(hi-lo)*0.2+0.05, L=90, R=W-40, Tp=90, B=H-90, sx=function(k){ return L+(R-L)*k/n; }, sy=function(z){ return B-(B-Tp)*(z-(lo-pad))/((hi+pad)-(lo-pad)); };
+  x.fillStyle='#16202c'; x.font='700 34px system-ui'; x.fillText('Section through '+A.name+' at the biggest change (along '+(alongX?'X':'Y')+', height exaggerated)', L, 50);
+  x.strokeStyle='#e5e7eb'; x.lineWidth=1; x.font='400 24px system-ui'; x.fillStyle='#6b7280'; var rg=(hi-lo+2*pad)/5, p10=Math.pow(10, Math.floor(Math.log10(rg))), step=rg/p10<2?2*p10:rg/p10<5?5*p10:10*p10; for(var zz=Math.ceil((lo-pad)/step)*step; zz<=hi+pad; zz+=step){ var yy=sy(zz); x.beginPath(); x.moveTo(L,yy); x.lineTo(R,yy); x.stroke(); x.fillText(zz.toFixed(step<1?2:0), 6, yy+8); }
+  for(k=0;k<n;k++){ var p1=S1[k], p2=S2[k]; if(!(p1===p1&&p2===p2)) continue; var d=p2-p1; if(Math.abs(d)<volM().dead) continue; var C=volColour(O.mode==='level'?-d:d, O.dmax, O.mode==='level'?'cf':O.mode); x.fillStyle='rgba('+C[0]+','+C[1]+','+C[2]+',0.55)'; x.fillRect(sx(k), Math.min(sy(p1),sy(p2)), sx(k+1)-sx(k)+1, Math.abs(sy(p1)-sy(p2))); }
+  var line=function(Sx, col, w){ x.strokeStyle=col; x.lineWidth=w; x.beginPath(); var on=false; Sx.forEach(function(z,k2){ if(z===z){ if(on) x.lineTo(sx(k2), sy(z)); else { x.moveTo(sx(k2), sy(z)); on=true; } } else on=false; }); x.stroke(); };
+  line(S1, '#6b7280', 4); line(S2, '#111827', 4); x.font='400 26px system-ui'; x.fillStyle='#6b7280'; x.fillText(O.mode==='cf'?'grey: '+O.la+'   black: '+O.lb:O.mode==='pile'?'grey: base through the boundary   black: top of the heap':'grey: level '+O.lev.toFixed(3)+'   black: ground now', L, H-30); return c; }
+function volPdf(){ var O=VOL.out, V=volM(); if(!O||!V.areas.length){ toast('Draw an area and measure first.'); return; } var b=volBox(V); b=[b[0]-2, b[1]-2, b[2]+2, b[3]+2]; b.only='vol';
+  var img, keep=SBP.key; try{ img=layPlanCanvas(b); }finally{} var u=volUnits(), lines=[['h',volModeName(O.mode)]];
+  if(O.mode==='cf') lines.push(['Earlier scan', O.la], ['Later scan', O.lb]); else lines.push(['Scan', O.lb]); if(O.mode==='level') lines.push(['Level', O.lev.toFixed(3)+' '+u]);
+  lines.push(['Grid', Math.round(O.g.cell*1000)+' mm'], ['Ground only filter', V.ground?'on':'off'], ['Changes ignored under', Math.round(V.dead*1000)+' mm']);
+  O.tot.forEach(function(T){ lines.push(['h', T.name], ['Plan area', volFmtA(T.area)]); if(O.mode==='pile') lines.push(['Heap above base', volFmtV(T.fill), true], ['Hollow below base', volFmtV(T.cut)]); else lines.push([O.mode==='level'?'Cut (to take off)':'Cut (gone)', volFmtV(T.cut), true], [O.mode==='level'?'Fill (to bring in)':'Fill (added)', volFmtV(T.fill), true], ['Net', (T.fill-T.cut>=0?'+':'')+volFmtV(T.fill-T.cut)]); if(T.nodata>0.005*T.area) lines.push(['No scan data', volFmtA(T.nodata)]); });
+  if(O.tot.length>1){ lines.push(['h','All areas'], ['Cut', volFmtV(O.all.cut), true], ['Fill', volFmtV(O.all.fill), true]); }
+  lines.push(['h','Key'], ['sw', O.mode==='level'?'Cut: above the level':'Cut: ground lower / taken away', '#c62828'], ['sw', O.mode==='level'?'Fill: below the level':'Fill: ground higher / added', '#2c5fd8'], ['sw','No scan data','#9ca3af']);
+  if(!O.alA||!O.alB) lines.push(['', 'Scans not aligned in Compare']);
+  var base=baseName().replace(/^(INT_|EXT_)+/,''), pages=[laySheet('Volume report', base.replace(/[_-]+/g,' ')+' · '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}), img, lines)];
+  var W=3508, H=2480, per=3; for(var i=0;i<V.areas.length;i+=per){ var pg=document.createElement('canvas'); pg.width=W; pg.height=H; var x=pg.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,W,H); x.fillStyle='#16202c'; x.font='700 64px system-ui'; x.fillText('Sections', 110, 150);
+    for(var k=0;k<per&&i+k<V.areas.length;k++){ var sc=volSection(V.areas[i+k], i+k); x.drawImage(sc, 110, 230+k*760); x.strokeStyle='#cbd2db'; x.lineWidth=3; x.strokeRect(110, 230+k*760, sc.width, sc.height); } pages.push(pg); }
+  download('EXT_'+base+'_volume_report.pdf', pdfFromCanvases(pages)); toast('PDF saved.', 2000); }
+
+/* ---------- panel ---------- */
+function volSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbVolSec'); if(!s){ s=document.createElement('div'); s.id='sbVolSec'; s.className='sec'; s.dataset.sec='volume'; s.innerHTML='<h2>Volume</h2><div class="body"></div>'; } if(s.parentNode!==side) side.appendChild(s); return s; }
+function volPanel(){ var s=volSec(); if(!s) return; var b=s.querySelector('.body'), V=volM(); if(!V||!APP.res){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return; } var S=volScans(), O=VOL.out, u=volUnits();
+  if(VOL.key!==volKey()&&V.areas.length&&!VOL._t) volRunSoon();
+  var opt=function(sel){ return S.map(function(x,k){ return '<option value="'+k+'"'+(k===sel?' selected':'')+'>'+(x.label||x.name).replace(/</g,'&lt;')+'</option>'; }).join(''); };
+  var seg=function(key, val, items){ return '<div class="sbLSeg vSeg">'+items.map(function(it){ return '<button data-vk="'+key+'" data-vv="'+it[0]+'" class="'+(String(val)===String(it[0])?'on':'')+'">'+it[1]+'</button>'; }).join('')+'</div>'; };
+  var h=seg('mode', V.mode, [['cf','Two dates'],['pile','Stockpile'],['level','To a level']]);
+  if(V.mode==='cf'){ h+=S.length<2?'<p class="mini vWarn">Add the second scan in Compare (step 4) and line it up there, then pick the dates here.</p>':'<div class="row"><label>Earlier</label><select id="vA">'+opt(Math.min(V.a,S.length-1))+'</select></div><div class="row"><label>Later</label><select id="vB">'+opt(Math.min(V.b,S.length-1))+'</select></div>';
+    if(O&&(!O.alA||!O.alB)) h+='<p class="mini vWarn">These scans have not been aligned in Compare, so the numbers will be wrong if they do not already line up.</p>'; }
+  else { h+='<div class="row"><label>Scan</label><select id="vS">'+opt(Math.min(V.scan,S.length-1))+'</select></div>'; if(V.mode==='pile') h+='<p class="mini">The base is a best-fit surface through the ground along the line you draw, so draw it on the ground just round the heap.</p>';
+    if(V.mode==='level') h+='<div class="row"><label>Level ('+u+')</label><input type="number" id="vLev" step="0.01" value="'+(V.level==null?'':V.level)+'" style="width:0;flex:1"><button id="vBal" class="vBtn" title="Set the level where cut equals fill">Balance</button></div>'; }
+  h+='<div class="vH">Areas</div>'+(V.areas.length?'':'<p class="mini">No areas yet.</p>')+V.areas.map(function(A, i){ var T=O&&O.tot[i]; return '<div class="vArea"><input data-vn="'+i+'" value="'+A.name.replace(/"/g,'&quot;')+'"><button data-vdel="'+i+'" title="Delete this area">✕</button>'+(T?'<div class="mini">'+(V.mode==='pile'?'Heap <b>'+volFmtV(T.fill)+'</b>':'Cut <b>'+volFmtV(T.cut)+'</b> · Fill <b>'+volFmtV(T.fill)+'</b>')+' · '+volFmtA(T.area)+'</div>':'')+'</div>'; }).join('');
+  h+=VOL.drawing?'<div class="vRow"><button id="vDone" class="vBtn on">Finish area</button><button id="vCan" class="vBtn">Cancel</button></div><p class="mini">Click round the area on the plan or the scan. Click the first point or press Enter to finish, Backspace takes off the last point.</p>':'<div class="vRow"><button id="vDraw" class="vBtn on">+ Draw area</button></div>';
+  if(VOL.err) h+='<p class="mini vWarn">'+VOL.err+'</p>';
+  if(O&&V.areas.length){ var A=O.all, net=A.fill-A.cut; h+='<div class="vH">Result</div><div class="vRes">'+(V.mode==='pile'?'<div><span>Heap</span><b>'+volFmtV(A.fill)+'</b></div><div><span>Hollow</span><b>'+volFmtV(A.cut)+'</b></div>':'<div><span>'+(V.mode==='level'?'Cut (take off)':'Cut')+'</span><b class="vCut">'+volFmtV(A.cut)+'</b></div><div><span>'+(V.mode==='level'?'Fill (bring in)':'Fill')+'</span><b class="vFill">'+volFmtV(A.fill)+'</b></div><div><span>Net</span><b>'+(net>=0?'+':'')+volFmtV(net)+'</b></div>')+'<div><span>Plan area</span><b>'+volFmtA(A.area)+'</b></div>'+(A.nodata>0.005*A.area?'<div><span>No scan data</span><b>'+volFmtA(A.nodata)+'</b></div>':'')+'</div>';
+    h+='<div class="vKey"><span style="background:linear-gradient(90deg,#8e1a1a,#e05a3a,#eee,#4a7bf0,#1e3a8a)"></span><div class="mini"><i>'+(V.mode==='level'?'above':'cut')+' '+Math.round(O.dmax*1000)+' mm</i><i>'+(V.mode==='level'?'below':'fill')+' '+Math.round(O.dmax*1000)+' mm</i></div></div>'; }
+  var cells=[[0,'Auto'+(V.areas.length?' ('+Math.round(volAutoCell(V)*100)+' cm)':'')],[0.05,'5 cm'],[0.1,'10 cm'],[0.25,'25 cm'],[0.5,'50 cm']];
+  h+='<div class="vH">Settings</div><div class="row"><label>Grid</label><select id="vCell">'+cells.map(function(c){ return '<option value="'+c[0]+'"'+(+V.cell===c[0]?' selected':'')+'>'+c[1]+'</option>'; }).join('')+'</select></div>'+
+    '<div class="row" title="Drops cars, people, fences and plants and fills the gap from the ground around them"><label>Ground only</label>'+seg('ground', V.ground?1:0, [[1,'On'],[0,'Off']])+'</div>'+
+    '<div class="row" title="Changes smaller than this are scan noise and are left out of the totals"><label>Ignore under</label><select id="vDead">'+[[0,'0'],[0.01,'10 mm'],[0.02,'20 mm'],[0.05,'50 mm'],[0.1,'100 mm']].map(function(c){ return '<option value="'+c[0]+'"'+(+V.dead===c[0]?' selected':'')+'>'+c[1]+'</option>'; }).join('')+'</select></div>'+
+    '<div class="row"><label>Colour map</label>'+seg('map', V.map?1:0, [[1,'On'],[0,'Off']])+'</div>'+
+    '<div class="vRow"><button id="vPdf" class="vBtn">PDF report</button><button id="vCsv" class="vBtn">CSV</button></div>'+(O?'<p class="mini">Measured in '+O.ms+' ms on a '+Math.round(O.g.cell*1000)+' mm grid.'+(u==='m'?'':' Scale not set, so the figures are scan units.')+'</p>':'');
+  b.innerHTML=h; var q=function(id){ return document.getElementById(id); }, set=function(k, v){ pushUndo(); V[k]=v; afterEdit(); volRunSoon(); volPanel(); planDrawSoon(); requestRender(false); };
+  b.querySelectorAll('[data-vk]').forEach(function(x){ x.onclick=function(){ var k=x.dataset.vk, v=x.dataset.vv; set(k, k==='mode'?v:v==='1'); }; });
+  if(q('vA')) q('vA').onchange=function(){ set('a', +this.value); }; if(q('vB')) q('vB').onchange=function(){ set('b', +this.value); }; if(q('vS')) q('vS').onchange=function(){ set('scan', +this.value); };
+  if(q('vLev')) q('vLev').onchange=function(){ var v=parseFloat(this.value); set('level', v===v?v:null); }; if(q('vBal')) q('vBal').onclick=function(){ set('level', null); };
+  q('vCell').onchange=function(){ set('cell', +this.value); }; q('vDead').onchange=function(){ set('dead', +this.value); };
+  b.querySelectorAll('[data-vn]').forEach(function(x){ x.onchange=function(){ pushUndo(); V.areas[+x.dataset.vn].name=x.value||('Area '+(+x.dataset.vn+1)); afterEdit(); if(VOL.out) VOL.out.tot[+x.dataset.vn].name=V.areas[+x.dataset.vn].name; VOL.key=volKey(); planDrawSoon(); requestRender(false); }; });
+  b.querySelectorAll('[data-vdel]').forEach(function(x){ x.onclick=function(){ pushUndo(); V.areas.splice(+x.dataset.vdel,1); afterEdit(); volRunSoon(); volPanel(); planDrawSoon(); requestRender(false); }; });
+  if(q('vDraw')) q('vDraw').onclick=volStartDraw; if(q('vDone')) q('vDone').onclick=volFinish; if(q('vCan')) q('vCan').onclick=volCancel; q('vPdf').onclick=volPdf; q('vCsv').onclick=volCSV; }
+SKIN_IC.volume='M12 3l9 4.5-9 4.5-9-4.5L12 3zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5';
+SBP_ITEMS.push(['volume','Volume','volume','Cut and fill between two dated scans, stockpile volumes and cut and fill to a level']);
+sbAfter('sbPanel', function(r){ try{ if(SBP.key==='volume') volPanel(); else if(VOL.drawing) volCancel(); planDrawSoon(); requestRender(false); }catch(e){} return r; });
+(function(){ sbAfter('buildSidebar', function(r){ try{ volPanel(); }catch(e){} return r; }); try{ volPanel(); }catch(e){}
+  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=volume] #side .sec[data-sec=volume]{display:block}body.sbSkin:not(.sbPanelOn) #sbVolSec,body:not(.hasScan) #sbVolSec{display:none}'+
+    '#sbVolSec .vH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:12px 0 4px}#sbVolSec .vSeg{display:flex;margin:2px 0 8px}#sbVolSec .vSeg button{flex:1}'+
+    '#sbVolSec .vRow{display:flex;gap:6px;margin:6px 0}#sbVolSec .vBtn{flex:1;border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 8px;cursor:pointer;font:inherit;font-size:12px}#sbVolSec .vBtn.on{background:var(--acc);border-color:var(--acc);color:#fff}#sbVolSec .vBtn:hover{border-color:var(--acc)}'+
+    '#sbVolSec .vArea{border:1px solid var(--sbLn);border-radius:8px;padding:5px 6px;margin:4px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center}#sbVolSec .vArea input{flex:1;width:0;min-width:0;font:inherit;font-size:12px;border:0;background:transparent;color:inherit;font-weight:600}#sbVolSec .vArea button{border:0;background:none;color:var(--sbTx2);cursor:pointer}#sbVolSec .vArea .mini{flex-basis:100%}'+
+    '#sbVolSec .vRes{display:grid;grid-template-columns:1fr 1fr;gap:6px}#sbVolSec .vRes div{border:1px solid var(--sbLn);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column}#sbVolSec .vRes span{font-size:11px;color:var(--sbTx2)}#sbVolSec .vRes b{font-size:15px}#sbVolSec .vCut{color:#c62828}#sbVolSec .vFill{color:#2c5fd8}'+
+    '#sbVolSec .vKey{margin:8px 0}#sbVolSec .vKey span{display:block;height:8px;border-radius:4px}#sbVolSec .vKey div{display:flex;justify-content:space-between}#sbVolSec .vWarn{color:#b45309}';
+  document.head.appendChild(c); })();
 
 
 </script>

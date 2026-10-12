@@ -1,6 +1,9 @@
-Scan Bench r314
+Scan Bench r315
 
-- Puddles: Reflections no longer hide the puddles; the mirror leaves out the ground itself, so puddles show the sky, walls and cars above them.
-- Puddles: mirror height follows the real ground level, so reflections line up on sloped car parks.
-- Puddles and rain: faint floater splats no longer count as cover, so open ground gets puddles, wet sheen and snow again.
-- Snow depth: now one continuous snow surface lifted from the ground, roofs and wall tops instead of separate circles; drifts pile against walls and stay thin on narrow wall tops.
+- New Volume tool on the left rail: cut and fill between two dated scans, stockpile volume, and cut and fill to a set level.
+- Draw areas round on the plan or the 3D scan: click the first point or press Enter to finish.
+- Ground only filter (on by default) drops cars, people, fences and plants before measuring.
+- Red/blue colour map on the plan and on the scan's ground in 3D, with totals per area.
+- To a level: type the level or press Balance for the level where cut equals fill.
+- Grid size: Auto, or 5 / 10 / 25 / 50 cm. Ignore under: leaves small scan noise out of the totals.
+- PDF report (plan, totals, a section through the biggest change in each area) and CSV (totals plus the grid of changes).
