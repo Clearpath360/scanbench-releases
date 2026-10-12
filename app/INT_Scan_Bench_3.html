@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r327';
+var SB_BUILD='2026-10-12 r328';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -20518,7 +20518,7 @@ function cmpUniforms(alphas){ if(!GL||!SPL.prog) return; var gl=GL, L=SPL.loc; i
 /* ---------- adding a scan ---------- */
 function cmpAddFile(f){ if(!APP.res){ toast('Open the first scan, then add the others to compare with it.', 4000); return; } if(!/\.ply$/i.test(f.name)){ toast('Add a PLY file (the same kind as the first scan).', 4000); return; }
   if(cmpList().length>=5){ toast('Up to 5 scans at once.', 3000); return; } setStatus('Reading '+f.name);
-  f.arrayBuffer().then(function(buf){ window.PROP_CAP=3000000; var D; try{ D=propAddBuf(buf, f.name, f.size, {dataOnly:true}); } finally{ window.PROP_CAP=0; } if(!D){ setStatus('Ready'); return; }
+  f.arrayBuffer().then(function(buf){ window.PROP_CAP=8000000; var D; try{ D=propAddBuf(buf, f.name, f.size, {dataOnly:true}); } finally{ window.PROP_CAP=0; } if(!D){ setStatus('Ready'); return; }
     if(!D.splat) toast('That file has no splat shapes: it shows as points.', 4000);
     /* the same levelling and scale the first scan got, so both sit the same way up */ var X=APP.res.xf; if(X){ var M=X.M, s=X.scale||1, P=D.pos; for(var i=0;i<D.n;i++){ var x=P[i*3], y=P[i*3+1], z=P[i*3+2]; P[i*3]=(M[0]*x+M[1]*y+M[2]*z)*s; P[i*3+1]=(M[3]*x+M[4]*y+M[5]*z)*s; P[i*3+2]=(M[6]*x+M[7]*y+M[8]*z+X.zOff)*s; }
       if(D.cov){ var C=D.cov, s2=s*s; for(i=0;i<D.n;i++){ var c=[C[i*6],C[i*6+1],C[i*6+2],C[i*6+3],C[i*6+4],C[i*6+5]], S3=[[c[0],c[1],c[2]],[c[1],c[3],c[4]],[c[2],c[4],c[5]]], T=[[0,0,0],[0,0,0],[0,0,0]], O=[[0,0,0],[0,0,0],[0,0,0]], a, b, k;
