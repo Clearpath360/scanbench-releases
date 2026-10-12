@@ -1,10 +1,8 @@
-# Scan Bench r310
+# Scan Bench r311
 
-- New Sky & weather panel on the left rail
-- Sky follows the sun clock: dawn, day, sunset, dusk, night
-- Drifting clouds from clear to overcast, stars and moon at night
-- Rain (drizzle to downpour) with darker light, wet ground and splashes
-- Snow, fog, ground mist and lightning
-- Strength slider from subtle to dramatic
-- Presets: Misty morning, Stormy evening, Winter's day, Clear night, Clear day
-- Lamps on at dusk
+- Rain: thin streaks, longer and brighter close up, a misty far curtain; lamps and headlights light the rain
+- Snow: flakes of different sizes that flutter, big and soft close up
+- No rain or snow under roofs or indoors; splashes land on roofs too
+- Snow on ground slider: snow settles on roofs, ground and wall tops
+- Wind: strength and direction for rain, snow and clouds
+- Real sun for the site: postcode or lat/long plus date, north arrow, true sunrise and sunset

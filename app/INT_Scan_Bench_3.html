@@ -4935,7 +4935,7 @@ function splatEnsure(){
   var VS='#version 300 es\nprecision highp float;precision highp int;precision highp usampler2D;\n'+
     'layout(location=0) in vec2 aQ; layout(location=1) in uint aI;\n'+
     'uniform highp sampler2D uA; uniform highp sampler2D uB; uniform highp sampler2D uC; uniform mediump sampler2D uD;\n'+
-    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
+    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform highp sampler2D uTopTex; uniform vec4 uTopB; uniform vec2 uTopS; uniform float uSnowC; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
     'out vec4 vCol; out vec2 vPos;\n'+
     'void main(){ int W='+W+'; ivec2 tc=ivec2(int(aI)%W, int(aI)/W); vec4 A=texelFetch(uA,tc,0); vec4 B=texelFetch(uB,tc,0); vec2 C=texelFetch(uC,tc,0).xy; vec4 D=texelFetch(uD,tc,0);\n'+
     ' gl_Position=vec4(0.0,0.0,2.0,1.0); if(A.z>uZMax) return; if(B.x+B.w+C.y>uMaxVar&&A.w<uFaint) return; if(uBoxOn>0.5&&(A.x<uBox.x||A.x>uBox.z||A.y<uBox.y||A.y>uBox.w)) return; if(((uCutOn>0.5&&dot(A.xyz,uCl[0].xyz)>uCl[0].w)||(uCutOn>1.5&&dot(A.xyz,uCl[1].xyz)>uCl[1].w)||(uCutOn>2.5&&dot(A.xyz,uCl[2].xyz)>uCl[2].w)||(uCutOn>3.5&&dot(A.xyz,uCl[3].xyz)>uCl[3].w))) return;\n'+
@@ -4951,7 +4951,8 @@ function splatEnsure(){
     ' int sty=int(D.a*255.0+0.5); float fa=1.0; vec3 rgb=D.rgb; if(sty<255){ int st=sty&7; vec3 pc=uPal[(sty>>4)&7];\n'+
     '  if(st==1){ fa=0.10; rgb=mix(rgb, vec3(0.75,0.88,1.0), 0.35); } else if(st==2){ M1=normalize(M1+vec2(1e-6,0.0))*1.6; M2=normalize(M2+vec2(0.0,1e-6))*1.6; fa=8.0; } else if(st==3){ rgb=pc*(0.45+0.75*dot(rgb,vec3(0.3,0.59,0.11))); } else if(st==4){ rgb=mix(rgb, pc, 0.5); } else if(st==5||st==6){ vec3 q0=cross(S[1],S[2]), q1=cross(S[2],S[0]), q2=cross(S[0],S[1]); vec3 nv=normalize(vec3(0.31,0.47,0.83)); nv=normalize(q0*nv.x+q1*nv.y+q2*nv.z+1e-12); nv=normalize(q0*nv.x+q1*nv.y+q2*nv.z+1e-12); float sh=0.38+0.5*abs(dot(nv,normalize(vec3(0.45,0.3,0.84))))+0.12*abs(nv.z); if(st==5){ float lu=dot(rgb,vec3(0.3,0.59,0.11)); rgb=vec3(0.9,0.89,0.86)*clamp(0.12+0.45*sh+0.6*lu,0.0,1.1); } else { float hz=clamp((A.z-uGrad.x)/max(1e-4,uGrad.y-uGrad.x),0.0,1.0); vec3 gc=hz<0.25?mix(vec3(0.17,0.32,0.85),vec3(0.1,0.7,0.85),hz*4.0):hz<0.5?mix(vec3(0.1,0.7,0.85),vec3(0.25,0.8,0.3),hz*4.0-1.0):hz<0.75?mix(vec3(0.25,0.8,0.3),vec3(0.98,0.85,0.2),hz*4.0-2.0):mix(vec3(0.98,0.85,0.2),vec3(0.9,0.25,0.15),hz*4.0-3.0); rgb=gc*(0.55+0.55*sh); } } }\n'+
     ' if(uLtN>0.5){ vec3 l0=cross(S[1],S[2]), l1=cross(S[2],S[0]), l2=cross(S[0],S[1]); vec3 ln=normalize(vec3(0.31,0.47,0.83)); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); ln=normalize(l0*ln.x+l1*ln.y+l2*ln.z+1e-12); vec3 acc=vec3(0.0); for(int k=0;k<8;k++){ if(float(k)>=uLtN) break; vec4 LP=uLP[k]; vec3 Ld; float lf=1.0; if(LP.w>0.5&&LP.w<1.5){ Ld=normalize(LP.xyz); } else { vec3 dv=LP.xyz-A.xyz; float dd=length(dv); Ld=dv/max(dd,1e-4); lf=1.0/(1.0+dd*dd/max(1e-4,uLR[k].x*uLR[k].x)); if(LP.w>1.5){ float cs=dot(-Ld, normalize(uLD[k].xyz)); lf*=smoothstep(uLD[k].w, max(uLD[k].w+1e-4,uLR[k].y), cs); } } float lam=abs(dot(ln,Ld)); acc+=uLC[k].rgb*(uLC[k].a*lf*(0.3+0.7*lam)); } rgb=rgb*uLAmb+rgb*acc; }\n'+
-    ' if(uWx.w>0.005){ vec3 n0=cross(S[1],S[2]), n1=cross(S[2],S[0]), n2=cross(S[0],S[1]); vec3 wn=normalize(vec3(0.31,0.47,0.83)); wn=normalize(n0*wn.x+n1*wn.y+n2*wn.z+1e-12); wn=normalize(n0*wn.x+n1*wn.y+n2*wn.z+1e-12); float wup=abs(wn.z); if(wup>0.75){ vec3 vd=normalize(A.xyz-uEyeW); float sp=pow(max(0.0,-vd.z*0.5+0.5),5.0); float wk=uWx.w*smoothstep(0.75,0.95,wup); rgb=rgb*(1.0-0.3*wk)+uFgCol*(0.35*wk*sp); } }\n'+
+    ' float wop=1.0; if(uTopB.w>0.0&&(uWx.w>0.005||uSnowC>0.005)){ vec2 tcw=(A.xy-uTopB.xy)*uTopB.z; ivec2 tiw=ivec2(clamp(tcw,vec2(0.0),uTopS-1.0)); float tpw=texelFetch(uTopTex,tiw,0).r; if(A.z<tpw-uTopB.w) wop=0.0; }\n'+
+' if((uWx.w>0.005||uSnowC>0.005)&&wop>0.5){ vec3 n0=cross(S[1],S[2]), n1=cross(S[2],S[0]), n2=cross(S[0],S[1]); vec3 wn=normalize(vec3(0.31,0.47,0.83)); wn=normalize(n0*wn.x+n1*wn.y+n2*wn.z+1e-12); wn=normalize(n0*wn.x+n1*wn.y+n2*wn.z+1e-12); float wup=abs(wn.z); if(uWx.w>0.005&&wup>0.75){ vec3 vd=normalize(A.xyz-uEyeW); float sp=pow(max(0.0,-vd.z*0.5+0.5),5.0); float wk=uWx.w*smoothstep(0.75,0.95,wup); rgb=rgb*(1.0-0.3*wk)+uFgCol*(0.35*wk*sp); } if(uSnowC>0.005){ float sn=fract(sin(dot(floor(A.xy*5.0),vec2(12.9898,78.233)))*43758.5453); float sk=clamp(uSnowC*1.25*smoothstep(0.5,0.85,wup)*(0.7+0.3*sn)+uSnowC*0.25*smoothstep(0.2,0.5,wup),0.0,1.0); rgb=mix(rgb, vec3(0.9,0.92,0.95)*(0.82+0.18*sn), sk); } }\n'+
 ' rgb*=(vec3(1.0)+uWx.rgb);\n'+
 ' if(uFg.x>0.0||uFg.z>0.0){ float fz=1.0-exp(-uFg.x*max(0.0,tz-uFg.y)); float mz=uFg.z*clamp((uFg.w-A.z)/max(1e-3,uFg.w),0.0,1.0)*(1.0-exp(-tz*0.25)); float ff=clamp(max(fz,mz),0.0,0.97); rgb=mix(rgb,uFgCol,ff); }\n'+
 ' if(uGrOn>0.5){ rgb=rgb*(1.0+uGr.x); rgb=(rgb-0.5)*uGr.y+0.5; float gl0=dot(rgb,vec3(0.3,0.59,0.11)); rgb=mix(vec3(gl0),rgb,uGr.z); rgb+=vec3(uGr.w*0.08, -uGrT*0.06, -uGr.w*0.08); rgb=clamp(rgb,0.0,1.0); }\n'+
@@ -8412,7 +8413,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-11 r310';
+var SB_BUILD='2026-10-12 r311';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22091,7 +22092,8 @@ function ltHM(h){ h=((h%24)+24)%24; var H=Math.floor(h), m=Math.round((h-H)*60);
 function ltParseHM(s){ var m=String(s||'').trim().match(/^(\d{1,2})(?:[:.](\d{1,2}))?$/); if(!m) return null; var h=+m[1]+(m[2]?+m[2]/60:0); return h>=0&&h<=24?h:null; }
 function ltSunState(l){ if(!l.tod) return null; var h=LT.todOv!=null?LT.todOv:(l.time==null?12:l.time), rise=l.rise==null?6.5:l.rise, set=l.set==null?19:l.set, peak=l.peak||50;
   var f=(h-rise)/Math.max(0.5, set-rise), el; if(f>=0&&f<=1) el=peak*Math.sin(Math.PI*f); else { var away=f<0?-f:f-1; el=-Math.min(18, away*(set-rise)*12); }
-  var az=(l.az==null?90:l.az)-180*Math.max(-0.1, Math.min(1.1, f)), lo=Math.max(0, Math.min(1, el/28)), c0=[1,0.52,0.28], c1=[1,0.97,0.92], col=[c0[0]+(c1[0]-c0[0])*lo, c0[1]+(c1[1]-c0[1])*lo, c0[2]+(c1[2]-c0[2])*lo];
+  var az=(l.az==null?90:l.az)-180*Math.max(-0.1, Math.min(1.1, f)); var SS=typeof wxSiteSun==='function'?wxSiteSun(h):null; if(SS){ el=SS.el; az=SS.az; }
+  var lo=Math.max(0, Math.min(1, el/28)), c0=[1,0.52,0.28], c1=[1,0.97,0.92], col=[c0[0]+(c1[0]-c0[0])*lo, c0[1]+(c1[1]-c0[1])*lo, c0[2]+(c1[2]-c0[2])*lo];
   var str=el<=0?0:(0.35+1.25*Math.min(1, el/30))*(l.str||1.2)/1.2, amb=0.16+0.69*Math.max(0, Math.min(1, (el+6)/32));
   return {el:el, az:az, dir:ltDir(az, Math.max(el, 0.5)), col:col, str:str, amb:amb, h:h}; }
 function ltTodSun(){ return ltOn()?ltList().filter(function(l){ return l.on&&l.kind==='sun'&&l.tod; })[0]||null:null; }
@@ -22214,7 +22216,7 @@ function ltPreset(k){ var M=ltM(); if(!M) return; var sc=ltSc(), cx=cam.tx, cy=c
 
 /* ---------- Play the day: the clock runs from just before sunrise to just after sunset in about 12 seconds ---------- */
 var LTP={raf:0};
-function ltPlayDay(l){ if(LTP.raf){ cancelAnimationFrame(LTP.raf); LTP.raf=0; LT.todOv=null; ltPanel(); requestRender(false); return; } var a=(l.rise==null?6.5:l.rise)-0.75, b=(l.set==null?19:l.set)+0.75, t0=performance.now();
+function ltPlayDay(l){ if(LTP.raf){ cancelAnimationFrame(LTP.raf); LTP.raf=0; LT.todOv=null; ltPanel(); requestRender(false); return; } var RS=typeof wxSiteRiseSet==='function'?wxSiteRiseSet():null, a=(RS?RS.rise:(l.rise==null?6.5:l.rise))-0.75, b=(RS?RS.set:(l.set==null?19:l.set))+0.75, t0=performance.now();
   (function step(){ var k=(performance.now()-t0)/12000; if(k>=1){ LTP.raf=0; LT.todOv=null; ltPanel(); requestRender(false); return; } LT.todOv=a+(b-a)*k; requestRender(false); var v=document.getElementById('ltTimeV'); if(v) v.textContent=ltHM(LT.todOv); LTP.raf=requestAnimationFrame(step); })(); ltPanel(); }
 
 /* ---------- the panel ---------- */
@@ -22780,7 +22782,7 @@ function strToScan(v, pt){ var R=strR3(), p=strPivot(), d=pt?[v[0]-p[0],v[1]-p[1
    One Strength slider runs from subtle to dramatic. Pictures, clips and walk-through videos include it all. Saved with the job.
    The sky is drawn straight after the 3D view is cleared, so the scan sits in front of it; fog and the wet look are in the splat shader. ===== */
 var WX={inR:false, prog:null, tri:null, pprog:null, pbuf:null, raf:0, tv:null, seed:null, last:0};
-function wxS(){ var M=APP.model; if(!M) return null; if(!M.sky) M.sky={on:false, time:12, clouds:0.25, speed:0.3, stars:true, rain:0, snow:0, fog:0, mist:0, lightning:false, wet:true, splash:true, strength:1, dusk:true, anim:true}; return M.sky; }
+function wxS(){ var M=APP.model; if(!M) return null; if(!M.sky) M.sky={on:false, time:12, clouds:0.25, speed:0.3, stars:true, rain:0, snow:0, fog:0, mist:0, lightning:false, wet:true, splash:true, strength:1, dusk:true, anim:true}; var K=M.sky; if(K.wind==null){ K.wind=0; K.windDir=45; } if(K.snowCover==null) K.snowCover=0; if(!K.site){ var d=new Date(); K.site={on:false, pc:'', lat:53.722, lon:-1.858, date:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), north:90}; } return K; }
 function wxOn(){ var S=wxS(); return !!(S&&S.on&&APP.res); }
 function wxT(){ return WX.tv!=null?WX.tv:performance.now()/1000; }
 function wxSc(){ return (typeof fScale==='function'?fScale():1)||1; }
@@ -22791,7 +22793,7 @@ function wxHex(h){ var n=parseInt(h.slice(1),16); return [(n>>16&255)/255, (n>>8
 function wxSun(){ var S=wxS(), ts=typeof ltTodSun==='function'?ltTodSun():null;
   if(ts){ var st=ltSunState(ts); return {el:st.el, az:st.az, dir:ltDir(st.az, st.el), h:st.h, own:false}; }
   var h=(typeof LT!=='undefined'&&LT.todOv!=null)?LT.todOv:(S.time==null?12:S.time), rise=6.5, set=19, f=(h-rise)/(set-rise), el; if(f>=0&&f<=1) el=50*Math.sin(Math.PI*f); else { var away=f<0?-f:f-1; el=-Math.min(18, away*(set-rise)*12); }
-  var az=90-180*wxClamp(f,-0.1,1.1); return {el:el, az:az, dir:ltDir(az, el), h:h, own:true}; }
+  var az=90-180*wxClamp(f,-0.1,1.1); var SS=wxSiteSun(h); if(SS){ el=SS.el; az=SS.az; } return {el:el, az:az, dir:ltDir(az, el), h:h, own:true}; }
 /* sky colours by the sun's height: night, twilight, sunrise/sunset, golden, day; then greyed by cloud */
 var WX_KEYS=[[-14,'#03050c','#0a0f1f'],[-7,'#0b1230','#26294d'],[-2,'#1f2d5c','#c0623f'],[3,'#3f64a8','#ff9d5c'],[10,'#3d72c4','#ffd2a0'],[25,'#2c6bd2','#b6d6f2'],[60,'#2563c9','#c3dcf4']];
 function wxSkyCols(el, cov, storm){ var K=WX_KEYS, i=0; while(i<K.length-1&&el>K[i+1][0]) i++; var a=K[i], b=K[Math.min(K.length-1,i+1)], k=b[0]===a[0]?0:wxClamp((el-a[0])/(b[0]-a[0]),0,1);
@@ -22831,8 +22833,8 @@ function wxState(){ var S=wxS(), k=S.strength==null?1:S.strength, sun=wxSun(), s
 function wxSkyDraw(){ var gl=GL, pr=wxSkyProg(); if(!pr) return; var X=wxState(), S=X.S, U=function(n){ return gl.getUniformLocation(pr,n); };
   if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(U('uInv'), false, wxInv(camMVP()));
   gl.uniform3fv(U('uZen'), X.C.zen); gl.uniform3fv(U('uHor'), X.C.hor); gl.uniform3fv(U('uSun'), X.sun.dir); gl.uniform3fv(U('uSunCol'), X.sunCol); gl.uniform1f(U('uCov'), Math.min(1, X.cov*(0.6+0.4*X.k))); gl.uniform1f(U('uStorm'), X.storm);
-  gl.uniform1f(U('uT'), X.t); gl.uniform1f(U('uNight'), X.night); gl.uniform1f(U('uStars'), S.stars?1:0); gl.uniform1f(U('uFlash'), X.flash); gl.uniform1f(U('uFog'), wxClamp(S.fog*X.k,0,1)); gl.uniform3fv(U('uFogCol'), X.fogCol);
-  var sp=(S.speed==null?0.3:S.speed)*0.02; gl.uniform2f(U('uWind'), sp, sp*0.35);
+  gl.uniform1f(U('uT'), X.t); gl.uniform1f(U('uNight'), X.night); gl.uniform1f(U('uStars'), S.stars?1:0); gl.uniform1f(U('uFlash'), X.flash); gl.uniform1f(U('uFog'), wxClamp(Math.min(1,S.fog+0.3*S.rain+0.2*S.snow)*X.k,0,1)); gl.uniform3fv(U('uFogCol'), X.fogCol);
+  var sp=(S.speed==null?0.3:S.speed)*0.02*(0.6+1.6*(S.wind||0)), wd=(S.windDir||0)*Math.PI/180; gl.uniform2f(U('uWind'), Math.cos(wd)*sp, Math.sin(wd)*sp);
   gl.bindBuffer(gl.ARRAY_BUFFER, WX.tri); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0); for(var i=1;i<4;i++) gl.disableVertexAttribArray(i);
   gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
 (function hookClear(){ if(typeof GL==='undefined'||!GL){ setTimeout(hookClear, 300); return; } var gl=GL, oc=gl.clear.bind(gl);
@@ -22841,38 +22843,57 @@ sbAround('gl_render', function(next){ WX.inR=wxOn()&&APP.view==='3d'&&!miniVP; t
 
 /* ---------- fog, darker/cooler light, wet sheen: uniforms for the splat shader every frame ---------- */
 sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL, L=SPL.loc; if(L.uWx===undefined){ ['uFg','uFgCol','uWx','uEyeW'].forEach(function(k){ L[k]=gl.getUniformLocation(SPL.prog,k); }); } if(!L.uWx) return r; gl.useProgram(SPL.prog);
-    if(!wxOn()){ gl.uniform4f(L.uWx,0,0,0,0); gl.uniform4f(L.uFg,0,0,0,0); return r; }
+    if(!wxOn()){ gl.uniform4f(L.uWx,0,0,0,0); gl.uniform4f(L.uFg,0,0,0,0); var lsc=gl.getUniformLocation(SPL.prog,'uSnowC'); if(lsc) gl.uniform1f(lsc,0); return r; }
     var X=wxState(), S=X.S, k=X.k, sc=wxSc(), lightsOn=typeof ltList==='function'&&ltOn()&&ltList().some(function(l){ return l.on; });
     var dim=1-(0.32*S.rain+0.22*X.cov)*k; var tint=[dim,dim,dim]; if(S.rain>0){ tint=[tint[0]*(1-0.12*S.rain*k), tint[1]*(1-0.06*S.rain*k), tint[2]]; } if(S.snow>0){ tint=wxMix(tint,[tint[0]*0.94,tint[1]*0.98,tint[2]*1.06],S.snow); }
     if(!lightsOn){ var nk=X.night*k; tint=[tint[0]*(1-0.72*nk), tint[1]*(1-0.68*nk), tint[2]*(1-0.55*nk)]; var gold=wxClamp(1-Math.abs(X.sun.el-4)/10,0,1)*(1-X.cov)*k*0.25; tint=[tint[0]*(1+gold), tint[1]*(1+gold*0.4), tint[2]*(1-gold*0.3)]; }
     tint=tint.map(function(v){ return v*(1+X.flash*1.3); });
     var wet=(S.wet&&S.rain>0)?wxClamp(S.rain*1.4,0,1)*Math.min(1,k):0, B=camBasis();
-    gl.uniform4f(L.uWx, tint[0]-1, tint[1]-1, tint[2]-1, wet); gl.uniform3f(L.uEyeW, B.eye[0], B.eye[1], B.eye[2]); gl.uniform3fv(L.uFgCol, X.fogCol);
-    var g=typeof mdlFloor==='function'?mdlFloor():0; gl.uniform4f(L.uFg, S.fog>0?(0.012+0.11*S.fog*S.fog)*k/sc:0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
+    gl.uniform4f(L.uWx, tint[0]-1, tint[1]-1, tint[2]-1, wet); if(L.uTopB===undefined){ ['uTopTex','uTopB','uTopS','uSnowC'].forEach(function(k2){ L[k2]=gl.getUniformLocation(SPL.prog,k2); }); } var TG=(wet>0||S.snowCover>0)?wxTop():null; if(TG&&wxTopTex(TG)){ gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, TG.tex); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(L.uTopTex, 6); gl.uniform4f(L.uTopB, TG.x0, TG.y0, 1/TG.cell, 0.45*sc); gl.uniform2f(L.uTopS, TG.nx, TG.ny); } else if(L.uTopB) gl.uniform4f(L.uTopB,0,0,0,0); if(L.uSnowC) gl.uniform1f(L.uSnowC, Math.min(1,(S.snowCover||0)*Math.min(1.2,k))); gl.uniform3f(L.uEyeW, B.eye[0], B.eye[1], B.eye[2]); gl.uniform3fv(L.uFgCol, X.fogCol);
+    var g=typeof mdlFloor==='function'?mdlFloor():0; var fogE=Math.min(1, S.fog+0.3*S.rain+0.2*S.snow); gl.uniform4f(L.uFg, fogE>0?(0.012+0.11*fogE*fogE)*k/sc:0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
 
 /* ---------- rain, snow and splashes: worked out from the clock alone, anchored to the ground (they do not swim when you move) ---------- */
 function wxPartProg(){ if(WX.pprog||!GL) return WX.pprog; var gl=GL;
-  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; uniform mat4 uM; uniform float uPS; out vec4 vC; void main(){ vC=aC; gl_Position=uM*vec4(aP,1.0); gl_PointSize=clamp(uPS/max(0.05,gl_Position.w),1.0,18.0); }';
-  var FS='#version 300 es\nprecision mediump float; in vec4 vC; uniform float uPt; out vec4 o; void main(){ float a=vC.a; if(uPt>0.5){ vec2 q=gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; a*=1.0-d; } o=vec4(vC.rgb*a, a); }';
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; layout(location=2) in float aS; uniform mat4 uM; uniform float uPS; out vec4 vC; out float vSoft; void main(){ vC=aC; gl_Position=uM*vec4(aP,1.0); float ps=uPS*aS/max(0.05,gl_Position.w); gl_PointSize=clamp(ps,1.0,40.0); vSoft=clamp((ps-6.0)/24.0,0.0,1.0); }';
+  var FS='#version 300 es\nprecision mediump float; in vec4 vC; in float vSoft; uniform float uPt; out vec4 o; void main(){ float a=vC.a; if(uPt>0.5){ vec2 q=gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; a*=mix(smoothstep(1.0,0.35,d), (1.0-d)*0.55, vSoft); } o=vec4(vC.rgb*a, a); }';
   WX.pprog=program(gl, VS, FS); WX.pbuf=gl.createBuffer(); return WX.pprog; }
-function wxSeed(){ if(WX.seed) return WX.seed; var N=6000, u=new Float32Array(N*4); for(var i=0;i<N*4;i++) u[i]=wxHash(i*1.37+0.5); WX.seed=u; return u; }
+function wxSeed(){ if(WX.seed) return WX.seed; var N=9000, u=new Float32Array(N*4); for(var i=0;i<N*4;i++) u[i]=wxHash(i*1.37+0.5); WX.seed=u; return u; }
 function wxWrap(v, c, H){ var P=2*H, a=c-H; return a+(((v-a)%P)+P)%P; }
+/* the top of the scan in each 0.5 m square: what is above a spot. Rain and snow stop there, and only surfaces with nothing over them get wet or snowy */
+function wxTop(){ var R=APP.res; if(!R||!R.pos) return null; if(WX.top&&WX.top.res===R) return WX.top; var sc=wxSc(), rb=R.robust, x0=rb.x[0]-1, y0=rb.y[0]-1, W=rb.x[1]-rb.x[0]+2, Hh=rb.y[1]-rb.y[0]+2, cell=Math.max(0.5*sc, Math.max(W,Hh)/400), nx=Math.max(1,Math.ceil(W/cell)), ny=Math.max(1,Math.ceil(Hh/cell));
+  var z0=rb.z[0]-0.5, z1=rb.z[1]+0.5, NB=48, bz=(z1-z0)/NB, cnt=new Uint16Array(nx*ny*NB), P=R.pos, n=R.n, st=Math.max(1, Math.floor(n/3000000));
+  for(var i=0;i<n;i+=st){ var z=P[i*3+2]; if(z<-9000||(R.del&&R.del[i])) continue; var cx=Math.floor((P[i*3]-x0)/cell), cy=Math.floor((P[i*3+1]-y0)/cell), b=Math.floor((z-z0)/bz); if(cx<0||cy<0||cx>=nx||cy>=ny||b<0||b>=NB) continue; var q=(cy*nx+cx)*NB+b; if(cnt[q]<65535) cnt[q]++; }
+  var top=new Float32Array(nx*ny); for(var c=0;c<nx*ny;c++){ var t=-1e9; for(var b2=NB-1;b2>=0;b2--){ if(cnt[c*NB+b2]>=3){ t=z0+(b2+1)*bz; break; } } top[c]=t; }
+  WX.top={res:R, x0:x0, y0:y0, cell:cell, nx:nx, ny:ny, top:top, tex:null}; return WX.top; }
+function wxTopAt(x, y){ var T=wxTop(); if(!T) return -1e9; var cx=Math.floor((x-T.x0)/T.cell), cy=Math.floor((y-T.y0)/T.cell); if(cx<0||cy<0||cx>=T.nx||cy>=T.ny) return -1e9; return T.top[cy*T.nx+cx]; }
+function wxTopTex(T){ if(T.tex) return true; var gl=GL; try{ T.tex=gl.createTexture(); gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, T.tex); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, T.nx, T.ny, 0, gl.RED, gl.FLOAT, T.top); gl.activeTexture(gl.TEXTURE0); return true; }catch(e){ console.warn(e); T.tex=null; return false; } }
+/* lamps and beams light the rain and snow that pass through them, like headlights in the rain */
+function wxLampsNear(){ if(typeof ltList!=='function'||!ltOn()) return []; var dk=typeof wxDuskK==='function'?wxDuskK():1; if(dk<0.03) return []; var sc=wxSc(); return ltList().filter(function(l){ return l.on&&l.kind!=='sun'; }).map(function(l){ var W=ltWorld(l); return {p:W.pos, d:W.dir, beam:l.kind==='beam', c:ltHex(l.col), s:l.str*dk, r:Math.max(0.5,l.reach||4)*sc, cs:Math.cos(Math.max(1,Math.min(89,(l.cone||35)/2))*Math.PI/180)}; }); }
+function wxLampLit(Lm, x, y, z){ var r=0, g=0, b=0; for(var i=0;i<Lm.length;i++){ var Q=Lm[i], dx=x-Q.p[0], dy=y-Q.p[1], dz=z-Q.p[2], dd=Math.sqrt(dx*dx+dy*dy+dz*dz), f=Q.s/(1+dd*dd/(Q.r*Q.r*0.25)); if(Q.beam){ var c=(dx*Q.d[0]+dy*Q.d[1]+dz*Q.d[2])/Math.max(1e-4,dd); if(c<Q.cs) continue; f*=Math.min(1,(c-Q.cs)/(1-Q.cs)*3)*2; } r+=Q.c[0]*f; g+=Q.c[1]*f; b+=Q.c[2]*f; } return [r,g,b]; }
 function wxPartDraw(){ var S=wxS(); if(!S||!wxOn()||APP.view!=='3d'||miniVP) return; if(!(S.rain>0||S.snow>0)) return; var gl=GL, pr=wxPartProg(); if(!pr) return;
-  var X=wxState(), k=X.k, t=X.t, sc=wxSc(), u=wxSeed(), cx=cam.tx, cy=cam.ty, H=wxClamp(cam.dist*0.7, 5, 45)*sc, g=typeof mdlFloor==='function'?mdlFloor():0, Hz=Math.max(6*sc, cam.tz-g+H*0.8), V=[], L=[];
-  var lit=wxMix([0.75,0.8,0.9],[0.25,0.28,0.35], X.night); lit=lit.map(function(v){ return v*(1+X.flash*1.5); });
-  if(S.rain>0){ var n=Math.round(500+3500*S.rain*Math.min(1.3,k)), vz=9*sc, wx=1.2*sc, len=0.06*vz, a=Math.min(0.55, 0.22+0.25*S.rain)*Math.min(1.2,k);
-    for(var i=0;i<n;i++){ var s=0.8+0.4*u[i*4+3], x=wxWrap(u[i*4]*2*H+wx*t*s, cx, H), y=wxWrap(u[i*4+1]*2*H, cy, H), z=g+((u[i*4+2]*Hz-vz*s*t)%Hz+Hz)%Hz;
-      L.push(x,y,z, lit[0],lit[1],lit[2],a, x-wx*0.06,y,z+len*s, lit[0],lit[1],lit[2],0); }
-    if(S.splash){ var m=Math.round(150+500*S.rain), rate=2.2, sa=Math.min(0.6,0.3+0.3*S.rain)*Math.min(1.2,k);
-      for(var j=0;j<m;j++){ var ph=t*rate+u[(j+3000)*4+3]*10, cyc=Math.floor(ph), age=ph-cyc; if(age>0.22) continue; var hx=wxHash(j*13.1+cyc*7.7), hy=wxHash(j*5.3+cyc*3.1), sx=cx+(hx*2-1)*H*0.8, sy=cy+(hy*2-1)*H*0.8, gz=typeof groundAt==='function'?groundAt(sx,sy):g; if(!isFinite(gz)) gz=g;
-        var r=(0.03+0.12*age/0.22)*sc, h=0.07*sc*Math.sin(age/0.22*Math.PI), fa=sa*(1-age/0.22); for(var q=0;q<3;q++){ var an=q*2.094+hx*6; L.push(sx,sy,gz+0.01*sc, lit[0],lit[1],lit[2],fa, sx+Math.cos(an)*r, sy+Math.sin(an)*r, gz+h, lit[0],lit[1],lit[2],0); } } } }
-  if(S.snow>0){ var ns=Math.round(400+2600*S.snow*Math.min(1.3,k)), vs=0.9*sc, sa2=Math.min(0.95,0.55+0.3*S.snow); var sl=wxMix([1,1,1],[0.55,0.6,0.7],X.night);
-    for(var i2=0;i2<ns;i2++){ var b=(i2+1500)*4, sx2=wxWrap(u[b]*2*H+Math.sin(t*0.7+u[b+3]*20)*0.4*sc+0.3*sc*t, cx, H), sy2=wxWrap(u[b+1]*2*H+Math.cos(t*0.6+u[b+3]*13)*0.3*sc, cy, H), sz=g+((u[b+2]*Hz-vs*(0.7+0.6*u[b+3])*t)%Hz+Hz)%Hz; V.push(sx2,sy2,sz, sl[0],sl[1],sl[2],sa2); } }
+  var X=wxState(), k=X.k, t=X.t, sc=wxSc(), u=wxSeed(), cx=cam.tx, cy=cam.ty, H=wxClamp(cam.dist*0.7, 5, 45)*sc, g=typeof mdlFloor==='function'?mdlFloor():0, Hz=Math.max(6*sc, cam.tz-g+H*0.8), B=camBasis(), E=B.eye, Lm=wxLampsNear(), T=[], V=[];
+  var wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wux=Math.cos(wd), wuy=Math.sin(wd), lit=wxMix([0.72,0.78,0.88],[0.2,0.23,0.3], X.night); lit=lit.map(function(v){ return v*(1+X.flash*1.5); });
+  function vtx(A, c, a, s){ T.push(A[0],A[1],A[2], c[0],c[1],c[2],a, s||1); }
+  if(S.rain>0){ var n=Math.round(800+5200*S.rain*Math.min(1.3,k)), vz=9*sc, vh=wv*7*sc, a0=Math.min(0.6, 0.25+0.3*S.rain)*Math.min(1.2,k), dt=1/45;
+    for(var i=0;i<n;i++){ var s=0.75+0.5*u[i*4+3], x=wxWrap(u[i*4]*2*H+vh*wux*t*s, cx, H), y=wxWrap(u[i*4+1]*2*H+vh*wuy*t*s, cy, H), z=g+((u[i*4+2]*Hz-vz*s*t)%Hz+Hz)%Hz;
+      var tp=wxTopAt(x,y); if(z<tp) continue;   /* under a roof or indoors: no rain */
+      var ex=x-E[0], ey=y-E[1], ez=z-E[2], dist=Math.sqrt(ex*ex+ey*ey+ez*ez)||1, near=wxClamp(1-dist/(H*1.6),0,1);
+      var len=(vz*s*dt)*(0.6+1.4*near), hx=x-vh*wux*s*dt*(0.6+1.4*near), hy=y-vh*wuy*s*dt*(0.6+1.4*near), hz=z+len, w=(0.0035+0.009*near*near)*sc;
+      var dx=hx-x, dy=hy-y, dz=hz-z, sx=dy*ez-dz*ey, sy=dz*ex-dx*ez, sz=dx*ey-dy*ex, sl=Math.sqrt(sx*sx+sy*sy+sz*sz)||1; sx=sx/sl*w; sy=sy/sl*w; sz=sz/sl*w;
+      var a=a0*(0.25+0.75*near)*(0.7+0.3*u[i*4+2]), col=lit; if(Lm.length){ var L2=wxLampLit(Lm,x,y,z); if(L2[0]+L2[1]+L2[2]>0.01){ col=[lit[0]+L2[0], lit[1]+L2[1], lit[2]+L2[2]]; a=Math.min(0.95, a*(1+0.6*(L2[0]+L2[1]+L2[2]))); } }
+      var A1=[x-sx,y-sy,z-sz], A2=[x+sx,y+sy,z+sz], B1=[hx-sx,hy-sy,hz-sz], B2=[hx+sx,hy+sy,hz+sz]; vtx(A1,col,a); vtx(A2,col,a); vtx(B2,col,0); vtx(A1,col,a); vtx(B2,col,0); vtx(B1,col,0); }
+    if(S.splash){ var m=Math.round(200+700*S.rain), rate=2.4, sa=Math.min(0.65,0.3+0.3*S.rain)*Math.min(1.2,k);
+      for(var j=0;j<m;j++){ var ph=t*rate+u[(j+6000)*4+3]*10, cyc=Math.floor(ph), age=ph-cyc; if(age>0.2) continue; var hx2=wxHash(j*13.1+cyc*7.7), hy2=wxHash(j*5.3+cyc*3.1), qx=cx+(hx2*2-1)*H*0.8, qy=cy+(hy2*2-1)*H*0.8, gz=wxTopAt(qx,qy); if(!(gz>-1e8)) continue;
+        var r=(0.02+0.09*age/0.2)*sc, hh=0.06*sc*Math.sin(age/0.2*Math.PI), fa=sa*(1-age/0.2), ww=0.004*sc; for(var q=0;q<4;q++){ var an=q*1.5708+hx2*6, ox=Math.cos(an), oy=Math.sin(an), p0=[qx,qy,gz+0.01*sc], p1=[qx+ox*r, qy+oy*r, gz+hh]; vtx([p0[0]-oy*ww,p0[1]+ox*ww,p0[2]],lit,fa); vtx([p0[0]+oy*ww,p0[1]-ox*ww,p0[2]],lit,fa); vtx(p1,lit,0); } } } }
+  if(S.snow>0){ var ns=Math.round(600+3800*S.snow*Math.min(1.3,k)), sa2=Math.min(0.95,0.6+0.3*S.snow), sl2=wxMix([1,1,1],[0.5,0.55,0.65],X.night), dr=wv*2.5*sc;
+    for(var i2=0;i2<ns;i2++){ var b=(i2+3000)*4, sp=0.55+0.7*u[b+3], fl=t*(0.6+0.8*u[b+2])+u[b+3]*40, sx2=wxWrap(u[b]*2*H+Math.sin(fl)*0.35*sc+(0.15*sc+dr)*wux*t*sp, cx, H), sy2=wxWrap(u[b+1]*2*H+Math.cos(fl*1.3)*0.3*sc+(0.15*sc+dr)*wuy*t*sp, cy, H), sz=g+((u[b+2]*Hz-0.9*sc*sp*t)%Hz+Hz)%Hz;
+      if(sz<wxTopAt(sx2,sy2)) continue; var size=0.45+1.1*u[b+1]*u[b+1], c2=sl2; if(Lm.length){ var L3=wxLampLit(Lm,sx2,sy2,sz); c2=[sl2[0]+L3[0], sl2[1]+L3[1], sl2[2]+L3[2]]; } V.push(sx2,sy2,sz, c2[0],c2[1],c2[2],sa2, size); } }
   if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uM'), false, camMVP()); gl.bindBuffer(gl.ARRAY_BUFFER, WX.pbuf);
-  gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); for(var e=2;e<4;e++) gl.disableVertexAttribArray(e); gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-  if(L.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(L), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,28,12); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),0); gl.drawArrays(gl.LINES, 0, L.length/7); }
-  if(V.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,28,12); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),1); gl.uniform1f(gl.getUniformLocation(pr,'uPS'), 0.09*sc*glCv.height/Math.tan(0.45)/2); gl.drawArrays(gl.POINTS, 0, V.length/7); }
-  gl.disable(gl.BLEND); gl.depthMask(true); gl.disableVertexAttribArray(1); }
+  gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2); gl.disableVertexAttribArray(3); gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  var st=32; if(T.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(T), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,st,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,st,12); gl.vertexAttribPointer(2,1,gl.FLOAT,false,st,28); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),0); gl.drawArrays(gl.TRIANGLES, 0, T.length/8); }
+  if(V.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,st,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,st,12); gl.vertexAttribPointer(2,1,gl.FLOAT,false,st,28); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),1); gl.uniform1f(gl.getUniformLocation(pr,'uPS'), 0.05*sc*glCv.height/Math.tan(0.45)/2); gl.drawArrays(gl.POINTS, 0, V.length/8); }
+  gl.disable(gl.BLEND); gl.depthMask(true); gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2); }
 sbAfter('gl_render', function(r){ try{ if(!miniVP) wxPartDraw(); }catch(e){ console.warn(e); } return r; });
 /* keep it moving: about 30 frames a second while rain, snow, lightning or drifting cloud is on and the 3D view is showing */
 function wxAnimNeed(){ var S=wxS(); return !!(S&&wxOn()&&S.anim!==false&&APP.view==='3d'&&!document.hidden&&(S.rain>0||S.snow>0||S.lightning||(S.clouds>0.02&&S.speed>0))); }
@@ -22884,11 +22905,11 @@ sbAround('wtExport', function(next){ var r=next(); Promise.resolve(r).then(funct
 
 /* ---------- presets ---------- */
 function wxPreset(k){ var S=wxS(); if(!S) return; pushUndo(); var P={
-  misty:{time:7.2, clouds:0.35, speed:0.2, rain:0, snow:0, fog:0.35, mist:0.75, lightning:false, stars:true, strength:1},
-  storm:{time:18.6, clouds:0.95, speed:0.9, rain:0.85, snow:0, fog:0.2, mist:0.1, lightning:true, wet:true, splash:true, stars:false, strength:1.1},
-  winter:{time:12.5, clouds:0.85, speed:0.25, rain:0, snow:0.6, fog:0.25, mist:0, lightning:false, stars:false, strength:1},
-  night:{time:23, clouds:0.05, speed:0.15, rain:0, snow:0, fog:0, mist:0.1, lightning:false, stars:true, dusk:true, strength:1},
-  clear:{time:13, clouds:0.15, speed:0.3, rain:0, snow:0, fog:0, mist:0, lightning:false, strength:1}}[k]; Object.assign(S, P, {on:true});
+  misty:{time:7.2, clouds:0.35, speed:0.2, wind:0.05, snowCover:0, rain:0, snow:0, fog:0.35, mist:0.75, lightning:false, stars:true, strength:1},
+  storm:{time:18.6, clouds:0.95, speed:0.9, wind:0.55, snowCover:0, rain:0.85, snow:0, fog:0.2, mist:0.1, lightning:true, wet:true, splash:true, stars:false, strength:1.1},
+  winter:{time:12.5, clouds:0.85, speed:0.25, rain:0, snow:0.6, snowCover:0.65, wind:0.2, fog:0.25, mist:0, lightning:false, stars:false, strength:1},
+  night:{time:23, clouds:0.05, speed:0.15, wind:0, rain:0, snow:0, fog:0, mist:0.1, lightning:false, stars:true, dusk:true, strength:1},
+  clear:{time:13, clouds:0.15, speed:0.3, wind:0.1, snowCover:0, rain:0, snow:0, fog:0, mist:0, lightning:false, strength:1}}[k]; Object.assign(S, P, {on:true});
   var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=S.time;
   if(k==='night'&&typeof ltList==='function'&&!ltList().some(function(l){ return l.kind!=='sun'; })){ var l=ltMake('lamp'); l.name='Lamp 1'; l.col='#ffc27a'; l.str=2.2; l.reach=8; ltList().push(l); ltM().lightsOn=true; }
   afterEdit(); wxPanel(); requestRender(false); toast({misty:'Misty morning', storm:'Stormy evening', winter:'Winter’s day', night:'Clear night: stars, moon and lamps on', clear:'Clear day'}[k]+'. Ctrl+Z undoes it.', 3000); }
@@ -22924,6 +22945,53 @@ sbAfter('sbPanel', function(r){ try{ if(SBP.key==='weather') wxPanel(); }catch(e
     '#sbWxSec .wxH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:10px 0 4px}#sbWxSec .wxGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0}'+
     '#sbWxSec .wxGrid button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 4px;cursor:pointer;font:inherit;font-size:12px}#sbWxSec .wxGrid button:hover{border-color:var(--acc)}';
   document.head.appendChild(c); })();
+
+/* ---------- real sun for the site: latitude, longitude and date give the true sun path (NOAA formulas, works offline), north set in the scene ---------- */
+function wxJD(y, m, d){ if(m<=2){ y-=1; m+=12; } var A=Math.floor(y/100), B=2-A+Math.floor(A/4); return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5; }
+function wxSolar(lat, lon, ymd, hLocal){ var p=String(ymd||'').split('-').map(Number); if(p.length<3||!p[0]) return null; var off=-new Date(p[0], p[1]-1, p[2], 12).getTimezoneOffset()/60, hU=hLocal-off, jd=wxJD(p[0], p[1], p[2])+hU/24, T=(jd-2451545)/36525, rad=Math.PI/180;
+  var L0=((280.46646+T*(36000.76983+T*0.0003032))%360+360)%360, M=357.52911+T*(35999.05029-0.0001537*T), e=0.016708634-T*(0.000042037+0.0000001267*T);
+  var C=Math.sin(M*rad)*(1.914602-T*(0.004817+0.000014*T))+Math.sin(2*M*rad)*(0.019993-0.000101*T)+Math.sin(3*M*rad)*0.000289, om=125.04-1934.136*T, lam=L0+C-0.00569-0.00478*Math.sin(om*rad);
+  var eps=23+(26+(21.448-T*(46.815+T*(0.00059-T*0.001813)))/60)/60+0.00256*Math.cos(om*rad), dec=Math.asin(Math.sin(eps*rad)*Math.sin(lam*rad)), yv=Math.pow(Math.tan(eps*rad/2),2);
+  var EoT=4/rad*(yv*Math.sin(2*L0*rad)-2*e*Math.sin(M*rad)+4*e*yv*Math.sin(M*rad)*Math.cos(2*L0*rad)-0.5*yv*yv*Math.sin(4*L0*rad)-1.25*e*e*Math.sin(2*M*rad));
+  var tst=((hU*60+EoT+4*lon)%1440+1440)%1440, ha=tst/4-180, la=lat*rad, cz=Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(ha*rad), zen=Math.acos(Math.max(-1,Math.min(1,cz)));
+  var az=(Math.atan2(Math.sin(ha*rad), Math.cos(ha*rad)*Math.sin(la)-Math.tan(dec)*Math.cos(la))/rad+180+360)%360; return {el:90-zen/rad, az:az}; }
+function wxSiteOn(){ var S=wxS(); return !!(S&&S.site&&S.site.on&&isFinite(S.site.lat)&&isFinite(S.site.lon)); }
+/* compass bearing (from north, clockwise) to the scene's own angle (anticlockwise from its X axis), using where north points in the scene */
+function wxSiteSun(h){ if(!wxSiteOn()) return null; var T=wxS().site, s=wxSolar(+T.lat, +T.lon, T.date, h); if(!s) return null; return {el:s.el, az:(T.north==null?90:T.north)-s.az}; }
+function wxSiteRiseSet(){ if(!wxSiteOn()) return null; var T=wxS().site, key=T.lat+'|'+T.lon+'|'+T.date; if(WX._rs&&WX._rs.key===key) return WX._rs; var rise=null, set=null, prev=null, noon=0, mx=-99;
+  for(var h=0;h<=24.001;h+=1/60){ var s=wxSolar(+T.lat, +T.lon, T.date, h); if(!s) return null; var up=s.el>-0.833; if(prev!=null&&up&&!prev&&rise==null) rise=h; if(prev!=null&&!up&&prev) set=h; if(s.el>mx){ mx=s.el; noon=h; } prev=up; }
+  WX._rs={key:key, rise:rise==null?6:rise, set:set==null?18:set, noon:noon, peak:mx}; return WX._rs; }
+function wxPostcode(pc){ var q=String(pc||'').replace(/\s+/g,'').toUpperCase(); if(!q){ toast('Type a postcode first.', 2000); return; } toast('Finding '+q+'...', 1500);
+  fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(q)).then(function(r){ return r.json(); }).then(function(j){ if(!j||j.status!==200||!j.result){ toast('That postcode was not found. You can type the latitude and longitude instead.', 4500); return; }
+    var S=wxS(); pushUndo(); S.site.pc=q; S.site.lat=Math.round(j.result.latitude*1e5)/1e5; S.site.lon=Math.round(j.result.longitude*1e5)/1e5; S.site.on=true; S.on=true; afterEdit(); wxPanel(); requestRender(false); toast(q+': '+S.site.lat+', '+S.site.lon+(j.result.admin_district?' ('+j.result.admin_district+')':''), 3500); })
+    .catch(function(){ toast('Could not reach the postcode lookup (no internet?). Type the latitude and longitude instead.', 5000); }); }
+/* north arrow on the 3D view while the panel is open and the real sun is on */
+sbAfter('gl_render', function(r){ try{ if(miniVP) return r; var cv=document.getElementById('sbLightOv'); if(!cv||!(SBP.key==='weather'&&wxOn()&&wxSiteOn()&&APP.view==='3d')) return r; var c=cv.getContext('2d'), dpr=window.devicePixelRatio||1, N=wxS().site.north==null?90:wxS().site.north, a=N*Math.PI/180;
+    var p0=[cam.tx, cam.ty, typeof mdlFloor==='function'?mdlFloor():0], L=cam.dist*0.18, p1=[p0[0]+Math.cos(a)*L, p0[1]+Math.sin(a)*L, p0[2]], A=projectWorld(p0), B=projectWorld(p1); if(!A||!B) return r;
+    c.save(); c.strokeStyle='#e11d48'; c.fillStyle='#e11d48'; c.lineWidth=3*dpr; c.beginPath(); c.moveTo(A[0]*dpr,A[1]*dpr); c.lineTo(B[0]*dpr,B[1]*dpr); c.stroke(); var dx=B[0]-A[0], dy=B[1]-A[1], l=Math.hypot(dx,dy)||1, ux=dx/l, uy=dy/l;
+    c.beginPath(); c.moveTo(B[0]*dpr,B[1]*dpr); c.lineTo((B[0]-ux*14-uy*7)*dpr,(B[1]-uy*14+ux*7)*dpr); c.lineTo((B[0]-ux*14+uy*7)*dpr,(B[1]-uy*14-ux*7)*dpr); c.closePath(); c.fill(); c.font='700 '+Math.round(14*dpr)+'px system-ui'; c.textAlign='center'; c.fillText('N', (B[0]+ux*14)*dpr, (B[1]+uy*14+5)*dpr); c.restore(); }catch(e){} return r; });
+/* the extra panel sections: wind, snow on the ground, real sun for the site */
+sbAfter('wxPanel', function(r){ try{ var s=document.getElementById('sbWxSec'), S=wxS(); if(!s||!S) return r; var b=s.querySelector('.body'), anchor=b.querySelector('#wxMist'); if(!anchor||document.getElementById('wxWind')) return r; anchor=anchor.closest('.row');
+    var pc=function(v){ return v<=0?'off':Math.round(v*100)+'%'; }, sl=function(id, lab, min, max, step, v, show, tip){ return '<div class="row" title="'+(tip||'')+'"><label>'+lab+'</label><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"><span class="mini" id="'+id+'V">'+show+'</span></div>'; };
+    var d=document.createElement('div'); d.innerHTML=sl('wxCover','Snow on ground',0,1,0.05,S.snowCover||0,pc(S.snowCover||0),'Snow settles on roofs, the ground and the tops of walls (only where nothing is overhead)')+
+      sl('wxWind','Wind',0,1,0.05,S.wind||0,S.wind<=0?'calm':S.wind>0.7?'gale':pc(S.wind),'Slants the rain, blows the snow, pushes the clouds')+sl('wxWDir','Wind towards',0,360,5,Math.round(S.windDir||0),Math.round(S.windDir||0)+'°','Which way the wind blows, as you see the scan');
+    var ref=anchor.nextSibling; while(d.firstChild) anchor.parentNode.insertBefore(d.firstChild, ref);
+    var T=S.site, RS=wxSiteRiseSet(), box=document.createElement('div'); box.innerHTML='<div class="wxH">Real sun for the site</div>'+
+      '<div class="row"><label>Real sun</label><div class="sbLSeg"><button data-site="1" class="'+(T.on?'on':'')+'">On</button><button data-site="0" class="'+(!T.on?'on':'')+'">Off</button></div></div>'+
+      '<div class="row"><label>Postcode</label><input id="wxPC" value="'+(T.pc||'')+'" placeholder="e.g. HX1 1DH" style="width:0;flex:1"><button class="btn sm" id="wxPCGo">Find</button></div>'+
+      '<div class="row"><label>Lat / long</label><input id="wxLat" type="number" step="0.0001" value="'+T.lat+'" style="width:0;flex:1"><input id="wxLon" type="number" step="0.0001" value="'+T.lon+'" style="width:0;flex:1"></div>'+
+      '<div class="row"><label>Date</label><input id="wxDate" type="date" value="'+T.date+'" style="width:0;flex:1"><button class="btn sm" id="wxToday">Today</button></div>'+
+      sl('wxNorth','North points',0,360,1,Math.round(T.north==null?90:T.north),Math.round(T.north==null?90:T.north)+'°','Turn until the red N arrow in the 3D view points north on the site')+
+      (T.on&&RS?'<p class="mini">Sunrise <b>'+ltHM(RS.rise)+'</b> · sunset <b>'+ltHM(RS.set)+'</b> · highest '+Math.round(RS.peak)+'° at '+ltHM(RS.noon)+'. The Light panel’s sun and the sky both follow it.</p>':'<p class="mini">Uses the real sun path for the place and day. Postcode lookup needs the internet; latitude and longitude work offline.</p>');
+    var after=b.querySelector('[data-tg="dusk"]'); after=after?after.closest('.row').previousElementSibling:null; if(after&&after.parentNode) after.parentNode.insertBefore(box, after); else b.appendChild(box);
+    var q=function(id){ return document.getElementById(id); }, live=function(){ requestRender(false); if(wxAnimNeed()) wxLoop(); };
+    var bind=function(id, key, fmt){ var el=q(id); if(!el) return; el.onpointerdown=function(){ pushUndo(); }; el.oninput=function(){ S[key]=+this.value; S.on=true; q(id+'V').textContent=fmt(+this.value); live(); }; el.onchange=function(){ afterEdit(); }; };
+    bind('wxCover','snowCover',pc); bind('wxWind','wind',function(v){ return v<=0?'calm':v>0.7?'gale':pc(v); }); bind('wxWDir','windDir',function(v){ return Math.round(v)+'°'; });
+    box.querySelectorAll('[data-site]').forEach(function(x){ x.onclick=function(){ pushUndo(); T.on=x.dataset.site==='1'; if(T.on) S.on=true; afterEdit(); wxPanel(); live(); }; });
+    q('wxPCGo').onclick=function(){ wxPostcode(q('wxPC').value); }; q('wxPC').onkeydown=function(e){ if(e.key==='Enter') wxPostcode(this.value); };
+    ['wxLat','wxLon'].forEach(function(id){ q(id).onchange=function(){ var v=parseFloat(this.value); if(!isFinite(v)) return; pushUndo(); T[id==='wxLat'?'lat':'lon']=v; afterEdit(); wxPanel(); live(); }; });
+    q('wxDate').onchange=function(){ if(!this.value) return; pushUndo(); T.date=this.value; afterEdit(); wxPanel(); live(); }; q('wxToday').onclick=function(){ var d2=new Date(); pushUndo(); T.date=d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0'); afterEdit(); wxPanel(); live(); };
+    var nn=q('wxNorth'); nn.onpointerdown=function(){ pushUndo(); }; nn.oninput=function(){ T.north=+this.value; q('wxNorthV').textContent=this.value+'°'; live(); }; nn.onchange=function(){ afterEdit(); wxPanel(); }; }catch(e){ console.warn(e); } return r; });
 
 
 </script>
