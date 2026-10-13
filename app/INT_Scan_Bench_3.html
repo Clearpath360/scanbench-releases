@@ -4927,7 +4927,7 @@ function splatReset(d){
   SPL.src=d; SPL.ready=false; SPL.failed=false; SPL.tex=[]; SPL.sw=null; SPL.busy=false; SPL.want=false; SPL.gotOrder=false; SPL.n=d?d.n:0;
   APP.canSplat=!!d; var ls=$('#lookSel'); if(ls){ ls.disabled=false; if(!APP.look) APP.look=d?'splat':'points'; if(!d && APP.look==='splat') APP.look='points'; ls.value=APP.look; }
 }
-var SPLAT_SORT_SRC='var P=null,n=0,DT=1,cx=0,cy=0,cz=0,rr=1,KEY=null,CNT=new Uint32Array(65536),VIS=null;onmessage=function(e){var d=e.data;if(!d.f)DT=1;if(d.pos){P=d.pos;n=d.n;return;}if(!P)return;var i,j;if(DT){cx=0;cy=0;cz=0;for(i=0,j=0;i<n;i++,j+=3){cx+=P[j];cy+=P[j+1];cz+=P[j+2];}cx/=Math.max(1,n);cy/=Math.max(1,n);cz/=Math.max(1,n);var r2=0;for(i=0,j=0;i<n;i++,j+=3){var ax=P[j]-cx,ay=P[j+1]-cy,az=P[j+2]-cz,q=ax*ax+ay*ay+az*az;if(q>r2&&q<1e12)r2=q;}rr=Math.max(1e-6,Math.sqrt(r2));DT=0;}if(!KEY||KEY.length<n)KEY=new Uint16Array(n);var f=d.f,ex=d.e,sc=65535/(2*rr),f0=f[0]*sc,f1=f[1]*sc,f2=f[2]*sc,base=((cx-ex[0])*f[0]+(cy-ex[1])*f[1]+(cz-ex[2])*f[2]+rr+ex[0]*f[0]+ex[1]*f[1]+ex[2]*f[2])*sc;CNT.fill(0);var M=d.m,nv=0;if(M){if(!VIS||VIS.length<n)VIS=new Uint8Array(n);var m0=M[0],m1=M[1],m3=M[3],m4=M[4],m5=M[5],m7=M[7],m8=M[8],m9=M[9],m11=M[11],m12=M[12],m13=M[13],m15=M[15];for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],w=m3*x+m7*y+m11*z+m15,v=0;if(w>0.001){var qx=m0*x+m4*y+m8*z+m12,qy=m1*x+m5*y+m9*z+m13,lim=1.35*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}VIS[i]=v;if(v){var k=(base-(x*f0+y*f1+z*f2))|0;if(k<0)k=0;else if(k>65535)k=65535;KEY[i]=k;CNT[k]++;nv++;}}}else{for(i=0,j=0;i<n;i++,j+=3){var k2=(base-(P[j]*f0+P[j+1]*f1+P[j+2]*f2))|0;if(k2<0)k2=0;else if(k2>65535)k2=65535;KEY[i]=k2;CNT[k2]++;}nv=n;}var s=0;for(i=0;i<65536;i++){var c=CNT[i];CNT[i]=s;s+=c;}var o=(d.buf&&d.buf.byteLength>=n*4)?new Uint32Array(d.buf,0,n):new Uint32Array(n);if(M){var t=nv;for(i=0;i<n;i++){if(VIS[i])o[CNT[KEY[i]]++]=i;else o[t++]=i;}}else{for(i=0;i<n;i++){o[CNT[KEY[i]]++]=i;}}postMessage({o:o,id:d.id,nv:M?nv:undefined},[o.buffer]);};';
+var SPLAT_SORT_SRC='var P=null,n=0,DT=1,cx=0,cy=0,cz=0,rr=1,KEY=null,CNT=new Uint32Array(65536),VIS=null;onmessage=function(e){var d=e.data;if(!d.f)DT=1;if(d.pos){P=d.pos;n=d.n;return;}if(!P)return;var i,j;if(DT){cx=0;cy=0;cz=0;for(i=0,j=0;i<n;i++,j+=3){cx+=P[j];cy+=P[j+1];cz+=P[j+2];}cx/=Math.max(1,n);cy/=Math.max(1,n);cz/=Math.max(1,n);var r2=0;for(i=0,j=0;i<n;i++,j+=3){var ax=P[j]-cx,ay=P[j+1]-cy,az=P[j+2]-cz,q=ax*ax+ay*ay+az*az;if(q>r2&&q<1e12)r2=q;}rr=Math.max(1e-6,Math.sqrt(r2));DT=0;}if(!KEY||KEY.length<n)KEY=new Uint16Array(n);var f=d.f,ex=d.e,sc=65535/(2*rr),f0=f[0]*sc,f1=f[1]*sc,f2=f[2]*sc,base=((cx-ex[0])*f[0]+(cy-ex[1])*f[1]+(cz-ex[2])*f[2]+rr+ex[0]*f[0]+ex[1]*f[1]+ex[2]*f[2])*sc;CNT.fill(0);var M=d.m,nv=0,HR=d.hide&&d.hide.length?d.hide:null;if(M){if(!VIS||VIS.length<n)VIS=new Uint8Array(n);var m0=M[0],m1=M[1],m3=M[3],m4=M[4],m5=M[5],m7=M[7],m8=M[8],m9=M[9],m11=M[11],m12=M[12],m13=M[13],m15=M[15];for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],w=m3*x+m7*y+m11*z+m15,v=0;if(w>0.001){var qx=m0*x+m4*y+m8*z+m12,qy=m1*x+m5*y+m9*z+m13,lim=1.35*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}if(v&&HR){for(var h=0;h<HR.length;h+=2){if(i>=HR[h]&&i<HR[h+1]){v=0;break;}}}VIS[i]=v;if(v){var k=(base-(x*f0+y*f1+z*f2))|0;if(k<0)k=0;else if(k>65535)k=65535;KEY[i]=k;CNT[k]++;nv++;}}}else{for(i=0,j=0;i<n;i++,j+=3){var k2=(base-(P[j]*f0+P[j+1]*f1+P[j+2]*f2))|0;if(k2<0)k2=0;else if(k2>65535)k2=65535;KEY[i]=k2;CNT[k2]++;}nv=n;}var s=0;for(i=0;i<65536;i++){var c=CNT[i];CNT[i]=s;s+=c;}var o=(d.buf&&d.buf.byteLength>=n*4)?new Uint32Array(d.buf,0,n):new Uint32Array(n);if(M){var t=nv;for(i=0;i<n;i++){if(VIS[i])o[CNT[KEY[i]]++]=i;else o[t++]=i;}}else{for(i=0;i<n;i++){o[CNT[KEY[i]]++]=i;}}postMessage({o:o,id:d.id,nv:M?nv:undefined},[o.buffer]);};';
 function splatEnsure(){
   if(SPL.ready) return true; if(SPL.failed||!SPL.src||!GL2) return false;
   var gl=GL, d=SPL.src, n=d.n, W=SPL.W, H=Math.ceil(n/W), cap=gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -5047,8 +5047,8 @@ function splatSort(){
   var b=camBasis(), f=[cam.tx-b.eye[0], cam.ty-b.eye[1], cam.tz-b.eye[2]], L=Math.hypot(f[0],f[1],f[2])||1; f=[f[0]/L,f[1]/L,f[2]/L];
   var key=f.map(function(v){ return v.toFixed(3); }).join(',')+'|'+b.eye.map(function(v){ return v.toFixed(2); }).join(',');
   if(typeof strOnAny==='function'&&strOnAny()) key+='|str'+STR.x.toFixed(1)+','+STR.y.toFixed(1)+','+STR.z.toFixed(1);   // r305: turning a Straighten ring re-sorts the splats, so near ones stay in front
-  if(key===SPL.lastKey) return; SPL.lastKey=key; SPL.busy=true; var ob=SPL.obuf; SPL.obuf=null; var mv=null; try{ var vv=splatView(), VV=vv.V; if(typeof strOnAny==='function'&&strOnAny()) VV=mMul(VV, strM4()); mv=Array.prototype.slice.call(mMul(vv.P, VV)); }catch(er){ mv=null; } var fS=f, eS=b.eye; if(typeof strOnAny==='function'&&strOnAny()&&typeof strToScan==='function'){ fS=strToScan(f,false); eS=strToScan(b.eye,true); }   // r305: depth order in the scan's own frame while it is turned
-  SPL.sw.postMessage({f:fS, e:eS, id:++SPL.reqId, buf:ob, m:mv}, ob?[ob]:[]);
+  try{ if(typeof splatHideRanges==='function'){ var hk=splatHideRanges(); key+='|h'+(hk?hk.join(','):''); } }catch(eh){} if(key===SPL.lastKey) return; SPL.lastKey=key; SPL.busy=true; var ob=SPL.obuf; SPL.obuf=null; var mv=null; try{ var vv=splatView(), VV=vv.V; if(typeof strOnAny==='function'&&strOnAny()) VV=mMul(VV, strM4()); mv=Array.prototype.slice.call(mMul(vv.P, VV)); }catch(er){ mv=null; } var fS=f, eS=b.eye; if(typeof strOnAny==='function'&&strOnAny()&&typeof strToScan==='function'){ fS=strToScan(f,false); eS=strToScan(b.eye,true); }   // r305: depth order in the scan's own frame while it is turned
+  var hide=null; try{ hide=typeof splatHideRanges==='function'?splatHideRanges():null; }catch(eh){ hide=null; } SPL.lastHide=hide?hide.join(','):''; SPL.sw.postMessage({f:fS, e:eS, id:++SPL.reqId, buf:ob, m:mv, hide:hide}, ob?[ob]:[]);
 }
 function splatView(){
   var asp=glCv.width/Math.max(1,glCv.height), cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r338';
+var SB_BUILD='2026-10-12 r339';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -21914,9 +21914,9 @@ sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog){ var L=SPL.loc; if(L.u
    after any delete + fill the depth steps grew to tens of centimetres and layered ground came out speckled everywhere. Deleted splats are
    now left out, and the depth range is taken from what is in view only, so the order is finer than before too. ===== */
 SPLAT_SORT_SRC='var P=null,n=0,KEY=null,DEP=null,VIS=null,CNT=new Uint32Array(65536);onmessage=function(e){var d=e.data;if(d.pos){P=d.pos;n=d.n;return;}if(!P)return;'+
- 'var i,j,f=d.f,ex=d.e,M=d.m,nv=0,mn=1e30,mx=-1e30;if(!KEY||KEY.length<n){KEY=new Uint16Array(n);DEP=new Float32Array(n);VIS=new Uint8Array(n);}'+
+ 'var i,j,f=d.f,ex=d.e,M=d.m,nv=0,mn=1e30,mx=-1e30,HR=d.hide&&d.hide.length?d.hide:null;if(!KEY||KEY.length<n){KEY=new Uint16Array(n);DEP=new Float32Array(n);VIS=new Uint8Array(n);}'+
  'for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],v=1;if(!(z>-9000))v=0;else if(M){var w=M[3]*x+M[7]*y+M[11]*z+M[15];v=0;if(w>0.001){var qx=M[0]*x+M[4]*y+M[8]*z+M[12],qy=M[1]*x+M[5]*y+M[9]*z+M[13],lim=1.6*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}}'+
- 'VIS[i]=v;if(v){var dd=(x-ex[0])*f[0]+(y-ex[1])*f[1]+(z-ex[2])*f[2];DEP[i]=dd;if(dd<mn)mn=dd;if(dd>mx)mx=dd;nv++;}}'+
+ 'if(v&&HR){for(var h=0;h<HR.length;h+=2){if(i>=HR[h]&&i<HR[h+1]){v=0;break;}}}VIS[i]=v;if(v){var dd=(x-ex[0])*f[0]+(y-ex[1])*f[1]+(z-ex[2])*f[2];DEP[i]=dd;if(dd<mn)mn=dd;if(dd>mx)mx=dd;nv++;}}'+
  'var sc=65535/Math.max(1e-9,mx-mn);CNT.fill(0);for(i=0;i<n;i++){if(VIS[i]){var k=((mx-DEP[i])*sc)|0;if(k<0)k=0;else if(k>65535)k=65535;KEY[i]=k;CNT[k]++;}}'+
  'var s=0;for(i=0;i<65536;i++){var c=CNT[i];CNT[i]=s;s+=c;}var o=(d.buf&&d.buf.byteLength>=n*4)?new Uint32Array(d.buf,0,n):new Uint32Array(n);var t=nv;for(i=0;i<n;i++){if(VIS[i])o[CNT[KEY[i]]++]=i;else o[t++]=i;}'+
  'postMessage({o:o,id:d.id,nv:M?nv:undefined},[o.buffer]);};';
@@ -24211,6 +24211,17 @@ sbAround('sec3DShot', function(next, W, Hc){ var G=secGeom(SEC.which); SEC._cut3
   '@media (max-width:1240px){#vtabs button{padding-left:5px!important;padding-right:5px!important;font-size:12px!important}#btnExport{font-size:0!important}#btnExport:before{content:"Export";font-size:13px}}'+
   '@media (max-width:1180px){#top h1{display:none!important}#menubar>*{padding-left:4px!important;padding-right:4px!important}#ceUnit{font-size:11px!important;padding-left:2px!important;padding-right:2px!important}#vtabs svg{display:none!important}}';
   document.head.appendChild(st); })();
+
+/* ===== Speed: scans that are not on screen are left out of the depth sort and the draw (r339).
+   A hidden capture, and the scans a timelapse is not showing at that moment, cost nothing. When a split or pane view shows
+   different scans side by side, everything is kept, as before. ===== */
+function splatHideRanges(){ var B=typeof PROPS!=='undefined'?PROPS.base:null; if(!B||!B.segs||!B.segs.length||typeof cmpList!=='function') return null; var S=cmpList(); if(S.length<2) return null;
+  if(typeof CMPV!=='undefined'&&(CMPV.on||CMPV._force)) return null; var A;
+  if(typeof MS!=='undefined'&&MS.on){ if(MS.tab!=='time') return null; var st=MS.st||(typeof msState==='function'?msState(MS.t):null); if(!st||!st.a) return null; if(st.wipe) return null; var st2=msState((MS.t||0)+0.8); A=st.a.map(function(v, k){ var w=st2&&st2.a?st2.a[k]:1; return Math.max(v||0, w||0, st2&&st2.wipe&&(k===st2.wipe.L||k===st2.wipe.R)?1:0); }); }
+  else A=cmpAlphas();
+  var out=[]; S.forEach(function(s, k){ var a=A[k]; if(a==null||a>0.003) return; if(k===0){ out.push(0, B.n); return; } var sg=cmpSeg(s); if(sg&&sg.n>0) out.push(sg.at, sg.at+sg.n); }); return out.length?out:null; }
+/* when what is shown changes (a timelapse moving from one scan to the next), sort again even if the camera has not moved */
+(function(){ var last=''; setInterval(function(){ try{ if(typeof SPL==='undefined'||!SPL.ready) return; var h=splatHideRanges(), k=h?h.join(','):''; if(k!==last){ last=k; if(typeof splatSort==='function'){ SPL.lastKey=''; splatSort(); } } }catch(e){} }, 120); })();
 
 
 </script>

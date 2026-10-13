@@ -1,6 +1,3 @@
-# Scan Bench r338
+# Scan Bench r339
 
-- Sections: the 3D strip follows the From and To length, with start and end posts.
-- Sections: dashed green 0 datum line on the section view and in the PDF.
-- Sections: Shade from 0 to the ground (blue above, orange below), on screen and in the PDF.
-- Sections PDF: ground highest and lowest in the panel match the markers.
+- Compare and Timelapse: scans not on screen (hidden, or not showing in that part of the timelapse) are left out of the depth sort and the draw, so about half the work with two scans.
