@@ -1,5 +1,3 @@
-# Scan Bench r335
+# Scan Bench r336
 
-- Sections: set the length with From and To in the panel, or drag the round end handles on the line in Plan.
-- Sections PDF: highest and lowest ground marked on the 3D picture, the profile and the plan strip.
-- Sections PDF: 3D picture cuts away everything between the camera and the line, so buildings no longer block it.
+- Top bar fits windows down to about 1100 px wide: Save, Export and Record stay on screen.
