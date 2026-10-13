@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r348';
+var SB_BUILD='2026-10-14 r349';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22889,8 +22889,8 @@ sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL,
 
 /* ---------- rain, snow and splashes: worked out from the clock alone, anchored to the ground (they do not swim when you move) ---------- */
 function wxPartProg(){ if(WX.pprog||!GL) return WX.pprog; var gl=GL;
-  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; layout(location=2) in float aS; uniform mat4 uM; uniform float uPS; out vec4 vC; out float vSoft; void main(){ vC=aC; gl_Position=uM*vec4(aP,1.0); float ps=uPS*aS/max(0.05,gl_Position.w); gl_PointSize=clamp(ps,1.0,40.0); vSoft=clamp((ps-6.0)/24.0,0.0,1.0); }';
-  var FS='#version 300 es\nprecision mediump float; in vec4 vC; in float vSoft; uniform float uPt; out vec4 o; void main(){ float a=vC.a; if(uPt>0.5){ vec2 q=gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; a*=mix(smoothstep(1.0,0.35,d), (1.0-d)*0.55, vSoft); } o=vec4(vC.rgb*a, a); }';
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; layout(location=2) in float aS; uniform mat4 uM; uniform float uPS; out vec4 vC; out float vSoft; out float vStar; void main(){ vC=aC; gl_Position=uM*vec4(aP,1.0); float ps=uPS*aS/max(0.05,gl_Position.w); gl_PointSize=clamp(ps,1.0,64.0); vSoft=clamp((ps-14.0)/30.0,0.0,1.0); vStar=clamp((ps-5.0)/6.0,0.0,1.0)*(1.0-vSoft); }';
+  var FS='#version 300 es\nprecision mediump float; in vec4 vC; in float vSoft; in float vStar; uniform float uPt; out vec4 o; void main(){ float a=vC.a; if(uPt>0.5){ vec2 q=gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; float an=atan(q.y,q.x)+vC.a*40.0; float st=mix(1.0, 0.78+0.22*pow(abs(cos(an*3.0)),2.0)*(1.0-d)+0.12*(1.0-d), vStar); a*=mix(smoothstep(1.0,0.35,d)*st, (1.0-d)*0.5, vSoft); } o=vec4(vC.rgb*a, a); }';
   WX.pprog=program(gl, VS, FS); WX.pbuf=gl.createBuffer(); return WX.pprog; }
 function wxSeed(){ if(WX.seed) return WX.seed; var N=9000, u=new Float32Array(N*4); for(var i=0;i<N*4;i++) u[i]=wxHash(i*1.37+0.5); WX.seed=u; return u; }
 function wxWrap(v, c, H){ var P=2*H, a=c-H; return a+(((v-a)%P)+P)%P; }
@@ -22938,8 +22938,15 @@ function wxPartDraw(){ var S=wxS(); if(!S||!wxOn()||APP.view!=='3d'||miniVP) ret
         for(var q2=0;q2<seg;q2++){ var a1=q2/seg*6.2832, a2=(q2+1)/seg*6.2832, c1=Math.cos(a1), s1=Math.sin(a1), c2=Math.cos(a2), s2=Math.sin(a2), I1=[qx+c1*(rr-rw), qy+s1*(rr-rw), gz2], O1=[qx+c1*(rr+rw), qy+s1*(rr+rw), gz2], I2=[qx+c2*(rr-rw), qy+s2*(rr-rw), gz2], O2=[qx+c2*(rr+rw), qy+s2*(rr+rw), gz2];
           vtx(I1,col2,ra); vtx(O1,col2,ra); vtx(O2,col2,ra); vtx(I1,col2,ra); vtx(O2,col2,ra); vtx(I2,col2,ra); } } } } else WX.rainVeil=0;
   if(S.snow>0){ var ns=Math.round(600+3800*S.snow*Math.min(1.3,k)), sa2=Math.min(0.95,0.6+0.3*S.snow), sl2=wxMix([1,1,1],[0.5,0.55,0.65],X.night), dr=wv*2.5*sc;
-    for(var i2=0;i2<ns;i2++){ var b=(i2+3000)*4, sp=0.55+0.7*u[b+3], fl=t*(0.6+0.8*u[b+2])+u[b+3]*40, sx2=wxWrap(u[b]*2*H+Math.sin(fl)*0.35*sc+(0.15*sc+dr)*wux*t*sp, cx, H), sy2=wxWrap(u[b+1]*2*H+Math.cos(fl*1.3)*0.3*sc+(0.15*sc+dr)*wuy*t*sp, cy, H), sz=g+((u[b+2]*Hz-0.9*sc*sp*t)%Hz+Hz)%Hz;
-      if(sz<wxTopAt(sx2,sy2)) continue; var size=0.45+1.1*u[b+1]*u[b+1], c2=sl2; if(Lm.length){ var L3=wxLampLit(Lm,sx2,sy2,sz); c2=[sl2[0]+L3[0], sl2[1]+L3[1], sl2[2]+L3[2]]; } V.push(sx2,sy2,sz, c2[0],c2[1],c2[2],sa2, size); } }
+    /* snow, after how real flakes move: most are small, a few are big clumps; each drifts down at about a metre a second while it swings
+       round in a little spiral, and turns as it goes so it glints now and then */
+    for(var i2=0;i2<ns;i2++){ var b=(i2+3000)*4, sp=0.55+0.7*u[b+3], fl=t*(1.5+2.5*u[b+2])+u[b+3]*40, rad=(0.05+0.25*u[b])*sc, sx2=wxWrap(u[b]*2*H+Math.cos(fl)*rad+(0.15*sc+dr)*wux*t*sp, cx, H), sy2=wxWrap(u[b+1]*2*H+Math.sin(fl)*rad+(0.15*sc+dr)*wuy*t*sp, cy, H), sz=g+((u[b+2]*Hz-0.9*sc*sp*t)%Hz+Hz)%Hz;
+      if(sz<wxTopAt(sx2,sy2)) continue; var uu=u[b+1], size=0.35+0.5*uu+1.6*Math.pow(u[(b+5)%36000],6), tw=0.65+0.35*Math.sin(t*(2+3*uu)+u[b]*20), c2=sl2; if(Lm.length){ var L3=wxLampLit(Lm,sx2,sy2,sz); c2=[sl2[0]+L3[0], sl2[1]+L3[1], sl2[2]+L3[2]]; } V.push(sx2,sy2,sz, c2[0],c2[1],c2[2],sa2*tw, size); }
+    /* and close to the camera: big soft out-of-focus flakes drifting past the lens, which is what makes snow feel deep */
+    var nn=Math.round((120+600*S.snow)*Math.min(1.3,k)), NB=2.6*sc, Ez=E[2];
+    for(var i3=0;i3<nn;i3++){ var h1=wxHash(i3*7.13+1.1), h2=wxHash(i3*3.71+2.3), h3=wxHash(i3*5.17+3.7), sp3=0.6+0.5*h3, fl3=t*(1.2+1.5*h2)+h1*30, r3=(0.04+0.12*h2)*sc,
+        nx3=wxWrap(h1*2*NB+Math.cos(fl3)*r3+(0.15*sc+dr)*wux*t*sp3, E[0], NB), ny3=wxWrap(h2*2*NB+Math.sin(fl3)*r3+(0.15*sc+dr)*wuy*t*sp3, E[1], NB), nz3=wxWrap(h3*2*NB-0.9*sc*sp3*t, Ez, NB);
+      var ddx=nx3-E[0], ddy=ny3-E[1], ddz=nz3-Ez; if(ddx*ddx+ddy*ddy+ddz*ddz<0.09*sc*sc) continue; if(nz3<wxTopAt(nx3,ny3)) continue; var c3=sl2; if(Lm.length){ var L4=wxLampLit(Lm,nx3,ny3,nz3); c3=[sl2[0]+L4[0], sl2[1]+L4[1], sl2[2]+L4[2]]; } V.push(nx3,ny3,nz3, c3[0],c3[1],c3[2], sa2*0.5*(0.6+0.4*Math.sin(t*2+h1*9)), 0.5+0.9*h1); } }
   if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uM'), false, camMVP()); gl.bindBuffer(gl.ARRAY_BUFFER, WX.pbuf);
   gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2); gl.disableVertexAttribArray(3); gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   var st=32; if(T.length){ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(T), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,st,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,st,12); gl.vertexAttribPointer(2,1,gl.FLOAT,false,st,28); gl.uniform1f(gl.getUniformLocation(pr,'uPt'),0); gl.drawArrays(gl.TRIANGLES, 0, T.length/8); }
@@ -24259,7 +24266,9 @@ function splatHideRanges(){ var B=typeof PROPS!=='undefined'?PROPS.base:null; if
    vertical streaks, rain drops make expanding ripple rings that bend the reflection, and you can still see the ground through shallow water.
    Things standing in front (cars, posts, people) hide the water: a quick depth picture of the scan is drawn first to know what is nearer. ===== */
 var WP={res:null, key:'', vao:null, buf:null, n:0, prog:null, fbo:null, dtex:null, ctex:null, dw:0, dh:0, inDepth:false, zmed:null, cov:0};
-function wpWet(){ var S=wxS(); if(!S||!wxOn()||!S.wet) return 0; var k=Math.min(1,S.strength==null?1:S.strength), r=S.rain>0?Math.min(1,S.rain*1.4):0; return Math.max(r, (S.puddles||0)>0.02?0.35:0)*k; }
+function wpWet(){ var S=wxS(); if(!S||!wxOn()||!S.wet) return 0; var k=Math.min(1,S.strength==null?1:S.strength), r=S.rain>0?Math.min(1,S.rain*1.4):0; return Math.max(r, (S.puddles||0)>0.02?0.35:0)*k*(1-wpIce()); }
+/* frozen: puddles turn to ice when the ground is snowy */
+function wpIce(){ var S=wxS(); if(!S||!wxOn()) return 0; var c=S.snowCover||0, f=Math.max(c>0.05?Math.min(1,c*1.4):0, (S.snow||0)>0.3?0.5:0); return f*(S.rain>0.3?0.4:1); }
 function wpWanted(){ var S=wxS(); return !!(S&&wxOn()&&((S.puddles||0)>0.02||wpWet()>0.01)&&APP.look==='splat'&&SPL.ready&&!miniVP&&APP.view==='3d'&&GL&&GL.createVertexArray); }
 /* summed-area box blur that ignores empty cells; returns the blurred values and how much of the box had data */
 function wpBox(v, ok, nx, ny, r){ var W=nx+1, S=new Float64Array(W*(ny+1)), C=new Float64Array(W*(ny+1)), out=new Float32Array(nx*ny), fr=new Float32Array(nx*ny);
@@ -24307,7 +24316,7 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     'void main(){ vec4 v=uV*vec4(aP.xyz,1.0); float d=length(v.xyz); vZ=-v.z; float pl=uPull.x+uPull.y*d; v.xyz*=max(0.05,1.0-pl/max(d,1e-3)); vW=aP.xyz; vF=aP.w; vD=d; gl_Position=uP*v; }';
   var FS='#version 300 es\nprecision highp float;\nin vec3 vW; in float vF; in float vD; in float vZ; out vec4 o;\n'+
     'uniform vec3 uEye; uniform vec4 uT; uniform sampler2D uRefl; uniform float uReflOn; uniform sampler2D uDep; uniform float uDT; uniform vec4 uVpR; uniform vec3 uPj;\n'+
-    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr; uniform float uWet; uniform float uDbg;\n'+
+    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr; uniform float uWet; uniform float uDbg; uniform float uIce;\n'+
     'float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }\n'+
     'float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1.0,0.0)),f.x), mix(h21(i+vec2(0.0,1.0)),h21(i+vec2(1.0,1.0)),f.x), f.y); }\n'+
     'float lin(float z){ float n=z*2.0-1.0; return uPj.z>0.5?(uPj.y-n)/uPj.x:uPj.y/(n+uPj.x); }\n'+
@@ -24322,15 +24331,18 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     ' if(rain>0.0){ for(int L=0;L<3;L++){ float fl=float(L); vec2 q=pm*3.2+vec2(fl*0.37,fl*0.61); vec2 c=floor(q); vec2 f=q-c; float ph=uT.x*(0.8+0.6*h21(c*1.7+fl*11.0))+h21(c+fl*17.0)*7.0; float cy=floor(ph), age=ph-cy;\n'+
     '   if(h21(c+vec2(cy*0.131,fl))>0.2+0.8*rain) continue; vec2 dv=f-(0.3+0.4*vec2(h21(c+cy*1.3),h21(c+cy*2.9))); float r=length(dv)+1e-4; float x=(r-age*0.3)*28.0; float en=(1.0-age); en*=en;\n'+
     '   g+=en*(-2.0*sin(x*2.0)-0.6*x*cos(x*2.0))*exp(-0.3*x*x)*dv/r; } g*=0.06*(0.5+0.5*rain); }\n'+
+    ' g*=1.0-uIce;\n'+
     /* and a slow breeze ruffle */
     ' vec2 wq=pm*1.7+vec2(uT.x*0.21,uT.x*0.13); float w0=vn(wq); g+=vec2(vn(wq+vec2(0.07,0.0))-w0, vn(wq+vec2(0.0,0.07))-w0)*0.18;\n'+
     ' vec3 n=normalize(vec3(-g,1.0)); vec3 V=normalize(vW-uEye); float cs=clamp(-dot(V,n),0.0,1.0); float F=0.1+0.9*pow(1.0-cs,3.0); vec3 R=reflect(V,n);\n'+
     ' vec3 sky=mix(uSkyH,uSkyZ,sqrt(clamp(R.z,0.0,1.0))); vec3 rc=sky;\n'+
-    ' if(e>0.01) rc=refl(uv+n.xy*0.06, 0.002+0.009*rain, sky);\n'+
+    ' if(e>0.01) rc=refl(uv+n.xy*0.06+uIce*(vec2(vn(pm*31.0),vn(pm*29.0+5.0))-0.5)*0.02, 0.002+0.009*rain+0.006*uIce, sky);\n'+
     /* the sun and each lamp leave a long vertical streak of light in the water */
     ' vec3 side=normalize(cross(V,vec3(0.0,0.0,1.0))+1e-5); vec3 hl=uSunC*uSun.w*glint(R,uSun.xyz,side,vec2(2500.0,60.0));\n'+
     ' for(int k=0;k<4;k++){ if(float(k)>=uLn) break; vec3 Ld=normalize(uLp[k].xyz-vW); hl+=uLc[k]*uLp[k].w*glint(R,Ld,side,vec2(2500.0,60.0))*1.6; }\n'+
     ' float dep=clamp(vF*uT.z/0.03,0.0,1.0); float Tb=0.48+0.25*cs-0.17*dep; float a=1.0-(1.0-F)*Tb; vec3 wc=(rc*F+hl*(0.4+0.6*F))*uBr;\n'+
+    /* ice: frosted white in patches and thickest round the edge, smooth dull reflection between */
+    ' if(uIce>0.01){ float fr=uIce*clamp(0.3+0.6*smoothstep(0.35,0.8,vn(pm*13.0))+0.6*(1.0-smoothstep(0.0,0.012,ed)),0.0,1.0); float dl=clamp((dot(uSkyH,vec3(0.33))+dot(uSkyZ,vec3(0.33)))*1.6,0.18,1.0); vec3 fc=mix(uSkyH,vec3(0.86,0.89,0.93)*dl,0.65)*(0.85+0.15*vn(pm*40.0))*uBr; a=mix(a,0.9,fr); wc=mix(wc*(1.0-0.25*uIce), fc*a, fr); }\n'+
     /* wet ground: a rough, faint mirror; light smears into long vertical streaks, the classic wet street at night */
     ' if(e<0.99){ vec2 gs=vec2(vn(pm*9.0)-vn(pm*9.0+vec2(0.11,0.0)), vn(pm*9.0)-vn(pm*9.0+vec2(0.0,0.11)))*1.4+g*0.4; vec3 ns=normalize(vec3(gs,1.0)); float cs2=clamp(-dot(V,ns),0.0,1.0); float Fs=0.02+0.98*pow(1.0-cs2,5.0); vec3 R2=reflect(V,ns);\n'+
     '   vec3 sk2=mix(uSkyH,uSkyZ,sqrt(clamp(R2.z,0.0,1.0))); vec3 rs=refl(uv+ns.xy*0.1, 0.012+0.02*rain, sk2); vec3 hs=uSunC*uSun.w*glint(R2,uSun.xyz,side,vec2(500.0,9.0))*0.5;\n'+
@@ -24338,7 +24350,7 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     '   float as=clamp(Fs*1.1,0.0,0.85)*shn; vec3 sc2=(rs*Fs*1.1+hs)*shn*uBr; wc=wc*e+sc2*(1.0-e); a=a*e+as*(1.0-e); e=1.0; }\n'+
     ' float fz=1.0-exp(-uFg.x*max(0.0,vD-uFg.y)); float mz=uFg.z*clamp((uFg.w-vW.z)/max(1e-3,uFg.w),0.0,1.0)*(1.0-exp(-vD*0.25)); float ff=clamp(max(fz,mz),0.0,0.97);\n'+
     ' vec3 src=(1.0-ff)*wc+uFgCol*ff*a; o=vec4(src*e, a*e); }';
-  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr','uWet','uDbg'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
+  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr','uWet','uDbg','uIce'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
 
 /* ---------- the depth picture: the scan drawn quickly at half size, only to know what stands in front of the water ---------- */
 function wpTarget(){ var gl=GL, w=Math.max(64, Math.round(glCv.width/2)), h=Math.max(64, Math.round(glCv.height/2)); if(WP.fbo&&WP.dw===w&&WP.dh===h) return true;
@@ -24364,7 +24376,7 @@ function wpDraw(useDT){ var gl=GL, pr=wpProg(); if(!pr||!WP.n) return; var S=wxS
   gl.uniform3fv(Lc.uSkyH, X.C.hor); gl.uniform3fv(Lc.uSkyZ, X.C.zen); gl.uniform4f(Lc.uFg, fg[0],fg[1],fg[2],fg[3]); gl.uniform3f(Lc.uFgCol, fgc[0],fgc[1],fgc[2]); gl.uniform1f(Lc.uBr, APP.pointBright||1);
   var sd=X.sun.dir, el=X.sun.el, sk=Math.max(0,Math.min(1,el/4))*(1-0.85*X.cov)*3.0, warm=Math.max(0,Math.min(1,el/25)); gl.uniform4f(Lc.uSun, sd[0],sd[1],sd[2], sk); gl.uniform3f(Lc.uSunC, 1, 0.72+0.26*warm, 0.45+0.5*warm);
   var Lm=[]; try{ Lm=wxLampsNear().slice(0,4); }catch(e){} var lp=new Float32Array(16), lc=new Float32Array(12); Lm.forEach(function(Q,i){ lp[i*4]=Q.p[0]; lp[i*4+1]=Q.p[1]; lp[i*4+2]=Q.p[2]; lp[i*4+3]=Math.min(2.5,Q.s); lc[i*3]=Q.c[0]; lc[i*3+1]=Q.c[1]; lc[i*3+2]=Q.c[2]; });
-  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length); gl.uniform1f(Lc.uWet, wpWet()); gl.uniform1f(Lc.uDbg, (window.WPDBG&8)?1:0);
+  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length); gl.uniform1f(Lc.uWet, wpWet()); gl.uniform1f(Lc.uIce, wpIce()); gl.uniform1f(Lc.uDbg, (window.WPDBG&8)?1:0);
   gl.uniform1f(Lc.uReflOn, refl>0.5&&WXR.tex?1:0); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, WXR.tex||null); gl.uniform1i(Lc.uRefl, 7);
   gl.uniform1f(Lc.uDT, useDT?1:0); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, useDT?WP.dtex:null); gl.uniform1i(Lc.uDep, 9); gl.activeTexture(gl.TEXTURE0);
   gl.bindVertexArray(WP.vao); if(useDT&&typeof sbFastNow==='function'&&sbFastNow()) gl.disable(gl.DEPTH_TEST); else gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.TRIANGLES, 0, WP.n);

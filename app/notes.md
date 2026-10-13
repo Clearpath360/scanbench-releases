@@ -1,5 +1,5 @@
-# Scan Bench r348
+# Scan Bench r349
 
-- Wet ground: in rain (Wet ground on) all open ground gets a faint rough sheen that mirrors the sky and buildings.
-- Wet ground: lamps and the sun smear into long vertical light streaks on the wet tarmac.
-- Puddles: no longer drawn on glass canopies seen from below.
+- Snow: flakes vary in size, swing down in small spirals and glint as they turn.
+- Snow: big soft out-of-focus flakes drift past close to the camera.
+- Snow: puddles freeze when there is snow on the ground, frosted white round the edges.
