@@ -1,4 +1,5 @@
-# Scan Bench r334
+# Scan Bench r335
 
-- Sections PDF: heights fitted to the ground, so walls and roofs the line crosses no longer flatten the profile.
-- Sections PDF: panel gives ground lowest and highest, with taller things listed separately.
+- Sections: set the length with From and To in the panel, or drag the round end handles on the line in Plan.
+- Sections PDF: highest and lowest ground marked on the 3D picture, the profile and the plan strip.
+- Sections PDF: 3D picture cuts away everything between the camera and the line, so buildings no longer block it.
