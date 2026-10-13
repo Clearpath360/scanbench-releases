@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r345';
+var SB_BUILD='2026-10-13 r346';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24250,6 +24250,119 @@ function splatHideRanges(){ var B=typeof PROPS!=='undefined'?PROPS.base:null; if
   var out=[]; S.forEach(function(s, k){ var a=A[k]; if(a==null||a>0.003) return; if(k===0){ out.push(0, B.n); return; } var sg=cmpSeg(s); if(sg&&sg.n>0) out.push(sg.at, sg.at+sg.n); }); return out.length?out:null; }
 /* when what is shown changes (a timelapse moving from one scan to the next), sort again even if the camera has not moved */
 (function(){ var last=''; setInterval(function(){ try{ if(typeof SPL==='undefined'||!SPL.ready) return; var h=splatHideRanges(), k=h?h.join(','):''; if(k!==last){ last=k; if(typeof splatSort==='function'){ SPL.lastKey=''; splatSort(); } } }catch(e){} }, 120); })();
+
+/* ===== Puddles, rebuilt (r346): real water surfaces in the low spots of the ground, after Tatarchuk's ToyShop rain work (ATI, SIGGRAPH 2006).
+   Where they go: the scan's open ground is turned into a fine height map; water collects where the ground dips below its surroundings,
+   and the Puddles slider sets how much of the flat open ground fills. Under cars and canopies stays dry.
+   How they look: a flat water surface drawn per pixel (not per splat, so the edges and reflections are sharp). It mirrors the scene and sky
+   by the Fresnel rule (little reflection looking straight down, nearly a mirror at a low angle), lights and the sun leave long
+   vertical streaks, rain drops make expanding ripple rings that bend the reflection, and you can still see the ground through shallow water.
+   Things standing in front (cars, posts, people) hide the water: a quick depth picture of the scan is drawn first to know what is nearer. ===== */
+var WP={res:null, key:'', vao:null, buf:null, n:0, prog:null, fbo:null, dtex:null, ctex:null, dw:0, dh:0, inDepth:false, zmed:null, cov:0};
+function wpWanted(){ var S=wxS(); return !!(S&&wxOn()&&(S.puddles||0)>0.02&&APP.look==='splat'&&SPL.ready&&!miniVP&&APP.view==='3d'&&GL&&GL.createVertexArray); }
+/* summed-area box blur that ignores empty cells; returns the blurred values and how much of the box had data */
+function wpBox(v, ok, nx, ny, r){ var W=nx+1, S=new Float64Array(W*(ny+1)), C=new Float64Array(W*(ny+1)), out=new Float32Array(nx*ny), fr=new Float32Array(nx*ny);
+  for(var y=0;y<ny;y++){ var rs=0, rc=0; for(var x=0;x<nx;x++){ var i=y*nx+x; if(ok[i]){ rs+=v[i]; rc++; } S[(y+1)*W+x+1]=S[y*W+x+1]+rs; C[(y+1)*W+x+1]=C[y*W+x+1]+rc; } }
+  for(y=0;y<ny;y++){ var y0=Math.max(0,y-r), y1=Math.min(ny,y+r+1); for(x=0;x<nx;x++){ var x0=Math.max(0,x-r), x1=Math.min(nx,x+r+1), a=y1*W+x1, b=y0*W+x1, c=y1*W+x0, d=y0*W+x0, n=C[a]-C[b]-C[c]+C[d], i2=y*nx+x;
+    fr[i2]=n/((y1-y0)*(x1-x0)); out[i2]=n>0?(S[a]-S[b]-S[c]+S[d])/n:0; } } return {v:out, f:fr}; }
+function wpHash(x, y){ var h=Math.sin(x*127.1+y*311.7)*43758.5453; return h-Math.floor(h); }
+function wpNoise(x, y){ var ix=Math.floor(x), iy=Math.floor(y), fx=x-ix, fy=y-iy; fx=fx*fx*(3-2*fx); fy=fy*fy*(3-2*fy); var a=wpHash(ix,iy), b=wpHash(ix+1,iy), c=wpHash(ix,iy+1), d=wpHash(ix+1,iy+1); return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy; }
+/* where the water lies: built once per scan and slider setting */
+function wpBuild(){ var S=wxS(), R=APP.res, T=wxTop(); if(!R||!T||!R.pos) return false; var amt=Math.round(Math.min(1,S.puddles)*20)/20, key=amt+':'+R.n;
+  if(WP.res===R&&WP.key===key) return WP.n>0; WP.res=R; WP.key=key; WP.n=0; WP.zmed=null;
+  var sc=wxSc(), nx=T.nx, ny=T.ny, top=T.top, rr=Math.max(1, Math.round(1.5*sc/T.cell)), mn=new Float32Array(nx*ny), G=new Float32Array(nx*ny), x, y, dx, dy, i;
+  /* the ground under everything: the lowest top nearby, then the highest of those (takes cars and bins off) */
+  for(y=0;y<ny;y++) for(x=0;x<nx;x++){ var m=1e9; for(dy=-rr;dy<=rr;dy++){ var yy=y+dy; if(yy<0||yy>=ny) continue; for(dx=-rr;dx<=rr;dx++){ var xx=x+dx; if(xx<0||xx>=nx) continue; var t=top[yy*nx+xx]; if(t>-1e8&&t<m) m=t; } } mn[y*nx+x]=m; }
+  for(y=0;y<ny;y++) for(x=0;x<nx;x++){ var M=-1e9; for(dy=-rr;dy<=rr;dy++){ var y2=y+dy; if(y2<0||y2>=ny) continue; for(dx=-rr;dx<=rr;dx++){ var x2=x+dx; if(x2<0||x2>=nx) continue; var t2=mn[y2*nx+x2]; if(t2<1e8&&t2>M) M=t2; } } G[y*nx+x]=M; }
+  /* a fine height map of the open ground, about 10 cm a cell */
+  var ext=Math.max(nx,ny)*T.cell, fc=Math.max(0.1*sc, ext/900), fx=Math.max(2,Math.ceil(nx*T.cell/fc)), fy=Math.max(2,Math.ceil(ny*T.cell/fc)), N=fx*fy, sum=new Float32Array(N), cnt=new Uint16Array(N), P=R.pos, OP=R.opa, st=Math.max(1, Math.floor(R.n/4000000));
+  for(i=0;i<R.n;i+=st){ var z=P[i*3+2]; if(z<-9000||(R.del&&R.del[i])||(OP&&OP[i]<128)) continue; var px=P[i*3], py=P[i*3+1], cx=Math.floor((px-T.x0)/T.cell), cy=Math.floor((py-T.y0)/T.cell); if(cx<0||cy<0||cx>=nx||cy>=ny) continue; var cc=cy*nx+cx, g=G[cc];
+    if(!(g>-1e8&&g<1e8)||top[cc]-g>0.6*sc||z<g-0.25*sc||z>g+0.2*sc) continue; var qx=Math.floor((px-T.x0)/fc), qy=Math.floor((py-T.y0)/fc); if(qx<0||qy<0||qx>=fx||qy>=fy) continue; var q=qy*fx+qx; sum[q]+=z; if(cnt[q]<65535) cnt[q]++; }
+  var ok=new Uint8Array(N), h=new Float32Array(N); for(i=0;i<N;i++){ if(cnt[i]>0){ ok[i]=1; h[i]=sum[i]/cnt[i]; } }
+  var A=wpBox(h, ok, fx, fy, Math.max(1,Math.round(0.3*sc/fc))), ok2=new Uint8Array(N); for(i=0;i<N;i++) ok2[i]=A.f[i]>0.3?1:0; var B=wpBox(A.v, ok2, fx, fy, Math.max(2,Math.round(1.6*sc/fc)));
+  /* how far each spot sits below the ground round it, with a little gentle variation so flat ground gets puddles too */
+  var d=new Float32Array(N).fill(-1e9), vals=[], ns=1/(4.0*sc);
+  for(y=1;y<fy-1;y++) for(x=1;x<fx-1;x++){ i=y*fx+x; if(!ok2[i]||B.f[i]<0.45) continue; var gx=(B.v[i+1]-B.v[i-1])/(2*fc), gy=(B.v[i+fx]-B.v[i-fx])/(2*fc); if(gx*gx+gy*gy>0.07*0.07) continue;
+    var wx0=T.x0+(x+0.5)*fc, wy0=T.y0+(y+0.5)*fc; d[i]=B.v[i]-A.v[i]+(wpNoise(wx0*ns, wy0*ns)-0.5)*0.012*sc+(wpNoise(wx0*ns*2.7+7, wy0*ns*2.7)-0.5)*0.004*sc; if((i&3)===0) vals.push(d[i]); }
+  if(vals.length<20) return false; vals.sort(function(a,b){ return a-b; }); var frac=Math.min(0.6, 0.03+0.45*Math.pow(amt,1.4)), thr=vals[Math.floor((vals.length-1)*(1-frac))];
+  /* the water mesh: one flat level per spot (the surrounding ground less the threshold), only where there is water or nearly */
+  var V=[], zs=[], lift=0.002*sc;
+  function F(ii){ return d[ii]>-1e8?d[ii]-thr:-0.006*sc; }
+  for(y=1;y<fy-2;y++) for(x=1;x<fx-2;x++){ var a=y*fx+x, b=a+1, c=a+fx, e=c+1; if(B.f[a]<0.2||B.f[b]<0.2||B.f[c]<0.2||B.f[e]<0.2) continue; var fa=F(a), fb=F(b), fcn=F(c), fe=F(e); if(Math.max(fa,fb,fcn,fe)<-0.004*sc) continue;
+    var X0=T.x0+(x+0.5)*fc, Y0=T.y0+(y+0.5)*fc, za=B.v[a]-thr+lift, zb=B.v[b]-thr+lift, zc=B.v[c]-thr+lift, ze=B.v[e]-thr+lift;
+    V.push(X0,Y0,za,fa, X0+fc,Y0,zb,fb, X0+fc,Y0+fc,ze,fe,  X0,Y0,za,fa, X0+fc,Y0+fc,ze,fe, X0,Y0+fc,zc,fcn); if(fa>0&&(x+y)%3===0) zs.push(za); }
+  if(!V.length) return false; zs.sort(function(a2,b2){ return a2-b2; }); WP.zmed=zs.length?zs[Math.floor(zs.length/2)]:null; WP.cov=frac;
+  var gl=GL; if(!WP.vao){ WP.vao=gl.createVertexArray(); WP.buf=gl.createBuffer(); } gl.bindVertexArray(WP.vao); gl.bindBuffer(gl.ARRAY_BUFFER, WP.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,4,gl.FLOAT,false,16,0); gl.bindVertexArray(null);
+  WP.n=V.length/4; return true; }
+/* the puddles mirror about their own water level rather than the general ground */
+sbAround('wxGroundZ', function(next){ if(wpWanted()&&WP.res===APP.res&&WP.zmed!=null) return WP.zmed; return next(); });
+
+/* ---------- the water shader ---------- */
+function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec4 aP; uniform mat4 uV; uniform mat4 uP; uniform vec2 uPull; out vec3 vW; out float vF; out float vD; out float vZ;\n'+
+    'void main(){ vec4 v=uV*vec4(aP.xyz,1.0); float d=length(v.xyz); vZ=-v.z; float pl=uPull.x+uPull.y*d; v.xyz*=max(0.05,1.0-pl/max(d,1e-3)); vW=aP.xyz; vF=aP.w; vD=d; gl_Position=uP*v; }';
+  var FS='#version 300 es\nprecision highp float;\nin vec3 vW; in float vF; in float vD; in float vZ; out vec4 o;\n'+
+    'uniform vec3 uEye; uniform vec4 uT; uniform sampler2D uRefl; uniform float uReflOn; uniform sampler2D uDep; uniform float uDT; uniform vec4 uVpR; uniform vec3 uPj;\n'+
+    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr;\n'+
+    'float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }\n'+
+    'float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1.0,0.0)),f.x), mix(h21(i+vec2(0.0,1.0)),h21(i+vec2(1.0,1.0)),f.x), f.y); }\n'+
+    'float lin(float z){ float n=z*2.0-1.0; return uPj.z>0.5?(uPj.y-n)/uPj.x:uPj.y/(n+uPj.x); }\n'+
+    'float occ(vec2 u, float zw){ float ds=texture(uDep,u).r; if(ds>0.99999) return 0.0; float zs=lin(ds); return (zs<zw*0.995&&uEye.z+(vW.z-uEye.z)*(zs/max(zw,1e-4))>vW.z+0.12/uT.z)?1.0:0.0; }\n'+
+    'float glint(vec3 R, vec3 L, vec3 side){ vec3 dd=R-L; float ds=dot(dd,side), dv=dd.z; return exp(-ds*ds*2500.0-dv*dv*60.0); }\n'+
+    'void main(){ vec2 pm=vW.xy*uT.z; float ed=vF*uT.z+(vn(pm*5.0)-0.5)*0.004+(vn(pm*19.0)-0.5)*0.0016; float e=smoothstep(0.0,0.003,ed); if(e<0.01) discard;\n'+
+    ' vec2 uv=(gl_FragCoord.xy-uVpR.xy)/uVpR.zw;\n'+
+    ' if(uDT>0.5){ vec2 tx=1.0/vec2(textureSize(uDep,0)); float oc=occ(uv,vZ)+occ(uv+vec2(tx.x,0.0),vZ)+occ(uv-vec2(tx.x,0.0),vZ)+occ(uv+vec2(0.0,tx.y),vZ)+occ(uv-vec2(0.0,tx.y),vZ); if(oc>2.5) discard; }\n'+
+    /* ripple rings from the rain: three staggered grids of drop sites, each drop a ring that spreads and fades */
+    ' float rain=uT.y; vec2 g=vec2(0.0);\n'+
+    ' if(rain>0.0){ for(int L=0;L<3;L++){ float fl=float(L); vec2 q=pm*3.2+vec2(fl*0.37,fl*0.61); vec2 c=floor(q); vec2 f=q-c; float ph=uT.x*(0.8+0.6*h21(c*1.7+fl*11.0))+h21(c+fl*17.0)*7.0; float cy=floor(ph), age=ph-cy;\n'+
+    '   if(h21(c+vec2(cy*0.131,fl))>0.2+0.8*rain) continue; vec2 dv=f-(0.3+0.4*vec2(h21(c+cy*1.3),h21(c+cy*2.9))); float r=length(dv)+1e-4; float x=(r-age*0.3)*28.0; float en=(1.0-age); en*=en;\n'+
+    '   g+=en*(-2.0*sin(x*2.0)-0.6*x*cos(x*2.0))*exp(-0.3*x*x)*dv/r; } g*=0.06*(0.5+0.5*rain); }\n'+
+    /* and a slow breeze ruffle */
+    ' vec2 wq=pm*1.7+vec2(uT.x*0.21,uT.x*0.13); float w0=vn(wq); g+=vec2(vn(wq+vec2(0.07,0.0))-w0, vn(wq+vec2(0.0,0.07))-w0)*0.18;\n'+
+    ' vec3 n=normalize(vec3(-g,1.0)); vec3 V=normalize(vW-uEye); float cs=clamp(-dot(V,n),0.0,1.0); float F=0.1+0.9*pow(1.0-cs,3.0); vec3 R=reflect(V,n);\n'+
+    ' vec3 sky=mix(uSkyH,uSkyZ,sqrt(clamp(R.z,0.0,1.0))); vec3 rc=sky;\n'+
+    ' if(uReflOn>0.5){ vec2 ru=uv+n.xy*0.06; float st=0.002+0.009*rain; vec3 acc=vec3(0.0); float wt=0.0; for(int i=0;i<6;i++){ float w=1.0-float(i)*0.15; acc+=w*texture(uRefl,clamp(ru+vec2(0.0,float(i)*st),vec2(0.002),vec2(0.998))).rgb; wt+=w; } rc=acc/wt; }\n'+
+    /* the sun and each lamp leave a long vertical streak of light in the water */
+    ' vec3 side=normalize(cross(V,vec3(0.0,0.0,1.0))+1e-5); vec3 hl=uSunC*uSun.w*glint(R,uSun.xyz,side);\n'+
+    ' for(int k=0;k<4;k++){ if(float(k)>=uLn) break; vec3 Ld=normalize(uLp[k].xyz-vW); hl+=uLc[k]*uLp[k].w*glint(R,Ld,side)*1.6; }\n'+
+    ' float dep=clamp(vF*uT.z/0.03,0.0,1.0); float Tb=0.48+0.25*cs-0.17*dep; float a=1.0-(1.0-F)*Tb; vec3 wc=(rc*F+hl*(0.4+0.6*F))*uBr;\n'+
+    ' float fz=1.0-exp(-uFg.x*max(0.0,vD-uFg.y)); float mz=uFg.z*clamp((uFg.w-vW.z)/max(1e-3,uFg.w),0.0,1.0)*(1.0-exp(-vD*0.25)); float ff=clamp(max(fz,mz),0.0,0.97);\n'+
+    ' vec3 src=(1.0-ff)*wc+uFgCol*ff*a; o=vec4(src*e, a*e); }';
+  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
+
+/* ---------- the depth picture: the scan drawn quickly at half size, only to know what stands in front of the water ---------- */
+function wpTarget(){ var gl=GL, w=Math.max(64, Math.round(glCv.width/2)), h=Math.max(64, Math.round(glCv.height/2)); if(WP.fbo&&WP.dw===w&&WP.dh===h) return true;
+  try{ if(WP.fbo){ gl.deleteFramebuffer(WP.fbo); gl.deleteTexture(WP.dtex); gl.deleteRenderbuffer(WP.ctex); } gl.activeTexture(gl.TEXTURE9); WP.dtex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, WP.dtex); gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,w,h,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    WP.ctex=gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, WP.ctex); gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, w, h);
+    WP.fbo=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, WP.fbo); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, WP.ctex); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, WP.dtex, 0);
+    var ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE; gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.activeTexture(gl.TEXTURE0); WP.dw=w; WP.dh=h; if(!ok){ WP.fbo=null; return false; } return true; }catch(e){ console.warn(e); WP.fbo=null; return false; } }
+sbAround('splatView', function(next){ var v=next(); if(WP.inDepth) v.fy*=WP.dw/Math.max(1,glCv.width); return v; });
+sbAround('sbFastNow', function(next){ if(WP.inDepth) return true; return next(); });
+sbAfter('wxReflWanted', function(r){ return r&&!WP.inDepth; });
+function wpDepthPass(zmax){ var gl=GL, L=SPL.loc; if(!wpTarget()) return false; var vp=gl.getParameter(gl.VIEWPORT), rOn=null; try{ if(L.uReflOn) rOn=gl.getUniform(SPL.prog, L.uReflOn); }catch(e){}
+  WP.inDepth=true; var ok=false;
+  try{ gl.bindFramebuffer(gl.FRAMEBUFFER, WP.fbo); gl.viewport(0,0,WP.dw,WP.dh); window.SPLVP=[WP.dw,WP.dh]; gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT|gl.COLOR_BUFFER_BIT); gl.colorMask(false,false,false,false); gl.enable(gl.DEPTH_TEST); gl.useProgram(SPL.prog); if(L.uCut) gl.uniform1f(L.uCut, 1.55); splatDraw(zmax); ok=true; }catch(e){ console.warn(e); }
+  finally{ gl.colorMask(true,true,true,true); window.SPLVP=null; gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(vp[0],vp[1],vp[2],vp[3]); WP.inDepth=false; try{ gl.useProgram(SPL.prog); if(L.uReflOn&&rOn!=null) gl.uniform1f(L.uReflOn, rOn); if(L.uCut) gl.uniform1f(L.uCut, 0); }catch(e){} }
+  return ok; }
+
+/* ---------- drawing the water, straight after the scan ---------- */
+function wpDraw(useDT){ var gl=GL, pr=wpProg(); if(!pr||!WP.n) return; var S=wxS(), X=wxState(), sc=wxSc(), Lc=WP.loc, v=splatView(), eye=[0,0,0], fg=[0,0,0,0], fgc=[0.5,0.5,0.5], refl=0;
+  try{ var SL=SPL.loc; if(SL.uEyeW) eye=gl.getUniform(SPL.prog, SL.uEyeW)||eye; if(SL.uFg) fg=gl.getUniform(SPL.prog, SL.uFg)||fg; if(SL.uFgCol) fgc=gl.getUniform(SPL.prog, SL.uFgCol)||fgc; if(SL.uReflOn) refl=gl.getUniform(SPL.prog, SL.uReflOn)||0; }catch(e){}
+  gl.useProgram(pr); gl.uniformMatrix4fv(Lc.uV,false,new Float32Array(v.V)); gl.uniformMatrix4fv(Lc.uP,false,new Float32Array(v.P)); gl.uniform2f(Lc.uPull, useDT?0:0.12*sc, useDT?0:0.006); gl.uniform3f(Lc.uEye, eye[0],eye[1],eye[2]);
+  gl.uniform4f(Lc.uT, X.t%600, S.rain||0, 1/sc, 0); var vp=gl.getParameter(gl.VIEWPORT); gl.uniform4f(Lc.uVpR, vp[0],vp[1],vp[2],vp[3]); gl.uniform3f(Lc.uPj, v.P[10], v.P[14], v.ortho?1:0);
+  gl.uniform3fv(Lc.uSkyH, X.C.hor); gl.uniform3fv(Lc.uSkyZ, X.C.zen); gl.uniform4f(Lc.uFg, fg[0],fg[1],fg[2],fg[3]); gl.uniform3f(Lc.uFgCol, fgc[0],fgc[1],fgc[2]); gl.uniform1f(Lc.uBr, APP.pointBright||1);
+  var sd=X.sun.dir, el=X.sun.el, sk=Math.max(0,Math.min(1,el/4))*(1-0.85*X.cov)*3.0, warm=Math.max(0,Math.min(1,el/25)); gl.uniform4f(Lc.uSun, sd[0],sd[1],sd[2], sk); gl.uniform3f(Lc.uSunC, 1, 0.72+0.26*warm, 0.45+0.5*warm);
+  var Lm=[]; try{ Lm=wxLampsNear().slice(0,4); }catch(e){} var lp=new Float32Array(16), lc=new Float32Array(12); Lm.forEach(function(Q,i){ lp[i*4]=Q.p[0]; lp[i*4+1]=Q.p[1]; lp[i*4+2]=Q.p[2]; lp[i*4+3]=Math.min(2.5,Q.s); lc[i*3]=Q.c[0]; lc[i*3+1]=Q.c[1]; lc[i*3+2]=Q.c[2]; });
+  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length);
+  gl.uniform1f(Lc.uReflOn, refl>0.5&&WXR.tex?1:0); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, WXR.tex||null); gl.uniform1i(Lc.uRefl, 7);
+  gl.uniform1f(Lc.uDT, useDT?1:0); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, useDT?WP.dtex:null); gl.uniform1i(Lc.uDep, 9); gl.activeTexture(gl.TEXTURE0);
+  gl.bindVertexArray(WP.vao); if(useDT&&typeof sbFastNow==='function'&&sbFastNow()) gl.disable(gl.DEPTH_TEST); else gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.TRIANGLES, 0, WP.n);
+  gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.bindVertexArray(null); gl.useProgram(SPL.prog); }
+sbAround('splatDraw', function(next, zmax){ if(WXR.inMirror||WP.inDepth) return next(); var on=false, dt=false; try{ on=wpWanted()&&wpBuild(); if(on&&!(window.WPDBG&1)) dt=wpDepthPass(zmax); }catch(e){ console.warn(e); on=false; }
+  var r=next(); if(on){ try{ wpDraw(dt); }catch(e){ console.warn(e); } } return r; });
+/* the old per-splat puddle tint is switched off while the water surfaces are showing */
+sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog&&SPL.loc.uPud&&wpWanted()&&WP.res===APP.res&&WP.n){ GL.useProgram(SPL.prog); GL.uniform4f(SPL.loc.uPud, 0,0,0,1); } }catch(e){} return r; });
 
 
 </script>
