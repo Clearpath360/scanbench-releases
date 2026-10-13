@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r340';
+var SB_BUILD='2026-10-12 r341';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -21735,10 +21735,10 @@ function skinStepName(k){ return ({prep:'Prep scan',model:'Model',draw:'Drawings
 function skinRail(){ var st=document.getElementById('stage'), mt=document.getElementById('mtools'); if(!st||!mt) return; var r=document.getElementById('sbRail'); if(!r){ r=document.createElement('div'); r.id='sbRail'; st.appendChild(r); }
   var items=[]; Array.from(mt.children).forEach(function(el){ if(el.tagName==='BUTTON'&&el.dataset.tool&&skinBtnShown(el)) items.push({name:skinLabel(el), btns:[el], ic:el.dataset.tool==='move'?'sel':'more', single:true, off:el.classList.contains('stepoff')}); else if(el.classList&&el.classList.contains('tbg')){ var h=el.querySelector('.tbgh span'), bs=Array.from(el.querySelectorAll('.tbgb button')).filter(skinBtnShown); if(bs.length) items.push({name:h?h.textContent.trim():'Tools', btns:bs, ic:skinGroupIcon(h?h.textContent:''), off:bs.every(function(b){ return b.classList.contains('stepoff'); }), single:false}); } });
   /* nothing is hidden: tools for this step first, then the other steps' tools (dimmed, a click switches step) */
-  var cur=items.filter(function(it){ return !it.off; }), oth=items.filter(function(it){ return it.off; });
+  var cur=items.filter(function(it){ return !it.off; }), oth=items.filter(function(it){ return it.off; }); cur.forEach(function(it){ it.cur=true; });
   oth.forEach(function(it){ var t=it.btns[0]&&it.btns[0].dataset.tool, k=typeof sbStepOf==='function'?sbStepOf(t):null; it.step=k; });
   r.innerHTML=''; SKIN.items=items;
-  var add=function(it){ var on=it.btns.some(function(b){ return b.classList.contains('on'); }); var b=document.createElement('button'); b.className='sbIt'+(on?' on':'')+(it.off?' dim':''); b.innerHTML=skinIcon(it.ic)+'<span>'+it.name+'</span>'; b.title=it.off?it.name+(it.step?' (in '+skinStepName(it.step)+'): click to switch step':''):(it.single?(it.btns[0].title||it.name):it.name+': click for its tools');
+  var add=function(it){ var on=it.btns.some(function(b){ return b.classList.contains('on'); }); var b=document.createElement('button'), t0=it.btns[0]&&it.btns[0].dataset.tool; b.className='sbIt'+(on?' on':'')+(it.off?' dim':'')+(it.single&&t0==='move'?' sbSelT':(it.cur?' sbStepT':'')); b.innerHTML=skinIcon(it.ic)+'<span>'+it.name+'</span>'; b.title=it.off?it.name+(it.step?' (in '+skinStepName(it.step)+'): click to switch step':''):(it.single?(it.btns[0].title||it.name):it.name+': click for its tools');
     b.onclick=function(e){ e.stopPropagation(); if(it.single){ skinRun(it.btns[0]); return; } skinFly(it, b); }; r.appendChild(b); };
   /* Prep panels (scan, scale, slice, clean, level, crop) reachable from any step */
   /* r340: in Model and Drawings that step's own tools come first, the scan panels after them, so Walls and the rest are never pushed off the bottom */
@@ -21829,6 +21829,13 @@ function skinWake(){ document.body.classList.remove('sbIdle'); clearTimeout(SKIN
   'body.sbSkin .viewtabs{border-radius:10px;border-color:var(--sbLn)}body.sbSkin .viewtabs button{border-radius:8px}'+
   '#sbRail .sbSub{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--sbTx2);text-align:center;padding:6px 0 2px;opacity:.8}#sbFly .sbFh i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500;opacity:.8}';
   document.head.appendChild(c); })();
+
+/* r341: Select is blue; the tools of the step you are in (Walls, Floors, Steel and glass, Objects...) have their own green tint */
+(function(){ var c=document.createElement('style'); c.textContent=
+ 'body.sbSkin #sbRail .sbIt.sbSelT,body.sbSkin .sbIt.sbSelT{background:#2563eb!important;color:#fff!important}body.sbSkin .sbIt.sbSelT svg{stroke:#fff!important;color:#fff!important}body.sbSkin .sbIt.sbSelT:hover{background:#1d4ed8!important}body.sbSkin .sbIt.sbSelT.on{box-shadow:0 0 0 2px #93c5fd inset}'+
+ 'body.sbSkin .sbIt.sbStepT{background:rgba(16,185,129,.12)!important;color:#047857!important}body.sbSkin .sbIt.sbStepT svg{stroke:#059669!important;color:#059669!important}body.sbSkin .sbIt.sbStepT:hover{background:rgba(16,185,129,.22)!important}body.sbSkin .sbIt.sbStepT.on{background:#059669!important;color:#fff!important}body.sbSkin .sbIt.sbStepT.on svg{stroke:#fff!important;color:#fff!important}'+
+ '@media (prefers-color-scheme:dark){body.sbSkin .sbIt.sbStepT{color:#6ee7b7!important}body.sbSkin .sbIt.sbStepT svg{stroke:#34d399!important}}';
+ document.head.appendChild(c); })();
 
 /* ===== r285 fixes: compare scans stay out of the main scan when Compare is closed; the walk-through panel keeps its place
    (no jumping to the top when a setting changes, and it no longer vanishes when the view is turned) ===== */

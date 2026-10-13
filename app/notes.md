@@ -1,4 +1,4 @@
-# Scan Bench r340
+# Scan Bench r341
 
-- Left toolbar: in Model and Drawings that step tools (Walls, Floors, Objects, Mark up) come first, scan panels after.
-- Top bar: step names (Prep scan, Model, Drawings, Compare) show again on screens 1560 px and wider.
+- Left toolbar: Select is blue.
+- Left toolbar: the tools of the step you are in (Walls, Floors, Steel and glass, Objects, Mark up) are green.
