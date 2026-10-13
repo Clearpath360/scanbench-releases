@@ -1,8 +1,4 @@
-# Scan Bench r346
+# Scan Bench r347
 
-- Puddles: now real water surfaces, drawn per pixel, not darkened splats.
-- Puddles: collect in the low spots of the scanned ground; under cars and canopies stays dry.
-- Puddles: mirror buildings, cars and sky, more at low viewing angles (Fresnel).
-- Puddles: lamps and the sun leave long vertical streaks in the water.
-- Puddles: rain makes ripple rings that bend the reflection; a light breeze ruffle when dry.
-- Puddles: shallow water shows the ground through it; cars and posts in front hide the water correctly.
+- Headlights: press Headlights, then click the front of any car in the scan; two beams appear at headlight height shining towards you.
+- Headlights: Esc cancels the pick; Ctrl+Z puts your old lights back.

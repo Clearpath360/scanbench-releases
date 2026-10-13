@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-13 r346';
+var SB_BUILD='2026-10-13 r347';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24363,6 +24363,24 @@ sbAround('splatDraw', function(next, zmax){ if(WXR.inMirror||WP.inDepth) return 
   var r=next(); if(on){ try{ wpDraw(dt); }catch(e){ console.warn(e); } } return r; });
 /* the old per-splat puddle tint is switched off while the water surfaces are showing */
 sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog&&SPL.loc.uPud&&wpWanted()&&WP.res===APP.res&&WP.n){ GL.useProgram(SPL.prog); GL.uniform4f(SPL.loc.uPud, 0,0,0,1); } }catch(e){} return r; });
+
+/* ===== Headlights on a car in the scan (r347): the cars in a scan are part of the scan, not objects, so there was nothing to pick.
+   Now, with no object chosen, Headlights asks you to click the front of the car: two beams go either side of that point,
+   at headlight height, shining away from the car towards where you are looking from. ===== */
+function hpPropFor(){ var pid=typeof PROPS!=='undefined'?PROPS.sel:null, p=pid?propById(pid):null; if(!p){ var Lp=propList().filter(function(q){ return !q.hide; }); p=Lp.length===1?Lp[0]:null; } return p; }
+sbAround('ltPreset', function(next, k){ if(k!=='head'||hpPropFor()) return next();
+  LT.headPick=true; glCv.style.cursor='crosshair'; toast('Click the front of the car, between its headlights. The beams shine towards you. Esc to cancel.', 6000); });
+function hpPlace(q){ var M=ltM(); if(!M||!q) return; var sc=ltSc(), B=camBasis(), fx=B.eye[0]-q[0], fy=B.eye[1]-q[1], fl=Math.hypot(fx,fy); if(fl<1e-4){ fx=-B.fwd[0]; fy=-B.fwd[1]; fl=Math.hypot(fx,fy)||1; } fx/=fl; fy/=fl;
+  var sx=-fy, sy=fx, g=ltGround(q[0], q[1]), z=g+0.65*sc, cx=q[0]+fx*0.05*sc, cy=q[1]+fy*0.05*sc; pushUndo(); M.lightAmb=0.2; var L=[];
+  [['Headlight L',1],['Headlight R',-1]].forEach(function(s){ var l=ltMake('beam'); Object.assign(l, {name:s[0], col:'#fff4d6', str:2.6, reach:14, cone:32, soft:0.45, glow:true, haze:0.4}); L.push(l); M.lights=L;
+    ltSetPos(l, [cx+sx*s[1]*0.65*sc, cy+sy*s[1]*0.65*sc, z]); ltSetDir(l, [fx, fy, -0.1]); });
+  M.lights=L; M.lightsOn=true; LT.sel=L[0].id; afterEdit(); ltPanel(); requestRender(false); toast('Headlights placed. Drag each light to fine tune, or its square to re-aim. Ctrl+Z puts your old lights back.', 5000); }
+window.addEventListener('pointerdown', function(e){ if(!LT.headPick||e.target!==glCv||e.button!==0) return; e.preventDefault(); e.stopImmediatePropagation(); var q=null; try{ var R=pickRay(e.clientX, e.clientY), h=stScanHit(R); q=h&&h.p?h.p.slice():null; }catch(er){}
+  if(!q){ toast('Click on the car itself.', 2000); return; } LT.headPick=false; glCv.style.cursor=''; hpPlace(q); }, true);
+window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&LT.headPick){ LT.headPick=false; glCv.style.cursor=''; toast('Headlights cancelled.', 1500); } });
+/* while picking, a press on the scan must not start an orbit */
+window.addEventListener('mousedown', function(e){ if(LT.headPick&&e.target===glCv){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+window.addEventListener('pointermove', function(e){ if(LT.headPick&&e.target===glCv) glCv.style.cursor='crosshair'; }, true);
 
 
 </script>
