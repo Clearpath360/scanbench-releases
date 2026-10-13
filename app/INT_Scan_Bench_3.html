@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r339';
+var SB_BUILD='2026-10-12 r340';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -21741,8 +21741,9 @@ function skinRail(){ var st=document.getElementById('stage'), mt=document.getEle
   var add=function(it){ var on=it.btns.some(function(b){ return b.classList.contains('on'); }); var b=document.createElement('button'); b.className='sbIt'+(on?' on':'')+(it.off?' dim':''); b.innerHTML=skinIcon(it.ic)+'<span>'+it.name+'</span>'; b.title=it.off?it.name+(it.step?' (in '+skinStepName(it.step)+'): click to switch step':''):(it.single?(it.btns[0].title||it.name):it.name+': click for its tools');
     b.onclick=function(e){ e.stopPropagation(); if(it.single){ skinRun(it.btns[0]); return; } skinFly(it, b); }; r.appendChild(b); };
   /* Prep panels (scan, scale, slice, clean, level, crop) reachable from any step */
-  if(typeof sbPanelItems==='function') sbPanelItems(r);
-  cur.forEach(add);
+  /* r340: in Model and Drawings that step's own tools come first, the scan panels after them, so Walls and the rest are never pushed off the bottom */
+  if(skinCurStep()==='prep'){ if(typeof sbPanelItems==='function') sbPanelItems(r); cur.forEach(add); }
+  else { cur.forEach(add); var sp0=document.createElement('div'); sp0.className='sbSep'; r.appendChild(sp0); if(typeof sbPanelItems==='function') sbPanelItems(r); }
   if(oth.length){ var all=[]; oth.forEach(function(it){ all=all.concat(it.btns); }); add({name:'Other steps', btns:all, ic:'more', off:true, single:false, step:null}); }
   var sep=document.createElement('div'); sep.className='sbSep'; r.appendChild(sep);
   [['cmp','Compare',function(){ if(typeof msOpen==='function') msOpen(); }]].forEach(function(x){ var b=document.createElement('button'); b.className='sbIt'; b.innerHTML=skinIcon(x[0])+'<span>'+x[1]+'</span>'; b.title=x[0]==='search'?'Find any tool or command by name (Ctrl+K)':x[0]==='theme'?'Look: Auto follows Windows, or choose Light or Dark':x[1]; b.onclick=function(e){ e.stopPropagation(); skinFlyClose(); x[2](); }; r.appendChild(b); }); }
@@ -24205,8 +24206,8 @@ sbAround('sec3DShot', function(next, W, Hc){ var G=secGeom(SEC.which); SEC._cut3
 /* ===== Top bar fits the window: below about 1760 px wide it gives up words it can spare, in order, so Save, Export, Copy view and Record stay on screen.
    The step buttons keep their numbers (the current step keeps its name), view tabs lose their key hints, the look button its word, the title its words. ===== */
 (function(){ var st=document.createElement('style'); st.id='sbTopFit'; st.textContent=
-  '@media (max-width:1760px){#steps button{font-size:0!important;gap:0}#steps button>i{font-size:12px!important;margin:0!important}#steps button.on{font-size:13px!important}#steps button.on>i{margin-right:6px!important}#vtabs .k{display:none!important}}'+
-  '@media (max-width:1560px){#sbThemeB>span{display:none!important}#top h1{font-size:0!important;gap:0}#top h1 img{margin-right:0!important}#vtabs button{padding-left:8px!important;padding-right:8px!important}}'+
+  '@media (max-width:1760px){#vtabs .k{display:none!important}#sbThemeB>span{display:none!important}#top h1{font-size:0!important;gap:0}#top h1 img{margin-right:0!important}#vtabs button{padding-left:8px!important;padding-right:8px!important}}'+
+  '@media (max-width:1560px){#steps button{font-size:0!important;gap:0}#steps button>i{font-size:12px!important;margin:0!important}#steps button.on{font-size:13px!important}#steps button.on>i{margin-right:6px!important}}'+
   '@media (max-width:1400px){#steps button.on{font-size:0!important}#steps button.on>i{margin-right:0!important}#menubar>*{padding-left:6px!important;padding-right:6px!important}#vtabs svg{margin-right:0!important}}'+
   '@media (max-width:1240px){#vtabs button{padding-left:5px!important;padding-right:5px!important;font-size:12px!important}#btnExport{font-size:0!important}#btnExport:before{content:"Export";font-size:13px}}'+
   '@media (max-width:1180px){#top h1{display:none!important}#menubar>*{padding-left:4px!important;padding-right:4px!important}#ceUnit{font-size:11px!important;padding-left:2px!important;padding-right:2px!important}#vtabs svg{display:none!important}}';

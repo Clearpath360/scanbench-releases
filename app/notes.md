@@ -1,3 +1,4 @@
-# Scan Bench r339
+# Scan Bench r340
 
-- Compare and Timelapse: scans not on screen (hidden, or not showing in that part of the timelapse) are left out of the depth sort and the draw, so about half the work with two scans.
+- Left toolbar: in Model and Drawings that step tools (Walls, Floors, Objects, Mark up) come first, scan panels after.
+- Top bar: step names (Prep scan, Model, Drawings, Compare) show again on screens 1560 px and wider.
