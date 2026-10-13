@@ -1,3 +1,4 @@
-# Scan Bench r333
+# Scan Bench r334
 
-- Levels: Height, Flatness and Spot grid views now show the outline, spot levels, fall lines, hover readout and profile again.
+- Sections PDF: heights fitted to the ground, so walls and roofs the line crosses no longer flatten the profile.
+- Sections PDF: panel gives ground lowest and highest, with taller things listed separately.
