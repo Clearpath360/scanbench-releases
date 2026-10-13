@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r341';
+var SB_BUILD='2026-10-12 r342';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -23248,7 +23248,7 @@ function volSurface(src, g, ground){ var nx=g.nx, ny=g.ny, N=nx*ny, cnt=new Uint
   for(var q2=0;q2<N;q2++) cnt[q2+1]+=cnt[q2]; var zs=new Float32Array(cnt[N]), fill=cnt.slice(0,N);
   for(i=0;i<n;i++){ var cq=cid[i]; if(cq<0) continue; zs[fill[cq]++]=P[i*3+2]; }
   var Z=new Float32Array(N); for(q2=0;q2<N;q2++){ var a=cnt[q2], b=cnt[q2+1], m=b-a; if(m<1){ Z[q2]=NaN; continue; } var sub=zs.subarray(a,b); sub.sort(); Z[q2]=m&1?sub[m>>1]:0.5*(sub[(m>>1)-1]+sub[m>>1]); }
-  if(ground) volGroundOnly(Z, g); volFillHoles(Z, g, 3.0); return Z; }
+  /* r342: cars and other things taken out are left as no data, not given a guessed level */ var gone=ground?volGroundOnly(Z, g):null; volFillHoles(Z, g, 3.0); if(gone){ for(var q3=0;q3<N;q3++) if(gone[q3]) Z[q3]=NaN; } g.gone=gone; return Z; }
 
 /* ground only: a morphological opening (lowest then highest within 1.25 m) finds the bare ground; anything standing more than
    about a metre above it with steep sides (a car, a person, a fence, a bush) is dropped and filled from the ground around.
@@ -23261,7 +23261,9 @@ function volGroundOnly(Z, g){ var R=Math.max(1, Math.round(1.25/g.cell)), op=vol
   var nx=g.nx, ny=g.ny, rm=new Uint8Array(Z.length), i, any=false; for(i=0;i<Z.length;i++){ if(Z[i]===Z[i]&&op[i]===op[i]&&Z[i]-op[i]>thr){ rm[i]=1; any=true; } } if(!any) return;
   /* the sides of whatever was dropped go too (a car door reads lower than a metre), and the gap takes the bare ground height */
   var D=Math.max(1, Math.round(0.45/g.cell)), rd=volMinMax(Float32Array.from(rm), nx, ny, D, false);
-  for(i=0;i<Z.length;i++){ if(!(op[i]===op[i])) continue; if(rm[i]||(rd[i]>0.5&&Z[i]===Z[i]&&Z[i]-op[i]>0.15)) Z[i]=op[i]; } }
+  var gone=new Uint8Array(Z.length); for(i=0;i<Z.length;i++){ if(!(op[i]===op[i])) continue; if(rm[i]||(rd[i]>0.5&&Z[i]===Z[i]&&Z[i]-op[i]>0.15)) gone[i]=1; }
+  /* close the gaps inside each footprint (the low, broken readings under a car) so the whole thing reads as no data */ var R2=Math.max(1, Math.round(0.9/g.cell)), cl=volMinMax(volMinMax(Float32Array.from(gone), nx, ny, R2, false), nx, ny, R2, true);
+  for(i=0;i<Z.length;i++){ if(gone[i]||cl[i]>0.5){ gone[i]=1; Z[i]=NaN; } } return gone; }
 function volFillHoles(Z, g, reach){ var nx=g.nx, ny=g.ny, passes=Math.min(90, Math.ceil(reach/g.cell)), T=new Float32Array(Z.length);
   for(var p=0;p<passes;p++){ var any=false; T.set(Z); for(var y=0;y<ny;y++) for(var x=0;x<nx;x++){ var i=y*nx+x; if(Z[i]===Z[i]) continue; var s=0, c=0, v;
       if(x>0){ v=Z[i-1]; if(v===v){ s+=v; c++; } } if(x<nx-1){ v=Z[i+1]; if(v===v){ s+=v; c++; } } if(y>0){ v=Z[i-nx]; if(v===v){ s+=v; c++; } } if(y<ny-1){ v=Z[i+nx]; if(v===v){ s+=v; c++; } }
@@ -23858,7 +23860,7 @@ function levRun(){ var V=levM(); LEV.key=levKey(); LEV.out=null; if(!V||!V.area|
   var Z0=volSurface({P:P, n:n, opa:R.opa, del:R.del}, g, V.ground), N=g.nx*g.ny, M=new Uint8Array(N), Z=new Float32Array(N).fill(NaN), w=[];
   /* inside the area only, with a 3 x 3 median to take out splat speckle */
   for(var cy=0;cy<g.ny;cy++) for(var cx=0;cx<g.nx;cx++){ var q=cy*g.nx+cx; if(!pointInPoly(g.x0+(cx+0.5)*cell, g.y0+(cy+0.5)*cell, poly)) continue; M[q]=1; if(!(Z0[q]===Z0[q])) continue; w.length=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var X=cx+dx, Y=cy+dy; if(X<0||Y<0||X>=g.nx||Y>=g.ny) continue; var v=Z0[Y*g.nx+X]; if(v===v) w.push(v); } w.sort(function(a,b){ return a-b; }); Z[q]=w[w.length>>1]; }
-  /* fill small gaps (up to about 3 cells) from their neighbours so the map has no speckle */ for(var it=0;it<3;it++){ var Zn=Z.slice(); for(var cy2=1;cy2<g.ny-1;cy2++) for(var cx2=1;cx2<g.nx-1;cx2++){ var q2=cy2*g.nx+cx2; if(!M[q2]||Z[q2]===Z[q2]) continue; var sm=0, k2=0; for(var dy2=-1;dy2<=1;dy2++) for(var dx2=-1;dx2<=1;dx2++){ var v2=Z[q2+dy2*g.nx+dx2]; if(v2===v2){ sm+=v2; k2++; } } if(k2>=3) Zn[q2]=sm/k2; } Z=Zn; }
+  /* fill small gaps (up to about 3 cells) from their neighbours so the map has no speckle */ for(var it=0;it<3;it++){ var Zn=Z.slice(); for(var cy2=1;cy2<g.ny-1;cy2++) for(var cx2=1;cx2<g.nx-1;cx2++){ var q2=cy2*g.nx+cx2; if(!M[q2]||Z[q2]===Z[q2]||(g.gone&&g.gone[q2])) continue; var sm=0, k2=0; for(var dy2=-1;dy2<=1;dy2++) for(var dx2=-1;dx2<=1;dx2++){ var v2=Z[q2+dy2*g.nx+dx2]; if(v2===v2){ sm+=v2; k2++; } } if(k2>=3) Zn[q2]=sm/k2; } Z=Zn; }
   var vals=[]; for(q=0;q<N;q++) if(Z[q]===Z[q]) vals.push(Z[q]); if(!vals.length){ LEV.err='No scan points inside the area.'; return null; } vals.sort(function(a,b){ return a-b; });
   var med=vals[vals.length>>1], cut=vals.filter(function(v){ return v>med-0.75&&v<med+0.75; }); if(cut.length<vals.length*0.3) cut=vals; var zl=cut[Math.floor(cut.length*0.02)], zh=cut[Math.min(cut.length-1, Math.floor(cut.length*0.98))]; if(!(zh-zl>0.002)){ zl-=0.001; zh+=0.001; }
   /* flatness: against the local average */ var Rr=Math.max(1, Math.round(V.flatR/cell)), Avg=levBox(Z, g, Rr), F=new Float32Array(N); for(q=0;q<N;q++) F[q]=Z[q]===Z[q]?Z[q]-Avg[q]:NaN;
@@ -23866,7 +23868,7 @@ function levRun(){ var V=levM(); LEV.key=levKey(); LEV.out=null; if(!V||!V.area|
   /* ponding: fill the hollows from the edge of the area and from the gullies; what the water would fill is the depth */ var Fill=levFlood(Z, M, g, V.gullies), ponds=levPonds(Z, Fill, g);
   var lo=vals[0], hi=vals[vals.length-1], loI=-1, hiI=-1; for(q=0;q<N;q++){ if(Z[q]===lo&&loI<0) loI=q; if(Z[q]===hi&&hiI<0) hiI=q; }
   var gap=levStraightedge(Z, g, 3.0), cls=gap.max<=0.003?'SR1':gap.max<=0.005?'SR2':gap.max<=0.010?'SR3':'outside SR3';
-  LEV.out={g:g, Z:Z, M:M, F:F, Sm:Sm, Fill:Fill, ponds:ponds, zl:zl, zh:zh, lo:lo, hi:hi, loI:loI, hiI:hiI, area:vals.length*cell*cell, gap:gap, cls:cls, ms:Math.round(performance.now()-t0), img:{}, cont:{}};
+  var goneA=0; if(g.gone){ for(q=0;q<N;q++) if(M[q]&&g.gone[q]) goneA+=cell*cell; } LEV.out={goneA:goneA, g:g, Z:Z, M:M, F:F, Sm:Sm, Fill:Fill, ponds:ponds, zl:zl, zh:zh, lo:lo, hi:hi, loI:loI, hiI:hiI, area:vals.length*cell*cell, gap:gap, cls:cls, ms:Math.round(performance.now()-t0), img:{}, cont:{}};
   return LEV.out; }
 function levRunSoon(){ if(LEV._t) return; LEV._t=setTimeout(function(){ LEV._t=0; LEV.err=''; try{ levRun(); }catch(e){ console.warn(e); LEV.err='Could not work out the levels: '+e.message; } levPanel(); planDrawSoon(); }, 30); }
 /* priority flood (Barnes et al.): water leaves at the edge of the area and down any gully */
@@ -23892,7 +23894,7 @@ function levAt(A, x, y){ var O=LEV.out; if(!O||!A) return NaN; return volZat(A, 
 function levS0(){ var O=LEV.out, V=levM(); if(!O) return null; var flat=V.mode==='flat', zl=flat?-V.flatMm/1000:O.zl, zh=flat?V.flatMm/1000:O.zh, ci=V.step>0?V.step:[0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.25,0.5,1].filter(function(c){ return (zh-zl)/c<=20; })[0]||1;
   return {g:O.g, Z:O.Z, F:flat?O.F:null, zl:zl, zh:zh, ci:ci, win:null}; }
 function levImage(){ var O=LEV.out, V=levM(); if(!O) return null; var k=V.mode+'|'+V.step+'|'+V.flatMm+'|'+(SEC.cmode||'bands'); if(O.img[k]) return O.img[k]; var S0=levS0(), g=O.g, cv=document.createElement('canvas'); cv.width=g.nx; cv.height=g.ny; var x=cv.getContext('2d'), im=x.createImageData(g.nx, g.ny), d=im.data, FZ=S0.F||S0.Z;
-  for(var j=0;j<g.ny;j++) for(var i=0;i<g.nx;i++){ var q=j*g.nx+i, z=FZ[q], o=((g.ny-1-j)*g.nx+i)*4; if(!(z===z)){ d[o+3]=0; continue; } var C;
+  for(var j=0;j<g.ny;j++) for(var i=0;i<g.nx;i++){ var q=j*g.nx+i, z=FZ[q], o=((g.ny-1-j)*g.nx+i)*4; if(!(z===z)){ if(g.gone&&g.gone[q]&&O.M[q]){ var hv=((i+j)%6<3)?168:128; d[o]=hv; d[o+1]=hv; d[o+2]=hv+8; d[o+3]=225; } else d[o+3]=0; continue; } var C;
     if(V.mode==='flat'){ var t=Math.max(-1, Math.min(1, z/(V.flatMm/1000))), st=Math.round(t*5)/5; C=st<0?[255+(37-255)*-st, 255+(99-255)*-st, 255+(235-255)*-st]:[255+(220-255)*st, 255+(38-255)*st, 255+(38-255)*st]; }
     else C=secCol(z, S0);
     if(V.mode==='falls') C=[C[0]+(255-C[0])*0.6, C[1]+(255-C[1])*0.6, C[2]+(255-C[2])*0.6];
@@ -23927,7 +23929,7 @@ function levArrows(c, dpr){ var O=LEV.out, g=O.g, z=planView.z, sp=Math.max(g.ce
     c.fillStyle='#fff'; c.beginPath(); c.moveTo(qq[0],qq[1]); c.lineTo(qq[0]-8*dpr*Math.cos(ang-0.5), qq[1]-8*dpr*Math.sin(ang-0.5)); c.lineTo(qq[0]-8*dpr*Math.cos(ang+0.5), qq[1]-8*dpr*Math.sin(ang+0.5)); c.closePath(); c.fill(); } }
 function levSpots(c, dpr){ var O=LEV.out, V=levM(), g=O.g, sp=V.spot||2, z=planView.z; if(sp*z<34*dpr) sp=Math.ceil(34*dpr/z/sp)*sp; c.font='600 '+(11*dpr)+'px system-ui';
   for(var x=Math.ceil(g.x0/sp)*sp; x<g.x0+g.nx*g.cell; x+=sp) for(var y=Math.ceil(g.y0/sp)*sp; y<g.y0+g.ny*g.cell; y+=sp){ var v=levAt(O.Z,x,y); if(!(v===v)) continue; var s=w2s(x,y); c.fillStyle='#111827'; c.beginPath(); c.arc(s[0],s[1],2.5*dpr,0,7); c.fill(); var t=levN(v); c.strokeStyle='rgba(255,255,255,.95)'; c.lineWidth=3*dpr; c.strokeText(t, s[0]+4*dpr, s[1]-3*dpr); c.fillText(t, s[0]+4*dpr, s[1]-3*dpr); } }
-function levHoverTip(c, dpr){ var O=LEV.out, h=LEV.hov, z=levAt(O.Z,h[0],h[1]); if(!(z===z)) return; var V=levM(), L=['Level '+levN(z)], f=levAt(O.F,h[0],h[1]), p=O.Fill?levAt(O.Fill,h[0],h[1])-z:NaN, g=O.g, d=g.cell*2, gx=(levAt(O.Sm,h[0]+d,h[1])-levAt(O.Sm,h[0]-d,h[1]))/(2*d), gy=(levAt(O.Sm,h[0],h[1]+d)-levAt(O.Sm,h[0],h[1]-d))/(2*d), sl=Math.hypot(gx,gy);
+function levHoverTip(c, dpr){ var O=LEV.out, h=LEV.hov, z=levAt(O.Z,h[0],h[1]); if(!(z===z)){ var gq=O.g, cx=Math.floor((h[0]-gq.x0)/gq.cell), cy=Math.floor((h[1]-gq.y0)/gq.cell), qq=cy*gq.nx+cx; if(gq.gone&&cx>=0&&cy>=0&&cx<gq.nx&&cy<gq.ny&&gq.gone[qq]&&O.M[qq]){ var sp=w2s(h[0],h[1]), tx='No data: a car or object stands here', tw; c.font='600 '+(12*dpr)+'px system-ui'; tw=c.measureText(tx).width+16*dpr; c.fillStyle='rgba(17,24,39,.92)'; c.fillRect(sp[0]+14*dpr, sp[1]+10*dpr, tw, 24*dpr); c.fillStyle='#fff'; c.textAlign='left'; c.fillText(tx, sp[0]+22*dpr, sp[1]+26*dpr); } return; } var V=levM(), L=['Level '+levN(z)], f=levAt(O.F,h[0],h[1]), p=O.Fill?levAt(O.Fill,h[0],h[1])-z:NaN, g=O.g, d=g.cell*2, gx=(levAt(O.Sm,h[0]+d,h[1])-levAt(O.Sm,h[0]-d,h[1]))/(2*d), gy=(levAt(O.Sm,h[0],h[1]+d)-levAt(O.Sm,h[0],h[1]-d))/(2*d), sl=Math.hypot(gx,gy);
   if(f===f) L.push((f>=0?'+':'−')+Math.abs(f*1000).toFixed(1)+' mm vs '+fmt(V.flatR,1)+' m average'); if(sl===sl&&sl>0.0005) L.push('Falls 1 in '+Math.round(1/sl)+' ('+(sl*100).toFixed(1)+'%)'); if(p>0.003) L.push('Water would sit '+Math.round(p*1000)+' mm deep');
   var s=w2s(h[0],h[1]); c.font='600 '+(12*dpr)+'px system-ui'; var w=0; L.forEach(function(t){ w=Math.max(w, c.measureText(t).width); }); w+=14*dpr; var hh=L.length*16*dpr+8*dpr, x=s[0]+14*dpr, y=s[1]+14*dpr; if(x+w>planView.w) x=s[0]-14*dpr-w; if(y+hh>planView.h) y=s[1]-14*dpr-hh;
   c.fillStyle='rgba(17,24,39,.92)'; c.fillRect(x,y,w,hh); c.fillStyle='#fff'; L.forEach(function(t,i){ c.font=(i?'400 ':'700 ')+(12*dpr)+'px system-ui'; c.fillText(t, x+7*dpr, y+17*dpr+i*16*dpr); }); }
@@ -23966,7 +23968,7 @@ function levFinish(){ var V=levM(); LEV.drawing=false; try{ var tt=document.getE
 
 /* ---------- exports ---------- */
 function levBoxAround(){ var V=levM(), xs=V.area.map(function(q){ return q[0]; }), ys=V.area.map(function(q){ return q[1]; }), b=[Math.min.apply(null,xs)-2, Math.min.apply(null,ys)-2, Math.max.apply(null,xs)+2, Math.max.apply(null,ys)+2]; b.only='lev'; return b; }
-function levFigures(){ var O=LEV.out, V=levM(), L=[['h','Area'],['Plan area', fmt(O.area,1)+' m²'],['Highest', levN(O.hi)],['Lowest', levN(O.lo)],['Difference', mm(O.hi-O.lo), true]];
+function levFigures(){ var O=LEV.out, V=levM(), L=[['h','Area'],['Plan area', fmt(O.area,1)+' m²']].concat(O.goneA>0.05?[['sw','No data (cars, objects): '+fmt(O.goneA,1)+' m²','rgb(148,148,156)']]:[]).concat([['Highest', levN(O.hi)],['Lowest', levN(O.lo)],['Difference', mm(O.hi-O.lo), true]]);
   L.push(['h','Flatness (3 m straightedge)'],['Biggest gap', Math.round(O.gap.max*1000)+' mm', true],['Class (BS 8204)', O.cls]); L.push(['h','Ponding'],['Spots over 3 mm', String(O.ponds.length)]); O.ponds.slice(0,4).forEach(function(P2,i){ L.push(['Spot '+(i+1), Math.round(P2.depth*1000)+' mm deep, '+Math.round(P2.litres)+' L']); });
   if(V.lines.length){ L.push(['h','Falls']); V.lines.forEach(function(Ln,i){ var f=levFall(Ln); if(f) L.push(['Line '+(i+1), f.txt.replace(/ in [\d.]+ m/,'')]); }); } if(V.gullies.length) L.push(['Gullies marked', String(V.gullies.length)]); return L; }
 function levWithMode(mode, fn){ var V=levM(), keep=V.mode; V.mode=mode; try{ return fn(); } finally{ V.mode=keep; } }
@@ -24005,7 +24007,7 @@ function levPanel(){ var s=levSec(); if(!s) return; var b=s.querySelector('.body
   else h+='<div class="lRow"><button id="lvFall" class="lBtn'+(LEV.tool==='fall'?' on':'')+'" title="Click two points to read the fall between them">'+(LEV.tool==='fall'?(LEV.p1?'Click the second point':'Click the first point'):'Measure a fall')+'</button><button id="lvGully" class="lBtn'+(LEV.tool==='gully'?' on':'')+'" title="Mark a gully or drain: water there runs away instead of ponding">'+(LEV.tool==='gully'?'Click the gully':'+ Gully')+'</button></div>'+
     '<div class="lRow"><button id="lvRedraw" class="lBtn">Redraw area</button><button id="lvClear" class="lBtn">Clear lines</button></div><p class="mini">Drag a corner to move it. Hover the plan for the level, fall and water depth.</p>';
   if(LEV.err) h+='<p class="mini" style="color:#b45309">'+LEV.err+'</p>';
-  if(O&&V.area){ h+='<div class="lH">Results</div><div class="lRes"><div><span>Highest</span><b>'+levN(O.hi)+'</b></div><div><span>Lowest</span><b>'+levN(O.lo)+'</b></div><div><span>3 m straightedge</span><b>'+Math.round(O.gap.max*1000)+' mm · '+O.cls+'</b></div><div><span>Ponding spots</span><b>'+O.ponds.length+(O.ponds[0]?' · up to '+Math.round(Math.max.apply(null, O.ponds.map(function(p){ return p.depth; }))*1000)+' mm':'')+'</b></div></div>';
+  if(O&&V.area){ h+='<div class="lH">Results</div><div class="lRes"><div><span>Highest</span><b>'+levN(O.hi)+'</b></div><div><span>Lowest</span><b>'+levN(O.lo)+'</b></div><div><span>3 m straightedge</span><b>'+Math.round(O.gap.max*1000)+' mm · '+O.cls+'</b></div><div><span>Ponding spots</span><b>'+O.ponds.length+(O.ponds[0]?' · up to '+Math.round(Math.max.apply(null, O.ponds.map(function(p){ return p.depth; }))*1000)+' mm':'')+'</b></div>'+(O.goneA>0.05?'<div><span>No data (cars, objects)</span><b>'+fmt(O.goneA,1)+' m² left out</b></div>':'')+'</div>';
     V.lines.forEach(function(Ln,i){ var f=levFall(Ln); h+='<p class="mini"><b style="color:#2563eb">Line '+(i+1)+'</b> '+(f?f.txt:'off the area')+'</p>'; }); if(V.mode==='flat') h+='<p class="mini">Class is from the 3 m straightedge rule (SR1 3 mm, SR2 5 mm, SR3 10 mm, as given in BS 8204; check the standard that applies). Scanner noise of a few mm shows here too.</p>'; }
   h+='<div class="lH">Settings</div>';
   if(V.mode==='height') h+='<div class="row"><label>Colour steps</label><select id="lvStep">'+o(0,'Auto',V.step)+[0.002,0.005,0.01,0.02,0.05,0.1].map(function(v){ return o(v, Math.round(v*1000)+' mm', V.step); }).join('')+'</select></div>';
