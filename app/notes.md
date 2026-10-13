@@ -1,4 +1,5 @@
-# Scan Bench r347
+# Scan Bench r348
 
-- Headlights: press Headlights, then click the front of any car in the scan; two beams appear at headlight height shining towards you.
-- Headlights: Esc cancels the pick; Ctrl+Z puts your old lights back.
+- Wet ground: in rain (Wet ground on) all open ground gets a faint rough sheen that mirrors the sky and buildings.
+- Wet ground: lamps and the sun smear into long vertical light streaks on the wet tarmac.
+- Puddles: no longer drawn on glass canopies seen from below.

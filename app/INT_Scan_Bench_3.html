@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-13 r347';
+var SB_BUILD='2026-10-14 r348';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24259,7 +24259,8 @@ function splatHideRanges(){ var B=typeof PROPS!=='undefined'?PROPS.base:null; if
    vertical streaks, rain drops make expanding ripple rings that bend the reflection, and you can still see the ground through shallow water.
    Things standing in front (cars, posts, people) hide the water: a quick depth picture of the scan is drawn first to know what is nearer. ===== */
 var WP={res:null, key:'', vao:null, buf:null, n:0, prog:null, fbo:null, dtex:null, ctex:null, dw:0, dh:0, inDepth:false, zmed:null, cov:0};
-function wpWanted(){ var S=wxS(); return !!(S&&wxOn()&&(S.puddles||0)>0.02&&APP.look==='splat'&&SPL.ready&&!miniVP&&APP.view==='3d'&&GL&&GL.createVertexArray); }
+function wpWet(){ var S=wxS(); if(!S||!wxOn()||!S.wet) return 0; var k=Math.min(1,S.strength==null?1:S.strength), r=S.rain>0?Math.min(1,S.rain*1.4):0; return Math.max(r, (S.puddles||0)>0.02?0.35:0)*k; }
+function wpWanted(){ var S=wxS(); return !!(S&&wxOn()&&((S.puddles||0)>0.02||wpWet()>0.01)&&APP.look==='splat'&&SPL.ready&&!miniVP&&APP.view==='3d'&&GL&&GL.createVertexArray); }
 /* summed-area box blur that ignores empty cells; returns the blurred values and how much of the box had data */
 function wpBox(v, ok, nx, ny, r){ var W=nx+1, S=new Float64Array(W*(ny+1)), C=new Float64Array(W*(ny+1)), out=new Float32Array(nx*ny), fr=new Float32Array(nx*ny);
   for(var y=0;y<ny;y++){ var rs=0, rc=0; for(var x=0;x<nx;x++){ var i=y*nx+x; if(ok[i]){ rs+=v[i]; rc++; } S[(y+1)*W+x+1]=S[y*W+x+1]+rs; C[(y+1)*W+x+1]=C[y*W+x+1]+rc; } }
@@ -24268,7 +24269,7 @@ function wpBox(v, ok, nx, ny, r){ var W=nx+1, S=new Float64Array(W*(ny+1)), C=ne
 function wpHash(x, y){ var h=Math.sin(x*127.1+y*311.7)*43758.5453; return h-Math.floor(h); }
 function wpNoise(x, y){ var ix=Math.floor(x), iy=Math.floor(y), fx=x-ix, fy=y-iy; fx=fx*fx*(3-2*fx); fy=fy*fy*(3-2*fy); var a=wpHash(ix,iy), b=wpHash(ix+1,iy), c=wpHash(ix,iy+1), d=wpHash(ix+1,iy+1); return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy; }
 /* where the water lies: built once per scan and slider setting */
-function wpBuild(){ var S=wxS(), R=APP.res, T=wxTop(); if(!R||!T||!R.pos) return false; var amt=Math.round(Math.min(1,S.puddles)*20)/20, key=amt+':'+R.n;
+function wpBuild(){ var S=wxS(), R=APP.res, T=wxTop(); if(!R||!T||!R.pos) return false; var amt=Math.round(Math.min(1,S.puddles)*20)/20, pon=(S.puddles||0)>0.02, key=amt+':'+R.n+':'+pon;
   if(WP.res===R&&WP.key===key) return WP.n>0; WP.res=R; WP.key=key; WP.n=0; WP.zmed=null;
   var sc=wxSc(), nx=T.nx, ny=T.ny, top=T.top, rr=Math.max(1, Math.round(1.5*sc/T.cell)), mn=new Float32Array(nx*ny), G=new Float32Array(nx*ny), x, y, dx, dy, i;
   /* the ground under everything: the lowest top nearby, then the highest of those (takes cars and bins off) */
@@ -24281,16 +24282,19 @@ function wpBuild(){ var S=wxS(), R=APP.res, T=wxTop(); if(!R||!T||!R.pos) return
   var ok=new Uint8Array(N), h=new Float32Array(N); for(i=0;i<N;i++){ if(cnt[i]>0){ ok[i]=1; h[i]=sum[i]/cnt[i]; } }
   var A=wpBox(h, ok, fx, fy, Math.max(1,Math.round(0.3*sc/fc))), ok2=new Uint8Array(N); for(i=0;i<N;i++) ok2[i]=A.f[i]>0.3?1:0; var B=wpBox(A.v, ok2, fx, fy, Math.max(2,Math.round(1.6*sc/fc)));
   /* how far each spot sits below the ground round it, with a little gentle variation so flat ground gets puddles too */
-  var d=new Float32Array(N).fill(-1e9), vals=[], ns=1/(4.0*sc);
+  var frac0=1, d=new Float32Array(N).fill(-1e9), vals=[], ns=1/(4.0*sc);
   for(y=1;y<fy-1;y++) for(x=1;x<fx-1;x++){ i=y*fx+x; if(!ok2[i]||B.f[i]<0.45) continue; var gx=(B.v[i+1]-B.v[i-1])/(2*fc), gy=(B.v[i+fx]-B.v[i-fx])/(2*fc); if(gx*gx+gy*gy>0.07*0.07) continue;
     var wx0=T.x0+(x+0.5)*fc, wy0=T.y0+(y+0.5)*fc; d[i]=B.v[i]-A.v[i]+(wpNoise(wx0*ns, wy0*ns)-0.5)*0.012*sc+(wpNoise(wx0*ns*2.7+7, wy0*ns*2.7)-0.5)*0.004*sc; if((i&3)===0) vals.push(d[i]); }
-  if(vals.length<20) return false; vals.sort(function(a,b){ return a-b; }); var frac=Math.min(0.6, 0.03+0.45*Math.pow(amt,1.4)), thr=vals[Math.floor((vals.length-1)*(1-frac))];
+  if(vals.length<20) return false; if(!pon) frac0=0; vals.sort(function(a,b){ return a-b; }); var frac=Math.min(0.6, 0.03+0.45*Math.pow(amt,1.4)); if(frac0===0) frac=0.0005; var thr=vals[Math.floor((vals.length-1)*(1-frac))];
   /* the water mesh: one flat level per spot (the surrounding ground less the threshold), only where there is water or nearly */
-  var V=[], zs=[], lift=0.002*sc;
+  var V=[], zs=[], lift=0.002*sc, used=new Uint8Array(N);
   function F(ii){ return d[ii]>-1e8?d[ii]-thr:-0.006*sc; }
-  for(y=1;y<fy-2;y++) for(x=1;x<fx-2;x++){ var a=y*fx+x, b=a+1, c=a+fx, e=c+1; if(B.f[a]<0.2||B.f[b]<0.2||B.f[c]<0.2||B.f[e]<0.2) continue; var fa=F(a), fb=F(b), fcn=F(c), fe=F(e); if(Math.max(fa,fb,fcn,fe)<-0.004*sc) continue;
+  for(y=1;y<fy-2;y++) for(x=1;x<fx-2;x++){ var a=y*fx+x, b=a+1, c=a+fx, e=c+1; if(B.f[a]<0.2||B.f[b]<0.2||B.f[c]<0.2||B.f[e]<0.2) continue; var fa=F(a), fb=F(b), fcn=F(c), fe=F(e); if(!pon||Math.max(fa,fb,fcn,fe)<-0.004*sc) continue; used[a]=1;
     var X0=T.x0+(x+0.5)*fc, Y0=T.y0+(y+0.5)*fc, za=B.v[a]-thr+lift, zb=B.v[b]-thr+lift, zc=B.v[c]-thr+lift, ze=B.v[e]-thr+lift;
     V.push(X0,Y0,za,fa, X0+fc,Y0,zb,fb, X0+fc,Y0+fc,ze,fe,  X0,Y0,za,fa, X0+fc,Y0+fc,ze,fe, X0,Y0+fc,zc,fcn); if(fa>0&&(x+y)%3===0) zs.push(za); }
+  /* the wet sheen: a coarser sheet over all the rest of the open ground (30 cm squares), skipping squares that hold water */
+  var K=3, WET=-1000*sc; for(y=1;y<fy-K-1;y+=K) for(x=1;x<fx-K-1;x+=K){ var a2=y*fx+x, b2=a2+K, c2=a2+K*fx, e2=c2+K; if(B.f[a2]<0.2||B.f[b2]<0.2||B.f[c2]<0.2||B.f[e2]<0.2) continue; var hit=false; for(var yy2=0;yy2<K&&!hit;yy2++) for(var xx2=0;xx2<K;xx2++) if(used[a2+yy2*fx+xx2]){ hit=true; break; } if(hit) continue; var gq=Math.max(Math.abs(B.v[b2]-B.v[a2]), Math.abs(B.v[c2]-B.v[a2]), Math.abs(B.v[e2]-B.v[a2]))/(fc*K); if(gq>0.2||Math.abs(A.v[a2]-B.v[a2])>0.06*sc||Math.abs(A.v[e2]-B.v[e2])>0.06*sc) continue;
+    var X1=T.x0+(x+0.5)*fc, Y1=T.y0+(y+0.5)*fc, L1=fc*K; V.push(X1,Y1,B.v[a2]+lift,WET, X1+L1,Y1,B.v[b2]+lift,WET, X1+L1,Y1+L1,B.v[e2]+lift,WET, X1,Y1,B.v[a2]+lift,WET, X1+L1,Y1+L1,B.v[e2]+lift,WET, X1,Y1+L1,B.v[c2]+lift,WET); }
   if(!V.length) return false; zs.sort(function(a2,b2){ return a2-b2; }); WP.zmed=zs.length?zs[Math.floor(zs.length/2)]:null; WP.cov=frac;
   var gl=GL; if(!WP.vao){ WP.vao=gl.createVertexArray(); WP.buf=gl.createBuffer(); } gl.bindVertexArray(WP.vao); gl.bindBuffer(gl.ARRAY_BUFFER, WP.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,4,gl.FLOAT,false,16,0); gl.bindVertexArray(null);
   WP.n=V.length/4; return true; }
@@ -24303,15 +24307,16 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     'void main(){ vec4 v=uV*vec4(aP.xyz,1.0); float d=length(v.xyz); vZ=-v.z; float pl=uPull.x+uPull.y*d; v.xyz*=max(0.05,1.0-pl/max(d,1e-3)); vW=aP.xyz; vF=aP.w; vD=d; gl_Position=uP*v; }';
   var FS='#version 300 es\nprecision highp float;\nin vec3 vW; in float vF; in float vD; in float vZ; out vec4 o;\n'+
     'uniform vec3 uEye; uniform vec4 uT; uniform sampler2D uRefl; uniform float uReflOn; uniform sampler2D uDep; uniform float uDT; uniform vec4 uVpR; uniform vec3 uPj;\n'+
-    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr;\n'+
+    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr; uniform float uWet; uniform float uDbg;\n'+
     'float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }\n'+
     'float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1.0,0.0)),f.x), mix(h21(i+vec2(0.0,1.0)),h21(i+vec2(1.0,1.0)),f.x), f.y); }\n'+
     'float lin(float z){ float n=z*2.0-1.0; return uPj.z>0.5?(uPj.y-n)/uPj.x:uPj.y/(n+uPj.x); }\n'+
     'float occ(vec2 u, float zw){ float ds=texture(uDep,u).r; if(ds>0.99999) return 0.0; float zs=lin(ds); return (zs<zw*0.995&&uEye.z+(vW.z-uEye.z)*(zs/max(zw,1e-4))>vW.z+0.12/uT.z)?1.0:0.0; }\n'+
-    'float glint(vec3 R, vec3 L, vec3 side){ vec3 dd=R-L; float ds=dot(dd,side), dv=dd.z; return exp(-ds*ds*2500.0-dv*dv*60.0); }\n'+
-    'void main(){ vec2 pm=vW.xy*uT.z; float ed=vF*uT.z+(vn(pm*5.0)-0.5)*0.004+(vn(pm*19.0)-0.5)*0.0016; float e=smoothstep(0.0,0.003,ed); if(e<0.01) discard;\n'+
+    'float glint(vec3 R, vec3 L, vec3 side, vec2 k){ vec3 dd=R-L; float ds=dot(dd,side), dv=dd.z; return exp(-ds*ds*k.x-dv*dv*k.y); }\n'+
+    'vec3 refl(vec2 ru, float st, vec3 sky){ if(uReflOn<0.5) return sky; vec3 acc=vec3(0.0); float wt=0.0; for(int i=0;i<6;i++){ float w=1.0-float(i)*0.15; acc+=w*texture(uRefl,clamp(ru+vec2(0.0,float(i)*st),vec2(0.002),vec2(0.998))).rgb; wt+=w; } return acc/wt; }\n'+
+    'void main(){ if(uEye.z<vW.z+0.02/uT.z) discard; vec2 pm=vW.xy*uT.z; float ed=vF*uT.z+(vn(pm*5.0)-0.5)*0.004+(vn(pm*19.0)-0.5)*0.0016; float e=smoothstep(0.0,0.003,ed); float shn=uWet*(0.45+0.55*smoothstep(0.25,0.75,vn(pm*0.45+3.1))); if(e<0.01&&shn<0.01) discard;\n'+
     ' vec2 uv=(gl_FragCoord.xy-uVpR.xy)/uVpR.zw;\n'+
-    ' if(uDT>0.5){ vec2 tx=1.0/vec2(textureSize(uDep,0)); float oc=occ(uv,vZ)+occ(uv+vec2(tx.x,0.0),vZ)+occ(uv-vec2(tx.x,0.0),vZ)+occ(uv+vec2(0.0,tx.y),vZ)+occ(uv-vec2(0.0,tx.y),vZ); if(oc>2.5) discard; }\n'+
+    ' if(uDT>0.5){ vec2 tx=1.0/vec2(textureSize(uDep,0)); float oc=occ(uv,vZ)+occ(uv+vec2(tx.x,0.0),vZ)+occ(uv-vec2(tx.x,0.0),vZ)+occ(uv+vec2(0.0,tx.y),vZ)+occ(uv-vec2(0.0,tx.y),vZ); if(uDbg>0.5){ o=vec4(e, shn, oc/5.0, 1.0); return; } if(oc>2.5) discard; if(oc>0.5) shn=0.0; if(e<0.01&&shn<0.01) discard; }\n'+
     /* ripple rings from the rain: three staggered grids of drop sites, each drop a ring that spreads and fades */
     ' float rain=uT.y; vec2 g=vec2(0.0);\n'+
     ' if(rain>0.0){ for(int L=0;L<3;L++){ float fl=float(L); vec2 q=pm*3.2+vec2(fl*0.37,fl*0.61); vec2 c=floor(q); vec2 f=q-c; float ph=uT.x*(0.8+0.6*h21(c*1.7+fl*11.0))+h21(c+fl*17.0)*7.0; float cy=floor(ph), age=ph-cy;\n'+
@@ -24321,14 +24326,19 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     ' vec2 wq=pm*1.7+vec2(uT.x*0.21,uT.x*0.13); float w0=vn(wq); g+=vec2(vn(wq+vec2(0.07,0.0))-w0, vn(wq+vec2(0.0,0.07))-w0)*0.18;\n'+
     ' vec3 n=normalize(vec3(-g,1.0)); vec3 V=normalize(vW-uEye); float cs=clamp(-dot(V,n),0.0,1.0); float F=0.1+0.9*pow(1.0-cs,3.0); vec3 R=reflect(V,n);\n'+
     ' vec3 sky=mix(uSkyH,uSkyZ,sqrt(clamp(R.z,0.0,1.0))); vec3 rc=sky;\n'+
-    ' if(uReflOn>0.5){ vec2 ru=uv+n.xy*0.06; float st=0.002+0.009*rain; vec3 acc=vec3(0.0); float wt=0.0; for(int i=0;i<6;i++){ float w=1.0-float(i)*0.15; acc+=w*texture(uRefl,clamp(ru+vec2(0.0,float(i)*st),vec2(0.002),vec2(0.998))).rgb; wt+=w; } rc=acc/wt; }\n'+
+    ' if(e>0.01) rc=refl(uv+n.xy*0.06, 0.002+0.009*rain, sky);\n'+
     /* the sun and each lamp leave a long vertical streak of light in the water */
-    ' vec3 side=normalize(cross(V,vec3(0.0,0.0,1.0))+1e-5); vec3 hl=uSunC*uSun.w*glint(R,uSun.xyz,side);\n'+
-    ' for(int k=0;k<4;k++){ if(float(k)>=uLn) break; vec3 Ld=normalize(uLp[k].xyz-vW); hl+=uLc[k]*uLp[k].w*glint(R,Ld,side)*1.6; }\n'+
+    ' vec3 side=normalize(cross(V,vec3(0.0,0.0,1.0))+1e-5); vec3 hl=uSunC*uSun.w*glint(R,uSun.xyz,side,vec2(2500.0,60.0));\n'+
+    ' for(int k=0;k<4;k++){ if(float(k)>=uLn) break; vec3 Ld=normalize(uLp[k].xyz-vW); hl+=uLc[k]*uLp[k].w*glint(R,Ld,side,vec2(2500.0,60.0))*1.6; }\n'+
     ' float dep=clamp(vF*uT.z/0.03,0.0,1.0); float Tb=0.48+0.25*cs-0.17*dep; float a=1.0-(1.0-F)*Tb; vec3 wc=(rc*F+hl*(0.4+0.6*F))*uBr;\n'+
+    /* wet ground: a rough, faint mirror; light smears into long vertical streaks, the classic wet street at night */
+    ' if(e<0.99){ vec2 gs=vec2(vn(pm*9.0)-vn(pm*9.0+vec2(0.11,0.0)), vn(pm*9.0)-vn(pm*9.0+vec2(0.0,0.11)))*1.4+g*0.4; vec3 ns=normalize(vec3(gs,1.0)); float cs2=clamp(-dot(V,ns),0.0,1.0); float Fs=0.02+0.98*pow(1.0-cs2,5.0); vec3 R2=reflect(V,ns);\n'+
+    '   vec3 sk2=mix(uSkyH,uSkyZ,sqrt(clamp(R2.z,0.0,1.0))); vec3 rs=refl(uv+ns.xy*0.1, 0.012+0.02*rain, sk2); vec3 hs=uSunC*uSun.w*glint(R2,uSun.xyz,side,vec2(500.0,9.0))*0.5;\n'+
+    '   for(int k=0;k<4;k++){ if(float(k)>=uLn) break; vec3 Ld=normalize(uLp[k].xyz-vW); hs+=uLc[k]*uLp[k].w*glint(R2,Ld,side,vec2(500.0,9.0))*0.9; }\n'+
+    '   float as=clamp(Fs*1.1,0.0,0.85)*shn; vec3 sc2=(rs*Fs*1.1+hs)*shn*uBr; wc=wc*e+sc2*(1.0-e); a=a*e+as*(1.0-e); e=1.0; }\n'+
     ' float fz=1.0-exp(-uFg.x*max(0.0,vD-uFg.y)); float mz=uFg.z*clamp((uFg.w-vW.z)/max(1e-3,uFg.w),0.0,1.0)*(1.0-exp(-vD*0.25)); float ff=clamp(max(fz,mz),0.0,0.97);\n'+
     ' vec3 src=(1.0-ff)*wc+uFgCol*ff*a; o=vec4(src*e, a*e); }';
-  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
+  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr','uWet','uDbg'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
 
 /* ---------- the depth picture: the scan drawn quickly at half size, only to know what stands in front of the water ---------- */
 function wpTarget(){ var gl=GL, w=Math.max(64, Math.round(glCv.width/2)), h=Math.max(64, Math.round(glCv.height/2)); if(WP.fbo&&WP.dw===w&&WP.dh===h) return true;
@@ -24339,10 +24349,10 @@ function wpTarget(){ var gl=GL, w=Math.max(64, Math.round(glCv.width/2)), h=Math
     var ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE; gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.activeTexture(gl.TEXTURE0); WP.dw=w; WP.dh=h; if(!ok){ WP.fbo=null; return false; } return true; }catch(e){ console.warn(e); WP.fbo=null; return false; } }
 sbAround('splatView', function(next){ var v=next(); if(WP.inDepth) v.fy*=WP.dw/Math.max(1,glCv.width); return v; });
 sbAround('sbFastNow', function(next){ if(WP.inDepth) return true; return next(); });
-sbAfter('wxReflWanted', function(r){ return r&&!WP.inDepth; });
+sbAround('wxReflWanted', function(next){ var r=next(); if(!r&&!WP.inDepth&&!WXR.inMirror&&wpWet()>0.01){ var S=wxS(); r=!!(S.reflect!==false&&APP.look==='splat'&&SPL.ready&&!miniVP&&APP.view==='3d'); } return r&&!WP.inDepth; });
 function wpDepthPass(zmax){ var gl=GL, L=SPL.loc; if(!wpTarget()) return false; var vp=gl.getParameter(gl.VIEWPORT), rOn=null; try{ if(L.uReflOn) rOn=gl.getUniform(SPL.prog, L.uReflOn); }catch(e){}
   WP.inDepth=true; var ok=false;
-  try{ gl.bindFramebuffer(gl.FRAMEBUFFER, WP.fbo); gl.viewport(0,0,WP.dw,WP.dh); window.SPLVP=[WP.dw,WP.dh]; gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT|gl.COLOR_BUFFER_BIT); gl.colorMask(false,false,false,false); gl.enable(gl.DEPTH_TEST); gl.useProgram(SPL.prog); if(L.uCut) gl.uniform1f(L.uCut, 1.55); splatDraw(zmax); ok=true; }catch(e){ console.warn(e); }
+  try{ gl.bindFramebuffer(gl.FRAMEBUFFER, WP.fbo); gl.viewport(0,0,WP.dw,WP.dh); window.SPLVP=[WP.dw,WP.dh]; gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT|gl.COLOR_BUFFER_BIT); gl.colorMask(false,false,false,false); gl.enable(gl.DEPTH_TEST); gl.useProgram(SPL.prog); if(L.uCut) gl.uniform1f(L.uCut, 1.3); splatDraw(zmax); ok=true; }catch(e){ console.warn(e); }
   finally{ gl.colorMask(true,true,true,true); window.SPLVP=null; gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(vp[0],vp[1],vp[2],vp[3]); WP.inDepth=false; try{ gl.useProgram(SPL.prog); if(L.uReflOn&&rOn!=null) gl.uniform1f(L.uReflOn, rOn); if(L.uCut) gl.uniform1f(L.uCut, 0); }catch(e){} }
   return ok; }
 
@@ -24354,7 +24364,7 @@ function wpDraw(useDT){ var gl=GL, pr=wpProg(); if(!pr||!WP.n) return; var S=wxS
   gl.uniform3fv(Lc.uSkyH, X.C.hor); gl.uniform3fv(Lc.uSkyZ, X.C.zen); gl.uniform4f(Lc.uFg, fg[0],fg[1],fg[2],fg[3]); gl.uniform3f(Lc.uFgCol, fgc[0],fgc[1],fgc[2]); gl.uniform1f(Lc.uBr, APP.pointBright||1);
   var sd=X.sun.dir, el=X.sun.el, sk=Math.max(0,Math.min(1,el/4))*(1-0.85*X.cov)*3.0, warm=Math.max(0,Math.min(1,el/25)); gl.uniform4f(Lc.uSun, sd[0],sd[1],sd[2], sk); gl.uniform3f(Lc.uSunC, 1, 0.72+0.26*warm, 0.45+0.5*warm);
   var Lm=[]; try{ Lm=wxLampsNear().slice(0,4); }catch(e){} var lp=new Float32Array(16), lc=new Float32Array(12); Lm.forEach(function(Q,i){ lp[i*4]=Q.p[0]; lp[i*4+1]=Q.p[1]; lp[i*4+2]=Q.p[2]; lp[i*4+3]=Math.min(2.5,Q.s); lc[i*3]=Q.c[0]; lc[i*3+1]=Q.c[1]; lc[i*3+2]=Q.c[2]; });
-  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length);
+  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length); gl.uniform1f(Lc.uWet, wpWet()); gl.uniform1f(Lc.uDbg, (window.WPDBG&8)?1:0);
   gl.uniform1f(Lc.uReflOn, refl>0.5&&WXR.tex?1:0); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, WXR.tex||null); gl.uniform1i(Lc.uRefl, 7);
   gl.uniform1f(Lc.uDT, useDT?1:0); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, useDT?WP.dtex:null); gl.uniform1i(Lc.uDep, 9); gl.activeTexture(gl.TEXTURE0);
   gl.bindVertexArray(WP.vao); if(useDT&&typeof sbFastNow==='function'&&sbFastNow()) gl.disable(gl.DEPTH_TEST); else gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.TRIANGLES, 0, WP.n);
@@ -24362,7 +24372,7 @@ function wpDraw(useDT){ var gl=GL, pr=wpProg(); if(!pr||!WP.n) return; var S=wxS
 sbAround('splatDraw', function(next, zmax){ if(WXR.inMirror||WP.inDepth) return next(); var on=false, dt=false; try{ on=wpWanted()&&wpBuild(); if(on&&!(window.WPDBG&1)) dt=wpDepthPass(zmax); }catch(e){ console.warn(e); on=false; }
   var r=next(); if(on){ try{ wpDraw(dt); }catch(e){ console.warn(e); } } return r; });
 /* the old per-splat puddle tint is switched off while the water surfaces are showing */
-sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog&&SPL.loc.uPud&&wpWanted()&&WP.res===APP.res&&WP.n){ GL.useProgram(SPL.prog); GL.uniform4f(SPL.loc.uPud, 0,0,0,1); } }catch(e){} return r; });
+sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog&&SPL.loc.uPud&&wpWanted()&&WP.res===APP.res&&WP.n){ GL.useProgram(SPL.prog); GL.uniform4f(SPL.loc.uPud, 0,0,0,1); if(WXR.inMirror&&SPL.loc.uMir){ var sc=wxSc(); GL.uniform4f(SPL.loc.uMir, 1, wxGroundZ(), 0.18*sc, 1.5*sc); } } }catch(e){} return r; });
 
 /* ===== Headlights on a car in the scan (r347): the cars in a scan are part of the scan, not objects, so there was nothing to pick.
    Now, with no object chosen, Headlights asks you to click the front of the car: two beams go either side of that point,
