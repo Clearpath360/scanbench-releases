@@ -1,3 +1,3 @@
-# Scan Bench r343
+# Scan Bench r344
 
-- Sections: cars and objects taken out by Ground only show as grey stripes (no data) on the height map, on screen and in the PDF.
+- Ground only filter: no longer takes out plain ground next to cars or near one low reading; checks against the average ground round each spot.

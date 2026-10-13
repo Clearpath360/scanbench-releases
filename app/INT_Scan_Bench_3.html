@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r343';
+var SB_BUILD='2026-10-12 r344';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -23258,12 +23258,17 @@ function volMinMax(A, nx, ny, R, isMin){ var T=new Float32Array(A.length), O=new
   for(x=0;x<nx;x++){ for(y=0;y<ny;y++){ m=isMin?Infinity:-Infinity; for(k=Math.max(0,y-R);k<=Math.min(ny-1,y+R);k++){ v=T[k*nx+x]; if(v===v){ if(isMin?v<m:v>m) m=v; } } O[y*nx+x]=(m===Infinity||m===-Infinity)?NaN:m; } }
   return O; }
 function volGroundOnly(Z, g){ var R=Math.max(1, Math.round(1.25/g.cell)), op=volMinMax(volMinMax(Z, g.nx, g.ny, R, true), g.nx, g.ny, R, false), thr=0.3+0.7*1.25;
-  var nx=g.nx, ny=g.ny, rm=new Uint8Array(Z.length), i, any=false; for(i=0;i<Z.length;i++){ if(Z[i]===Z[i]&&op[i]===op[i]&&Z[i]-op[i]>thr){ rm[i]=1; any=true; } } if(!any) return;
-  /* the sides of whatever was dropped go too (a car door reads lower than a metre), and the gap takes the bare ground height */
+  var nx=g.nx, ny=g.ny, N=Z.length, rm=new Uint8Array(N), i, any=false; for(i=0;i<N;i++){ if(Z[i]===Z[i]&&op[i]===op[i]&&Z[i]-op[i]>thr){ rm[i]=1; any=true; } } if(!any) return;
+  /* r344: check against the average of the real ground round each spot (not the single lowest reading, which one bad low point drags down) */
+  var Rg=Math.max(2, Math.round(1.5/g.cell)), G=volBoxMean(Z, rm, nx, ny, Rg); for(i=0;i<N;i++){ if(rm[i]&&G[i]===G[i]&&Z[i]-G[i]<0.6) rm[i]=0; }
+  /* the sides of what was dropped go too (a car door reads lower than a metre), when they stand clearly above that ground */
   var D=Math.max(1, Math.round(0.45/g.cell)), rd=volMinMax(Float32Array.from(rm), nx, ny, D, false);
-  var gone=new Uint8Array(Z.length); for(i=0;i<Z.length;i++){ if(!(op[i]===op[i])) continue; if(rm[i]||(rd[i]>0.5&&Z[i]===Z[i]&&Z[i]-op[i]>0.15)) gone[i]=1; }
-  /* close the gaps inside each footprint (the low, broken readings under a car) so the whole thing reads as no data */ var R2=Math.max(1, Math.round(0.9/g.cell)), cl=volMinMax(volMinMax(Float32Array.from(gone), nx, ny, R2, false), nx, ny, R2, true);
-  for(i=0;i<Z.length;i++){ if(gone[i]||cl[i]>0.5){ gone[i]=1; Z[i]=NaN; } } return gone; }
+  /* close small gaps inside each object's own footprint only */ var R2=Math.max(1, Math.round(0.6/g.cell)), cl=volMinMax(volMinMax(Float32Array.from(rm), nx, ny, R2, false), nx, ny, R2, true);
+  var gone=new Uint8Array(N); for(i=0;i<N;i++){ var gi=G[i]; if(rm[i]||cl[i]>0.5||(rd[i]>0.5&&Z[i]===Z[i]&&gi===gi&&Z[i]-gi>0.25)){ gone[i]=1; Z[i]=NaN; } } return gone; }
+/* mean of the cells within R that are not marked, ignoring gaps (two passes of a summed-area table) */
+function volBoxMean(Z, skip, nx, ny, R){ var W=nx+1, S=new Float64Array(W*(ny+1)), C=new Float64Array(W*(ny+1)), x, y;
+  for(y=0;y<ny;y++){ var rs=0, rc=0; for(x=0;x<nx;x++){ var q=y*nx+x, v=Z[q]; if(v===v&&!skip[q]){ rs+=v; rc++; } S[(y+1)*W+x+1]=S[y*W+x+1]+rs; C[(y+1)*W+x+1]=C[y*W+x+1]+rc; } }
+  var O=new Float32Array(nx*ny); for(y=0;y<ny;y++){ var y0=Math.max(0,y-R), y1=Math.min(ny,y+R+1); for(x=0;x<nx;x++){ var x0=Math.max(0,x-R), x1=Math.min(nx,x+R+1), a=y1*W+x1, b=y0*W+x1, c=y1*W+x0, d=y0*W+x0, n=C[a]-C[b]-C[c]+C[d]; O[y*nx+x]=n>0?(S[a]-S[b]-S[c]+S[d])/n:NaN; } } return O; }
 function volFillHoles(Z, g, reach){ var nx=g.nx, ny=g.ny, passes=Math.min(90, Math.ceil(reach/g.cell)), T=new Float32Array(Z.length);
   for(var p=0;p<passes;p++){ var any=false; T.set(Z); for(var y=0;y<ny;y++) for(var x=0;x<nx;x++){ var i=y*nx+x; if(Z[i]===Z[i]) continue; var s=0, c=0, v;
       if(x>0){ v=Z[i-1]; if(v===v){ s+=v; c++; } } if(x<nx-1){ v=Z[i+1]; if(v===v){ s+=v; c++; } } if(y>0){ v=Z[i-nx]; if(v===v){ s+=v; c++; } } if(y<ny-1){ v=Z[i+nx]; if(v===v){ s+=v; c++; } }
