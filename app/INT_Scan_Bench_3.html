@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r349';
+var SB_BUILD='2026-10-14 r350';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24316,14 +24316,14 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     'void main(){ vec4 v=uV*vec4(aP.xyz,1.0); float d=length(v.xyz); vZ=-v.z; float pl=uPull.x+uPull.y*d; v.xyz*=max(0.05,1.0-pl/max(d,1e-3)); vW=aP.xyz; vF=aP.w; vD=d; gl_Position=uP*v; }';
   var FS='#version 300 es\nprecision highp float;\nin vec3 vW; in float vF; in float vD; in float vZ; out vec4 o;\n'+
     'uniform vec3 uEye; uniform vec4 uT; uniform sampler2D uRefl; uniform float uReflOn; uniform sampler2D uDep; uniform float uDT; uniform vec4 uVpR; uniform vec3 uPj;\n'+
-    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr; uniform float uWet; uniform float uDbg; uniform float uIce;\n'+
+    'uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uSun; uniform vec3 uSunC; uniform vec4 uLp[4]; uniform vec3 uLc[4]; uniform float uLn; uniform float uBr; uniform float uWet; uniform float uDbg; uniform float uIce; uniform float uGrow;\n'+
     'float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }\n'+
     'float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(h21(i),h21(i+vec2(1.0,0.0)),f.x), mix(h21(i+vec2(0.0,1.0)),h21(i+vec2(1.0,1.0)),f.x), f.y); }\n'+
     'float lin(float z){ float n=z*2.0-1.0; return uPj.z>0.5?(uPj.y-n)/uPj.x:uPj.y/(n+uPj.x); }\n'+
     'float occ(vec2 u, float zw){ float ds=texture(uDep,u).r; if(ds>0.99999) return 0.0; float zs=lin(ds); return (zs<zw*0.995&&uEye.z+(vW.z-uEye.z)*(zs/max(zw,1e-4))>vW.z+0.12/uT.z)?1.0:0.0; }\n'+
     'float glint(vec3 R, vec3 L, vec3 side, vec2 k){ vec3 dd=R-L; float ds=dot(dd,side), dv=dd.z; return exp(-ds*ds*k.x-dv*dv*k.y); }\n'+
     'vec3 refl(vec2 ru, float st, vec3 sky){ if(uReflOn<0.5) return sky; vec3 acc=vec3(0.0); float wt=0.0; for(int i=0;i<6;i++){ float w=1.0-float(i)*0.15; acc+=w*texture(uRefl,clamp(ru+vec2(0.0,float(i)*st),vec2(0.002),vec2(0.998))).rgb; wt+=w; } return acc/wt; }\n'+
-    'void main(){ if(uEye.z<vW.z+0.02/uT.z) discard; vec2 pm=vW.xy*uT.z; float ed=vF*uT.z+(vn(pm*5.0)-0.5)*0.004+(vn(pm*19.0)-0.5)*0.0016; float e=smoothstep(0.0,0.003,ed); float shn=uWet*(0.45+0.55*smoothstep(0.25,0.75,vn(pm*0.45+3.1))); if(e<0.01&&shn<0.01) discard;\n'+
+    'void main(){ if(uEye.z<vW.z+0.02/uT.z) discard; vec2 pm=vW.xy*uT.z; float ed=vF*uT.z-(1.0-uGrow)*0.025+(vn(pm*5.0)-0.5)*0.004+(vn(pm*19.0)-0.5)*0.0016; float e=smoothstep(0.0,0.003,ed); float shn=uWet*(0.45+0.55*smoothstep(0.25,0.75,vn(pm*0.45+3.1))); if(e<0.01&&shn<0.01) discard;\n'+
     ' vec2 uv=(gl_FragCoord.xy-uVpR.xy)/uVpR.zw;\n'+
     ' if(uDT>0.5){ vec2 tx=1.0/vec2(textureSize(uDep,0)); float oc=occ(uv,vZ)+occ(uv+vec2(tx.x,0.0),vZ)+occ(uv-vec2(tx.x,0.0),vZ)+occ(uv+vec2(0.0,tx.y),vZ)+occ(uv-vec2(0.0,tx.y),vZ); if(uDbg>0.5){ o=vec4(e, shn, oc/5.0, 1.0); return; } if(oc>2.5) discard; if(oc>0.5) shn=0.0; if(e<0.01&&shn<0.01) discard; }\n'+
     /* ripple rings from the rain: three staggered grids of drop sites, each drop a ring that spreads and fades */
@@ -24350,7 +24350,7 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     '   float as=clamp(Fs*1.1,0.0,0.85)*shn; vec3 sc2=(rs*Fs*1.1+hs)*shn*uBr; wc=wc*e+sc2*(1.0-e); a=a*e+as*(1.0-e); e=1.0; }\n'+
     ' float fz=1.0-exp(-uFg.x*max(0.0,vD-uFg.y)); float mz=uFg.z*clamp((uFg.w-vW.z)/max(1e-3,uFg.w),0.0,1.0)*(1.0-exp(-vD*0.25)); float ff=clamp(max(fz,mz),0.0,0.97);\n'+
     ' vec3 src=(1.0-ff)*wc+uFgCol*ff*a; o=vec4(src*e, a*e); }';
-  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr','uWet','uDbg','uIce'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
+  WP.prog=program(gl, VS, FS); if(!WP.prog) return null; WP.loc={}; ['uV','uP','uPull','uEye','uT','uRefl','uReflOn','uDep','uDT','uVpR','uPj','uSkyH','uSkyZ','uFg','uFgCol','uSun','uSunC','uLp','uLc','uLn','uBr','uWet','uDbg','uIce','uGrow'].forEach(function(k){ WP.loc[k]=gl.getUniformLocation(WP.prog,k); }); return WP.prog; }
 
 /* ---------- the depth picture: the scan drawn quickly at half size, only to know what stands in front of the water ---------- */
 function wpTarget(){ var gl=GL, w=Math.max(64, Math.round(glCv.width/2)), h=Math.max(64, Math.round(glCv.height/2)); if(WP.fbo&&WP.dw===w&&WP.dh===h) return true;
@@ -24376,7 +24376,7 @@ function wpDraw(useDT){ var gl=GL, pr=wpProg(); if(!pr||!WP.n) return; var S=wxS
   gl.uniform3fv(Lc.uSkyH, X.C.hor); gl.uniform3fv(Lc.uSkyZ, X.C.zen); gl.uniform4f(Lc.uFg, fg[0],fg[1],fg[2],fg[3]); gl.uniform3f(Lc.uFgCol, fgc[0],fgc[1],fgc[2]); gl.uniform1f(Lc.uBr, APP.pointBright||1);
   var sd=X.sun.dir, el=X.sun.el, sk=Math.max(0,Math.min(1,el/4))*(1-0.85*X.cov)*3.0, warm=Math.max(0,Math.min(1,el/25)); gl.uniform4f(Lc.uSun, sd[0],sd[1],sd[2], sk); gl.uniform3f(Lc.uSunC, 1, 0.72+0.26*warm, 0.45+0.5*warm);
   var Lm=[]; try{ Lm=wxLampsNear().slice(0,4); }catch(e){} var lp=new Float32Array(16), lc=new Float32Array(12); Lm.forEach(function(Q,i){ lp[i*4]=Q.p[0]; lp[i*4+1]=Q.p[1]; lp[i*4+2]=Q.p[2]; lp[i*4+3]=Math.min(2.5,Q.s); lc[i*3]=Q.c[0]; lc[i*3+1]=Q.c[1]; lc[i*3+2]=Q.c[2]; });
-  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length); gl.uniform1f(Lc.uWet, wpWet()); gl.uniform1f(Lc.uIce, wpIce()); gl.uniform1f(Lc.uDbg, (window.WPDBG&8)?1:0);
+  gl.uniform4fv(Lc.uLp, lp); gl.uniform3fv(Lc.uLc, lc); gl.uniform1f(Lc.uLn, Lm.length); gl.uniform1f(Lc.uWet, wpWet()); gl.uniform1f(Lc.uIce, wpIce()); gl.uniform1f(Lc.uGrow, WP.grow==null?1:WP.grow); gl.uniform1f(Lc.uDbg, (window.WPDBG&8)?1:0);
   gl.uniform1f(Lc.uReflOn, refl>0.5&&WXR.tex?1:0); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, WXR.tex||null); gl.uniform1i(Lc.uRefl, 7);
   gl.uniform1f(Lc.uDT, useDT?1:0); gl.activeTexture(gl.TEXTURE9); gl.bindTexture(gl.TEXTURE_2D, useDT?WP.dtex:null); gl.uniform1i(Lc.uDep, 9); gl.activeTexture(gl.TEXTURE0);
   gl.bindVertexArray(WP.vao); if(useDT&&typeof sbFastNow==='function'&&sbFastNow()) gl.disable(gl.DEPTH_TEST); else gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.TRIANGLES, 0, WP.n);
@@ -24391,18 +24391,101 @@ sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog&&SPL.loc.uPud&&wpWanted
    at headlight height, shining away from the car towards where you are looking from. ===== */
 function hpPropFor(){ var pid=typeof PROPS!=='undefined'?PROPS.sel:null, p=pid?propById(pid):null; if(!p){ var Lp=propList().filter(function(q){ return !q.hide; }); p=Lp.length===1?Lp[0]:null; } return p; }
 sbAround('ltPreset', function(next, k){ if(k!=='head'||hpPropFor()) return next();
-  LT.headPick=true; glCv.style.cursor='crosshair'; toast('Click the front of the car, between its headlights. The beams shine towards you. Esc to cancel.', 6000); });
-function hpPlace(q){ var M=ltM(); if(!M||!q) return; var sc=ltSc(), B=camBasis(), fx=B.eye[0]-q[0], fy=B.eye[1]-q[1], fl=Math.hypot(fx,fy); if(fl<1e-4){ fx=-B.fwd[0]; fy=-B.fwd[1]; fl=Math.hypot(fx,fy)||1; } fx/=fl; fy/=fl;
+  LT.headPick=true; glCv.style.cursor='crosshair'; toast('Click on the car. The headlights go on the end facing you (Shift+click for the other end). Esc to cancel.', 6000); });
+/* r350: find the car round the clicked point, its length, width and which end faces you, so a click anywhere on it is enough */
+function hpCar(q){ var R=APP.res; if(!R||!R.pos) return null; var sc=ltSc(), g=ltGround(q[0], q[1]), P=R.pos, OP=R.opa, D=R.del, cell=0.15*sc, Rr=4*sc, N=Math.ceil(2*Rr/cell), occ=new Uint8Array(N*N), zt=new Float32Array(N*N).fill(-1e9), x0=q[0]-Rr, y0=q[1]-Rr, st=Math.max(1, Math.floor(R.n/3000000));
+  for(var i=0;i<R.n;i+=st){ var x=P[i*3], y=P[i*3+1], z=P[i*3+2]; if(x<x0||y<y0||x>=x0+2*Rr||y>=y0+2*Rr||(D&&D[i])||(OP&&OP[i]<100)) continue; if(z<g+0.18*sc||z>g+2.3*sc) continue; var c=Math.floor((y-y0)/cell)*N+Math.floor((x-x0)/cell); if(occ[c]<255) occ[c]++; if(z>zt[c]) zt[c]=z; }
+  var s0=Math.floor((q[1]-y0)/cell)*N+Math.floor((q[0]-x0)/cell), seen=new Uint8Array(N*N), stack=[], best=-1, bd=1e9;
+  for(var dy=-3;dy<=3;dy++) for(var dx=-3;dx<=3;dx++){ var c2=s0+dy*N+dx; if(c2>=0&&c2<N*N&&occ[c2]>=2&&dx*dx+dy*dy<bd){ bd=dx*dx+dy*dy; best=c2; } } if(best<0) return null;
+  stack.push(best); seen[best]=1; var cells=[];
+  while(stack.length&&cells.length<4000){ var c3=stack.pop(), cx=c3%N, cy=(c3-cx)/N; cells.push(c3); for(var k=0;k<4;k++){ var nx=cx+(k===0?1:k===1?-1:0), ny=cy+(k===2?1:k===3?-1:0); if(nx<0||ny<0||nx>=N||ny>=N) continue; var c4=ny*N+nx; if(!seen[c4]&&occ[c4]>=2){ seen[c4]=1; stack.push(c4); } } }
+  if(cells.length<20) return null; var mx=0, my=0, hz=-1e9; cells.forEach(function(c){ var cx=c%N, cy=(c-cx)/N; mx+=cx; my+=cy; if(zt[c]>hz) hz=zt[c]; }); mx/=cells.length; my/=cells.length;
+  var sxx=0, syy=0, sxy=0; cells.forEach(function(c){ var cx=c%N-mx, cy=(c-c%N)/N-my; sxx+=cx*cx; syy+=cy*cy; sxy+=cx*cy; }); var an=0.5*Math.atan2(2*sxy, sxx-syy), ax=[Math.cos(an), Math.sin(an)], ay=[-ax[1], ax[0]];
+  var a0=1e9, a1=-1e9, b0=1e9, b1=-1e9; cells.forEach(function(c){ var cx=c%N-mx, cy=(c-c%N)/N-my, u=cx*ax[0]+cy*ax[1], v=cx*ay[0]+cy*ay[1]; if(u<a0) a0=u; if(u>a1) a1=u; if(v<b0) b0=v; if(v>b1) b1=v; });
+  var len=(a1-a0+1)*cell, wid=(b1-b0+1)*cell, cxw=x0+(mx+0.5)*cell, cyw=y0+(my+0.5)*cell, um=(a0+a1)/2*cell, vm=(b0+b1)/2*cell; cxw+=ax[0]*um+ay[0]*vm; cyw+=ax[1]*um+ay[1]*vm;
+  if(len<2.2*sc||len>7*sc||wid<1.2*sc||wid>2.8*sc) return null; return {c:[cxw,cyw], ax:ax, ay:ay, len:len, wid:wid, h:hz-g, g:g}; }
+function hpPlace(q, flip){ var K=hpCar(q); if(K){ hpPlaceCar(K, flip); return; } var M=ltM(); if(!M||!q) return; var sc=ltSc(), B=camBasis(), fx=B.eye[0]-q[0], fy=B.eye[1]-q[1], fl=Math.hypot(fx,fy); if(fl<1e-4){ fx=-B.fwd[0]; fy=-B.fwd[1]; fl=Math.hypot(fx,fy)||1; } fx/=fl; fy/=fl;
   var sx=-fy, sy=fx, g=ltGround(q[0], q[1]), z=g+0.65*sc, cx=q[0]+fx*0.05*sc, cy=q[1]+fy*0.05*sc; pushUndo(); M.lightAmb=0.2; var L=[];
   [['Headlight L',1],['Headlight R',-1]].forEach(function(s){ var l=ltMake('beam'); Object.assign(l, {name:s[0], col:'#fff4d6', str:2.6, reach:14, cone:32, soft:0.45, glow:true, haze:0.4}); L.push(l); M.lights=L;
     ltSetPos(l, [cx+sx*s[1]*0.65*sc, cy+sy*s[1]*0.65*sc, z]); ltSetDir(l, [fx, fy, -0.1]); });
   M.lights=L; M.lightsOn=true; LT.sel=L[0].id; afterEdit(); ltPanel(); requestRender(false); toast('Headlights placed. Drag each light to fine tune, or its square to re-aim. Ctrl+Z puts your old lights back.', 5000); }
+function hpPlaceCar(K, flip){ var M=ltM(), sc=ltSc(), B=camBasis(), ax=K.ax, d1=(B.eye[0]-K.c[0])*ax[0]+(B.eye[1]-K.c[1])*ax[1], sgn=d1>=0?1:-1; if(flip) sgn=-sgn; var f=[ax[0]*sgn, ax[1]*sgn], sd=[-f[1], f[0]];
+  var fx=K.c[0]+f[0]*(K.len/2-0.05*sc), fy=K.c[1]+f[1]*(K.len/2-0.05*sc), z=K.g+Math.max(0.55*sc, Math.min(0.85*sc, K.h*0.42)), off=K.wid/2*0.72; pushUndo(); M.lightAmb=0.2; var L=[];
+  [['Headlight L',1],['Headlight R',-1]].forEach(function(s){ var l=ltMake('beam'); Object.assign(l, {name:s[0], col:'#fff4d6', str:2.6, reach:14, cone:32, soft:0.45, glow:true, haze:0.4}); L.push(l); M.lights=L; ltSetPos(l, [fx+sd[0]*s[1]*off, fy+sd[1]*s[1]*off, z]); ltSetDir(l, [f[0], f[1], -0.1]); });
+  M.lights=L; M.lightsOn=true; LT.sel=L[0].id; afterEdit(); ltPanel(); requestRender(false); toast('Headlights on the car ('+(K.len/sc).toFixed(1)+' m long). Wrong end? Press Headlights and Shift+click the car.', 6000); }
 window.addEventListener('pointerdown', function(e){ if(!LT.headPick||e.target!==glCv||e.button!==0) return; e.preventDefault(); e.stopImmediatePropagation(); var q=null; try{ var R=pickRay(e.clientX, e.clientY), h=stScanHit(R); q=h&&h.p?h.p.slice():null; }catch(er){}
-  if(!q){ toast('Click on the car itself.', 2000); return; } LT.headPick=false; glCv.style.cursor=''; hpPlace(q); }, true);
+  if(!q){ toast('Click on the car itself.', 2000); return; } LT.headPick=false; glCv.style.cursor=''; hpPlace(q, e.shiftKey); }, true);
 window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&LT.headPick){ LT.headPick=false; glCv.style.cursor=''; toast('Headlights cancelled.', 1500); } });
 /* while picking, a press on the scan must not start an orbit */
 window.addEventListener('mousedown', function(e){ if(LT.headPick&&e.target===glCv){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 window.addEventListener('pointermove', function(e){ if(LT.headPick&&e.target===glCv) glCv.style.cursor='crosshair'; }, true);
+
+/* ===== Weather story (r350): one click makes a 15 second film of the site: late afternoon, the clouds come over, rain starts,
+   puddles fill from the deepest spots outwards, and it gets dark with the lamps on. The camera makes a slow push in with a small turn.
+   Play shows it live; Make video renders it frame by frame through the walk-through video maker. Everything is put back after. ===== */
+var WS={on:false, T:15, cam0:null, keep:null, raf:0, addLamp:null};
+function wsSm(a, b, u){ var x=Math.max(0, Math.min(1, (u-a)/(b-a))); return x*x*(3-2*x); }
+function wsStoryCam(t){ var c=WS.cam0, u=t/WS.T, e=wsSm(0,1,u); return {tx:c.tx, ty:c.ty, tz:c.tz, dist:c.dist*(1.1-0.22*e), yaw:c.yaw-0.18+0.36*e, pitch:c.pitch+0.03-0.04*e}; }
+function wsApply(t){ var S=wxS(); if(!S) return; var u=t/WS.T;
+  S.on=true; S.wet=true; S.anim=true; S.time=17.4+2.2*wsSm(0.05,0.6,u)+1.4*wsSm(0.6,0.95,u); S.clouds=0.3+0.55*wsSm(0.05,0.35,u); S.rain=0.75*wsSm(0.25,0.45,u); S.fog=0.12*wsSm(0.3,0.7,u); S.puddles=WS.pud; S.snow=0; S.snowCover=0;
+  WP.grow=wsSm(0.32,0.88,u); WX.tv=1000+t; if(WS.lamp){ WS.lamp.str=2.0*wsSm(0.4,0.6,u); } }
+/* the walk-through maker is handed the story's own camera path while the story renders */
+sbAround('wtTimeline', function(next){ if(WS.on) return {T:WS.T, P:[], segs:[{}]}; return next(); });
+sbAround('wtAt', function(next, TL, t){ if(WS.on) return wsStoryCam(t); return next(); });
+(function(){ var prev=window.wtFrameHook; window.wtFrameHook=function(t){ if(prev) try{ prev(t); }catch(e){ console.warn(e); } if(WS.on) try{ wsApply(t); }catch(e){ console.warn(e); } }; })();
+function wsStart(){ if(!APP.res){ toast('Load a scan first.'); return false; } if(WS.on||WT.busy) return false; if(APP.view!=='3d') wsView('3d');
+  var S=wxS(); WS.keep={S:JSON.parse(JSON.stringify(S)), lights:typeof ltM==='function'&&ltM()?JSON.parse(JSON.stringify(ltM().lights||[])):null, lon:typeof ltM==='function'&&ltM()?ltM().lightsOn:null, amb:typeof ltM==='function'&&ltM()?ltM().lightAmb:null, cam:Object.assign({}, cam)};
+  WS.cam0=Object.assign({}, cam); WS.pud=Math.max(0.5, S.puddles||0); WS.lamp=null;
+  /* no lights of your own: a street lamp goes where you are looking, for the night part */
+  try{ var M=ltM(); if(M&&!(M.lights||[]).some(function(l){ return l.on&&l.kind!=='sun'; })){ var l=ltMake('lamp'); Object.assign(l, {name:'Story lamp', x:cam.tx, y:cam.ty, z:ltGround(cam.tx,cam.ty)+5*ltSc(), col:'#ffc27a', str:0, reach:9, glow:true}); M.lights=(M.lights||[]).concat([l]); M.lightsOn=true; WS.lamp=l; } }catch(e){ console.warn(e); }
+  WS.on=true; wsApply(0); return true; }
+function wsEnd(){ if(!WS.on) return; WS.on=false; if(WS.raf) cancelAnimationFrame(WS.raf); WS.raf=0; var K=WS.keep; WP.grow=null; WX.tv=null;
+  try{ var M=APP.model; if(K){ M.sky=K.S; var L=ltM(); if(L&&K.lights){ L.lights=K.lights; L.lightsOn=K.lon; L.lightAmb=K.amb; } Object.assign(cam, K.cam); } }catch(e){ console.warn(e); }
+  try{ wxPanel(); }catch(e){} requestRender(false); wsUI(); }
+function wsPlay(){ if(WS.on){ wsEnd(); return; } if(!wsStart()) return; wsUI(); var t0=performance.now();
+  (function step(){ if(!WS.on) return; var t=(performance.now()-t0)/1000; if(t>=WS.T){ wsEnd(); return; } wsApply(t); Object.assign(cam, wsStoryCam(t)); gl_render(); WS.raf=requestAnimationFrame(step); })(); }
+async function wsVideo(){ if(!window.VideoEncoder){ toast('This browser cannot make video files. Use Chrome or Edge.', 5000); return; } if(!wsStart()) return; wsUI(); toast('Making the weather story video. Esc cancels.', 4000);
+  var wasOn=WT.on; try{ await wtExport(); }catch(e){ console.warn(e); } if(!wasOn) try{ wtClose(); }catch(e){} wsEnd(); }
+/* the name the video is saved under */
+(function(){ var inner=window.download; window.download=function(name, blob){ if(WS.on&&/_walkthrough_/.test(name)) name=name.replace('_walkthrough_','_weather_story_'); return inner.apply(this, [name, blob].concat([].slice.call(arguments,2))); }; })();
+/* the panel: two buttons under the presets */
+function wsUI(){ var a=document.getElementById('wsPlay'); if(a) a.textContent=WS.on&&!WT.busy?'■ Stop':'▶ Play story'; }
+sbAfter('wxPanel', function(r){ try{ var s=document.getElementById('sbWxSec'); if(!s||document.getElementById('wsRow')) return r; var b=s.querySelector('.body'); if(!b) return r;
+    var d=document.createElement('div'); d.id='wsRow'; d.innerHTML='<div class="row" title="A 15 second film: afternoon, rain comes in, puddles fill, night falls with the lamps on. The camera pushes in slowly from where you are looking."><label>Weather story</label><div class="sbLSeg" style="flex:1;display:flex;gap:6px"><button id="wsPlay" style="flex:1">▶ Play story</button><button id="wsVid" style="flex:1">Make video</button></div></div>';
+    var pre=[].slice.call(b.children).filter(function(x){ return /PRESETS|Presets/.test(x.textContent||'')&&x.querySelectorAll('button').length>2; })[0]; if(pre&&pre.nextSibling) b.insertBefore(d, pre.nextSibling); else b.insertBefore(d, b.firstChild);
+    d.querySelector('#wsPlay').onclick=wsPlay; d.querySelector('#wsVid').onclick=wsVideo; wsUI(); }catch(e){ console.warn(e); } return r; });
+
+/* ===== Timelapse framing (r350): the slow camera move points at what changed between the scans (a new extension, a dug trench,
+   a pile of materials), worked out from the height of every half-metre square in each scan. Untick "Frame what changed" in the
+   timelapse settings to keep your own view. ===== */
+if(MS.autoFrame==null) MS.autoFrame=true;
+var TF={key:'', box:null};
+/* the height of the highest solid thing in each square, ignoring the odd stray floater */
+function tfTop(pos, n, del, opa, G){ var NB=40, z0=G.z0, bz=(G.z1-G.z0)/NB, cnt=new Uint16Array(G.nx*G.ny*NB), st=Math.max(1, Math.floor(n/1500000));
+  for(var i=0;i<n;i+=st){ if(del&&del[i]) continue; if(opa&&opa[i]<128) continue; var x=pos[i*3], y=pos[i*3+1], z=pos[i*3+2], cx=Math.floor((x-G.x0)/G.cell), cy=Math.floor((y-G.y0)/G.cell), b=Math.floor((z-z0)/bz); if(cx<0||cy<0||cx>=G.nx||cy>=G.ny||b<0||b>=NB) continue; var q=(cy*G.nx+cx)*NB+b; if(cnt[q]<65535) cnt[q]++; }
+  var top=new Float32Array(G.nx*G.ny).fill(-1e9); for(var c=0;c<G.nx*G.ny;c++){ var tot=0; for(var b2=0;b2<NB;b2++) tot+=cnt[c*NB+b2]; if(tot<3) continue; var need=Math.max(2, Math.round(tot*0.05)); for(var b3=NB-1;b3>=0;b3--) if(cnt[c*NB+b3]>=need){ top[c]=z0+(b3+0.5)*bz; break; } } return top; }
+function tfChange(){ var R=APP.res; if(!R||!R.pos) return null; var L=msAligned(); if(L.length<2) return null; var key=L.map(function(o){ var p=cmpProp(o.s), D=p&&PROPS.data[p.src]; return (o.k===0?R.n:(D?D.n:0))+':'+(o.s.msAligned?1:0)+':'+(p?[p.x,p.y,p.rot].join(','):''); }).join('|');
+  if(TF.key===key) return TF.box; TF.key=key; TF.box=null;
+  var sc=(typeof fScale==='function'?fScale():1)||1, rb=R.robust, W=rb.x[1]-rb.x[0], H=rb.y[1]-rb.y[0], cell=Math.max(0.5*sc, Math.max(W,H)/300), G={x0:rb.x[0]-2*sc, y0:rb.y[0]-2*sc, cell:cell, z0:rb.z[0]-1*sc, z1:rb.z[1]+3*sc}; G.nx=Math.ceil((W+4*sc)/cell); G.ny=Math.ceil((H+4*sc)/cell);
+  var tops=L.map(function(o){ if(o.k===0) return tfTop(R.pos, R.n, R.del, R.opa, G); var p=cmpProp(o.s), D=p&&PROPS.data[p.src]; if(!D||!D.pos) return null; var wp=typeof propWorld==='function'?propWorld(p, D):D.pos; return tfTop(wp, D.n, D.del, D.opa, G); }).filter(Boolean); if(tops.length<2) return null;
+  var N=G.nx*G.ny, ch=new Float32Array(N), thr=0.45*sc;
+  for(var k=1;k<tops.length;k++){ var A=tops[k-1], B=tops[k]; for(var c=0;c<N;c++){ var a=A[c], b=B[c]; if(a>-1e8&&b>-1e8){ var d=Math.abs(a-b); if(d>thr) ch[c]+=Math.min(3*sc, d); } } }
+  /* a change has to cover a few squares together to count: single squares are scan noise */
+  var pts=[], tot=0; for(var y=1;y<G.ny-1;y++) for(var x=1;x<G.nx-1;x++){ var c2=y*G.nx+x; if(!(ch[c2]>0)) continue; var nb=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) if((dx||dy)&&ch[c2+dy*G.nx+dx]>0) nb++; if(nb<2) continue; pts.push([G.x0+(x+0.5)*cell, G.y0+(y+0.5)*cell, ch[c2], Math.max(tops[0][c2], tops[tops.length-1][c2])]); tot+=ch[c2]; }
+  if(pts.length<4) return null; var mx=0, my=0; pts.forEach(function(p){ mx+=p[0]*p[2]; my+=p[1]*p[2]; }); mx/=tot; my/=tot;
+  /* keep the main area of change: drop the outlying tenth, then box what is left */
+  pts.forEach(function(p){ p[4]=Math.hypot(p[0]-mx, p[1]-my); }); pts.sort(function(a,b){ return a[4]-b[4]; }); var keep=pts.slice(0, Math.max(4, Math.ceil(pts.length*0.85)));
+  var x0=1e9, x1=-1e9, y0=1e9, y1=-1e9, zt=-1e9; keep.forEach(function(p){ x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); zt=Math.max(zt,p[3]); });
+  var g=typeof groundAt==='function'?groundAt((x0+x1)/2,(y0+y1)/2):(typeof mdlFloor==='function'?mdlFloor():0); if(!(g>-1e8)) g=rb.z[0];
+  TF.box={x0:x0-cell/2, x1:x1+cell/2, y0:y0-cell/2, y1:y1+cell/2, g:g, zt:zt, area:keep.length*cell*cell/(sc*sc)}; return TF.box; }
+/* the camera that shows the whole change, from the side you are already looking from */
+function tfCam(base){ var B=tfChange(); if(!B) return null; var sc=(typeof fScale==='function'?fScale():1)||1, c=Object.assign({}, base), w=Math.max(B.x1-B.x0, B.y1-B.y0, 4*sc), hh=Math.max(1*sc, Math.min(12*sc, (B.zt>-1e8?B.zt:B.g)-B.g));
+  c.tx=(B.x0+B.x1)/2; c.ty=(B.y0+B.y1)/2; c.tz=B.g+hh*0.35; c.dist=Math.max(5*sc, Math.min(120*sc, (w*0.5+hh*0.5)/Math.tan(0.45)*1.35)); c.pitch=Math.max(c.pitch||0, 0.42); return c; }
+sbAround('tlpAutoKeys', function(next){ if(MS.autoFrame===false) return next(); var c0=msCamCopy(), c=null; try{ c=tfCam(c0); }catch(e){ console.warn(e); } if(!c) return next();
+  var T=msTT(), a=Object.assign({}, c), b=Object.assign({}, c); a.dist=c.dist*1.08; a.yaw=c.yaw-0.10; b.dist=c.dist*0.88; b.yaw=c.yaw+0.10; return [{t:0, cam:a}, {t:T, cam:b}]; });
+sbAfter('tlpEnsureMove', function(r){ try{ if(MS._autoKeys&&TF.box&&MS.autoFrame!==false) toast('The camera move is aimed at what changed (about '+Math.round(TF.box.area)+' m²). Untick Frame what changed in ⚙ to keep your view.', 5000); }catch(e){} return r; });
+sbAfter('msDraw', function(r){ try{ var u=msUI(), S=u&&u.querySelector('.msSet'); if(!S||S.querySelector('#tlpFrame')) return r; var l=document.createElement('label'); l.innerHTML='<input type="checkbox" id="tlpFrame"'+(MS.autoFrame!==false?' checked':'')+'> Frame what changed';
+    l.querySelector('input').onchange=function(){ MS.autoFrame=this.checked; if(MS._autoKeys){ MS.keys=[]; MS._autoKeys=false; } }; S.appendChild(l); }catch(e){ console.warn(e); } return r; });
 
 
 </script>

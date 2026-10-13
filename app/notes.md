@@ -1,5 +1,6 @@
-# Scan Bench r349
+# Scan Bench r350
 
-- Snow: flakes vary in size, swing down in small spirals and glint as they turn.
-- Snow: big soft out-of-focus flakes drift past close to the camera.
-- Snow: puddles freeze when there is snow on the ground, frosted white round the edges.
+- Weather story: Sky & weather, Play story or Make video for a 15 s film: afternoon, rain comes in, puddles fill, night with a lamp.
+- Weather story: everything goes back to your own settings after it plays.
+- Headlights: click anywhere on a car; it finds the car, puts the lights on the end facing you (Shift+click for the other end).
+- Timelapse: the slow camera move now aims at what changed between the scans; untick Frame what changed in the gear menu to keep your view.
