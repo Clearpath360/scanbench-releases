@@ -8422,7 +8422,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-12 r344';
+var SB_BUILD='2026-10-12 r345';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22885,7 +22885,7 @@ sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL,
     tint=tint.map(function(v){ return v*(1+X.flash*1.3); });
     var wet=(S.wet&&S.rain>0)?wxClamp(S.rain*1.4,0,1)*Math.min(1,k):0, B=camBasis();
     gl.uniform4f(L.uWx, tint[0]-1, tint[1]-1, tint[2]-1, wet); if(L.uTopB===undefined){ ['uTopTex','uTopB','uTopS','uSnowC'].forEach(function(k2){ L[k2]=gl.getUniformLocation(SPL.prog,k2); }); } var TG=(wet>0||S.snowCover>0||S.puddles>0)?wxTop():null; if(TG&&wxTopTex(TG)){ gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, TG.tex); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(L.uTopTex, 6); gl.uniform4f(L.uTopB, TG.x0, TG.y0, 1/TG.cell, 0.45*sc); gl.uniform2f(L.uTopS, TG.nx, TG.ny); } else if(L.uTopB) gl.uniform4f(L.uTopB,0,0,0,0); if(L.uSnowC) gl.uniform1f(L.uSnowC, Math.min(1,(S.snowCover||0)*Math.min(1.2,k))); gl.uniform3f(L.uEyeW, B.eye[0], B.eye[1], B.eye[2]); gl.uniform3fv(L.uFgCol, X.fogCol);
-    var g=typeof mdlFloor==='function'?mdlFloor():0; var fogE=Math.min(1, S.fog+0.3*S.rain+0.2*S.snow); gl.uniform4f(L.uFg, fogE>0?(0.012+0.11*fogE*fogE)*k/sc:0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
+    var g=typeof mdlFloor==='function'?mdlFloor():0; var fogE=Math.min(1, S.fog+0.5*S.rain+0.2*S.snow); gl.uniform4f(L.uFg, fogE>0?(0.012+0.11*fogE*fogE)*k/sc:0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
 
 /* ---------- rain, snow and splashes: worked out from the clock alone, anchored to the ground (they do not swim when you move) ---------- */
 function wxPartProg(){ if(WX.pprog||!GL) return WX.pprog; var gl=GL;
@@ -22913,17 +22913,30 @@ function wxPartDraw(){ var S=wxS(); if(!S||!wxOn()||APP.view!=='3d'||miniVP) ret
   var X=wxState(), k=X.k, t=X.t, sc=wxSc(), u=wxSeed(), cx=cam.tx, cy=cam.ty, H=wxClamp(cam.dist*0.7, 5, 45)*sc, g=typeof mdlFloor==='function'?mdlFloor():0, Hz=Math.max(6*sc, cam.tz-g+H*0.8), B=camBasis(), E=B.eye, Lm=wxLampsNear(), T=[], V=[];
   var wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wux=Math.cos(wd), wuy=Math.sin(wd), lit=wxMix([0.72,0.78,0.88],[0.2,0.23,0.3], X.night); lit=lit.map(function(v){ return v*(1+X.flash*1.5); });
   function vtx(A, c, a, s){ T.push(A[0],A[1],A[2], c[0],c[1],c[2],a, s||1); }
-  if(S.rain>0){ var n=Math.round(800+5200*S.rain*Math.min(1.3,k)), vz=9*sc, vh=wv*7*sc, a0=Math.min(0.6, 0.25+0.3*S.rain)*Math.min(1.2,k), dt=1/45;
-    for(var i=0;i<n;i++){ var s=0.75+0.5*u[i*4+3], x=wxWrap(u[i*4]*2*H+vh*wux*t*s, cx, H), y=wxWrap(u[i*4+1]*2*H+vh*wuy*t*s, cy, H), z=g+((u[i*4+2]*Hz-vz*s*t)%Hz+Hz)%Hz;
-      var tp=wxTopAt(x,y); if(z<tp) continue;   /* under a roof or indoors: no rain */
-      var ex=x-E[0], ey=y-E[1], ez=z-E[2], dist=Math.sqrt(ex*ex+ey*ey+ez*ez)||1, near=wxClamp(1-dist/(H*1.6),0,1);
-      var len=(vz*s*dt)*(0.6+1.4*near), hx=x-vh*wux*s*dt*(0.6+1.4*near), hy=y-vh*wuy*s*dt*(0.6+1.4*near), hz=z+len, w=(0.0035+0.009*near*near)*sc;
+  if(S.rain>0){ var rk=S.rain*Math.min(1.3,k), dt=1/45, vh=wv*7*sc;
+    /* r345: one streak per drop, each its own length, thickness and brightness; brighter near its leading end and fading to nothing behind, like a drop caught by the shutter */
+    var drop=function(x, y, z, s, near, a, col, fat){ var vz=9*sc*s, len=vz*dt*(0.7+1.6*near)*(0.6+0.8*fat), hx=x-vh*wux*s*dt*(0.7+1.6*near), hy=y-vh*wuy*s*dt*(0.7+1.6*near), hz=z+len, ex=x-E[0], ey=y-E[1], ez=z-E[2], w=(0.002+0.0065*near*near)*sc*(0.6+0.9*fat);
       var dx=hx-x, dy=hy-y, dz=hz-z, sx=dy*ez-dz*ey, sy=dz*ex-dx*ez, sz=dx*ey-dy*ex, sl=Math.sqrt(sx*sx+sy*sy+sz*sz)||1; sx=sx/sl*w; sy=sy/sl*w; sz=sz/sl*w;
-      var a=a0*(0.25+0.75*near)*(0.7+0.3*u[i*4+2]), col=lit; if(Lm.length){ var L2=wxLampLit(Lm,x,y,z); if(L2[0]+L2[1]+L2[2]>0.01){ col=[lit[0]+L2[0], lit[1]+L2[1], lit[2]+L2[2]]; a=Math.min(0.95, a*(1+0.6*(L2[0]+L2[1]+L2[2]))); } }
-      var A1=[x-sx,y-sy,z-sz], A2=[x+sx,y+sy,z+sz], B1=[hx-sx,hy-sy,hz-sz], B2=[hx+sx,hy+sy,hz+sz]; vtx(A1,col,a); vtx(A2,col,a); vtx(B2,col,0); vtx(A1,col,a); vtx(B2,col,0); vtx(B1,col,0); }
-    if(S.splash){ var m=Math.round(200+700*S.rain), rate=2.4, sa=Math.min(0.65,0.3+0.3*S.rain)*Math.min(1.2,k);
-      for(var j=0;j<m;j++){ var ph=t*rate+u[(j+6000)*4+3]*10, cyc=Math.floor(ph), age=ph-cyc; if(age>0.2) continue; var hx2=wxHash(j*13.1+cyc*7.7), hy2=wxHash(j*5.3+cyc*3.1), qx=cx+(hx2*2-1)*H*0.8, qy=cy+(hy2*2-1)*H*0.8, gz=wxTopAt(qx,qy); if(!(gz>-1e8)) continue;
-        var r=(0.02+0.09*age/0.2)*sc, hh=0.06*sc*Math.sin(age/0.2*Math.PI), fa=sa*(1-age/0.2), ww=0.004*sc; for(var q=0;q<4;q++){ var an=q*1.5708+hx2*6, ox=Math.cos(an), oy=Math.sin(an), p0=[qx,qy,gz+0.01*sc], p1=[qx+ox*r, qy+oy*r, gz+hh]; vtx([p0[0]-oy*ww,p0[1]+ox*ww,p0[2]],lit,fa); vtx([p0[0]+oy*ww,p0[1]-ox*ww,p0[2]],lit,fa); vtx(p1,lit,0); } } } }
+      var mx=x+dx*0.22, my=y+dy*0.22, mz=z+dz*0.22, ah=a*0.55;
+      var A1=[x-sx*0.4,y-sy*0.4,z-sz*0.4], A2=[x+sx*0.4,y+sy*0.4,z+sz*0.4], M1=[mx-sx,my-sy,mz-sz], M2=[mx+sx,my+sy,mz+sz], B1=[hx-sx*0.3,hy-sy*0.3,hz-sz*0.3], B2=[hx+sx*0.3,hy+sy*0.3,hz+sz*0.3];
+      vtx(A1,col,ah); vtx(A2,col,ah); vtx(M2,col,a); vtx(A1,col,ah); vtx(M2,col,a); vtx(M1,col,a); vtx(M1,col,a); vtx(M2,col,a); vtx(B2,col,0); vtx(M1,col,a); vtx(B2,col,0); vtx(B1,col,0); };
+    var shade=function(x,y,z,a){ var col=lit, f=0.75+0.5*wxHash(x*3.1+y*1.7); col=[col[0]*f, col[1]*f, col[2]*f]; if(Lm.length){ var L2=wxLampLit(Lm,x,y,z), sL=L2[0]+L2[1]+L2[2]; if(sL>0.01){ col=[col[0]+L2[0]*1.4, col[1]+L2[1]*1.4, col[2]+L2[2]*1.4]; a=Math.min(0.95, a*(1+0.9*sL)); } } return [col, a]; };
+    /* the main fall round what you are looking at */ var n=Math.round(900+5600*rk), vz0=9*sc, a0=Math.min(0.55, 0.22+0.3*S.rain)*Math.min(1.2,k);
+    for(var i=0;i<n;i++){ var s=0.75+0.5*u[i*4+3], x=wxWrap(u[i*4]*2*H+vh*wux*t*s, cx, H), y=wxWrap(u[i*4+1]*2*H+vh*wuy*t*s, cy, H), z=g+((u[i*4+2]*Hz-vz0*s*t)%Hz+Hz)%Hz;
+      if(z<wxTopAt(x,y)) continue; var ex=x-E[0], ey=y-E[1], ez=z-E[2], dist=Math.sqrt(ex*ex+ey*ey+ez*ez)||1, near=wxClamp(1-dist/(H*1.6),0,1), fat=u[(i+4500)%9000*4+1];
+      var a=a0*(0.15+0.85*near)*(0.35+0.65*u[i*4+2]); if(fat<0.25) a*=0.45; var sh=shade(x,y,z,a); drop(x,y,z,s,near,sh[1],sh[0],fat); }
+    /* close to the camera: a few big soft drops racing past, which is what gives rain its depth */ var nn=Math.round(60+260*rk), Rn=2.2*sc;
+    for(var i3=0;i3<nn;i3++){ var b3=(i3+7000)%9000*4, s3=0.85+0.4*u[b3+3], zr=((u[b3+2]*2*Rn-vz0*1.25*s3*t)%(2*Rn)+2*Rn)%(2*Rn)-Rn, x3=E[0]+(u[b3]*2-1)*Rn, y3=E[1]+(u[b3+1]*2-1)*Rn, z3=E[2]+zr;
+      var fx=x3-E[0], fy=y3-E[1], fz=z3-E[2], fd=Math.sqrt(fx*fx+fy*fy+fz*fz); if(fd<0.35*sc) continue; if(z3<wxTopAt(x3,y3)||z3<g) continue; var sh3=shade(x3,y3,z3, Math.min(0.22, 0.08+0.14*S.rain)*Math.min(1.2,k)); drop(x3,y3,z3,s3*1.1,0.85,sh3[1],sh3[0],0.3+0.4*u[b3+1]); }
+    /* far away: rain reads as a faint grey veil, not lines */ WX.rainVeil=Math.min(0.5, 0.12+0.4*S.rain)*Math.min(1.2,k);
+    if(S.splash!==false){ var m=Math.round(260+1500*S.rain), rate=2.2, sa=Math.min(0.75,0.35+0.35*S.rain)*Math.min(1.2,k), RR=H*0.85;
+      for(var j=0;j<m;j++){ var ph=t*rate+u[(j+6000)%9000*4+3]*10, cyc=Math.floor(ph), age=ph-cyc; if(age>0.45) continue; var hx2=wxHash(j*13.1+cyc*7.7), hy2=wxHash(j*5.3+cyc*3.1), qx=cx+(hx2*2-1)*RR, qy=cy+(hy2*2-1)*RR, gz=wxTopAt(qx,qy); if(!(gz>-1e8)) continue;
+        var ddx=qx-E[0], ddy=qy-E[1], ddz=gz-E[2], dd=Math.sqrt(ddx*ddx+ddy*ddy+ddz*ddz), vis=wxClamp(1.25-dd/(H*1.4),0,1); if(vis<=0.02) continue; var sc2=shade(qx,qy,gz,sa*vis), col2=sc2[0], aa=sc2[1];
+        /* the crown: a quick spray of droplets thrown up and out, then falling back */ if(age<0.2){ var u2=age/0.2, r=(0.015+0.07*u2)*sc, hh=0.07*sc*Math.sin(u2*Math.PI), fa=aa*(1-u2), ww=0.0035*sc;
+          for(var q=0;q<6;q++){ var an=q*1.0472+hx2*6, ox=Math.cos(an), oy=Math.sin(an), p0=[qx+ox*r*0.4,qy+oy*r*0.4,gz+0.008*sc], p1=[qx+ox*r, qy+oy*r, gz+hh*(0.7+0.6*wxHash(q+j))]; vtx([p0[0]-oy*ww,p0[1]+ox*ww,p0[2]],col2,fa); vtx([p0[0]+oy*ww,p0[1]-ox*ww,p0[2]],col2,fa); vtx(p1,col2,fa*0.25); } }
+        /* the ring: spreading out over the wet ground and fading */ var u3=age/0.45, rr=(0.02+0.22*u3)*sc, rw=(0.006+0.006*(1-u3))*sc, ra=aa*0.6*(1-u3)*(1-u3), seg=12, gz2=gz+0.006*sc;
+        for(var q2=0;q2<seg;q2++){ var a1=q2/seg*6.2832, a2=(q2+1)/seg*6.2832, c1=Math.cos(a1), s1=Math.sin(a1), c2=Math.cos(a2), s2=Math.sin(a2), I1=[qx+c1*(rr-rw), qy+s1*(rr-rw), gz2], O1=[qx+c1*(rr+rw), qy+s1*(rr+rw), gz2], I2=[qx+c2*(rr-rw), qy+s2*(rr-rw), gz2], O2=[qx+c2*(rr+rw), qy+s2*(rr+rw), gz2];
+          vtx(I1,col2,ra); vtx(O1,col2,ra); vtx(O2,col2,ra); vtx(I1,col2,ra); vtx(O2,col2,ra); vtx(I2,col2,ra); } } } } else WX.rainVeil=0;
   if(S.snow>0){ var ns=Math.round(600+3800*S.snow*Math.min(1.3,k)), sa2=Math.min(0.95,0.6+0.3*S.snow), sl2=wxMix([1,1,1],[0.5,0.55,0.65],X.night), dr=wv*2.5*sc;
     for(var i2=0;i2<ns;i2++){ var b=(i2+3000)*4, sp=0.55+0.7*u[b+3], fl=t*(0.6+0.8*u[b+2])+u[b+3]*40, sx2=wxWrap(u[b]*2*H+Math.sin(fl)*0.35*sc+(0.15*sc+dr)*wux*t*sp, cx, H), sy2=wxWrap(u[b+1]*2*H+Math.cos(fl*1.3)*0.3*sc+(0.15*sc+dr)*wuy*t*sp, cy, H), sz=g+((u[b+2]*Hz-0.9*sc*sp*t)%Hz+Hz)%Hz;
       if(sz<wxTopAt(sx2,sy2)) continue; var size=0.45+1.1*u[b+1]*u[b+1], c2=sl2; if(Lm.length){ var L3=wxLampLit(Lm,sx2,sy2,sz); c2=[sl2[0]+L3[0], sl2[1]+L3[1], sl2[2]+L3[2]]; } V.push(sx2,sy2,sz, c2[0],c2[1],c2[2],sa2, size); } }
