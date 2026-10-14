@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r377';
+var SB_BUILD='2026-10-15 r378';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -25708,6 +25708,162 @@ sbAround('qtyFacts', function(next, it){ var t=next(); try{ if(it&&it.type==='ro
 /* slope areas from each slope's own squares (shared squares go to the nearer plane), so the totals add up */
 function rlOwnFix(){ try{ var V=APP.model&&APP.model.chk; if(!V||!V.roofs||V.roofs.length<2||!APP.res) return; var O=rlRun(); if(!O||!O.own) return; V.roofs.forEach(function(f, i){ var w=O.own[i]; if(!w||(f.poly&&!(f.paint||[]).length)) return; f.plan=w.plan; f.area=w.area; }); }catch(e){ console.warn(e); } }
 ['chkPanel','rsReport','qtyAddRoofs','chkPdf','chkCsv'].forEach(function(nm){ sbBefore(nm, function(){ rlOwnFix(); }); });
+
+/* ===== Drawing check (r378): lay a site plan (PDF or picture) over the scan, line it up by matching two or more points,
+   then check where things were built against the drawing: each check is a point on the drawing and the same point on the scan,
+   with the offset in mm, right/left and up/down on the drawing, passed or failed against your tolerance. PDF and CSV.
+   The drawing picture is kept in this browser's storage for this scan, not in the job, so undo and autosave stay light. ===== */
+var DWG={img:null, src:null, key:'', tool:null, pend:null, hov:null, drag:null, pages:0, file:null, loading:false};
+function dwgM(){ var M=APP.model; if(!M) return null; if(!M.dwg) M.dwg={has:false, name:'', w:0, h:0, page:1, T:null, al:[], ck:[], op:0.75, mode:'red', tol:50, known:null, hold:false, always:false}; return M.dwg; }
+function dwgOpen(){ return typeof SBP!=='undefined'&&SBP.key==='dwg'&&!!APP.res; }
+function dwgEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* drawing pixels (u right, v down) to the plan and back: x = a u + b v + tx, y = b u - a v + ty */
+function dwgW(T, u, v){ return [T.a*u+T.b*v+T.tx, T.b*u-T.a*v+T.ty]; }
+function dwgUV(T, x, y){ var k2=T.a*T.a+T.b*T.b, dx=x-T.tx, dy=y-T.ty; return [(T.a*dx+T.b*dy)/k2, (T.b*dx-T.a*dy)/k2]; }
+function dwgK(T){ return Math.hypot(T.a, T.b); } /* metres per drawing pixel */
+/* first placing: the drawing fitted over the scan */
+function dwgFit(){ var V=dwgM(), rb=APP.res.robust, W=rb.x[1]-rb.x[0], H=rb.y[1]-rb.y[0], k=Math.max(W/V.w, H/V.h); V.T={a:k, b:0, tx:(rb.x[0]+rb.x[1])/2-k*V.w/2, ty:(rb.y[0]+rb.y[1])/2+k*V.h/2}; }
+/* the best fit through the matched points (turn, size and shift, never a mirror) */
+function dwgSolve(){ var V=dwgM(), A=V.al; if(!V.T) return; if(!A.length) return;
+  if(A.length===1){ var w=dwgW(V.T, A[0].u, A[0].v); V.T.tx+=A[0].x-w[0]; V.T.ty+=A[0].y-w[1]; return; }
+  var n=A.length, pu=0, pv=0, qx=0, qy=0; A.forEach(function(p){ pu+=p.u; pv+=-p.v; qx+=p.x; qy+=p.y; }); pu/=n; pv/=n; qx/=n; qy/=n;
+  var na=0, nb=0, den=0; A.forEach(function(p){ var px=p.u-pu, py=-p.v-pv, X=p.x-qx, Y=p.y-qy; na+=px*X+py*Y; nb+=px*Y-py*X; den+=px*px+py*py; }); if(den<1e-9) return;
+  var a=na/den, b=nb/den, kd=dwgKnownK(); if(V.hold&&kd){ var th=Math.atan2(b,a); a=kd*Math.cos(th); b=kd*Math.sin(th); }
+  V.T={a:a, b:b, tx:qx-(a*pu-b*pv), ty:qy-(b*pu+a*pv)}; }
+/* metres per pixel from the distance you know between the first two matched points */
+function dwgKnownK(){ var V=dwgM(); if(!V.known||V.al.length<2) return null; var d=Math.hypot(V.al[1].u-V.al[0].u, V.al[1].v-V.al[0].v); return d>1?V.known/d:null; }
+function dwgResid(p){ var V=dwgM(), w=dwgW(V.T, p.u, p.v); return Math.hypot(w[0]-p.x, w[1]-p.y); }
+/* a check: the offset from where the drawing has it to where the scan has it, in the drawing's own right and up */
+function dwgOff(c){ var V=dwgM(), T=V.T, w=dwgW(T, c.u, c.v), dx=c.x-w[0], dy=c.y-w[1], k=dwgK(T), rx=T.a/k, ry=T.b/k; return {d:Math.hypot(dx,dy), r:dx*rx+dy*ry, up:-dx*ry+dy*rx, wx:w[0], wy:w[1]}; }
+function dwgMm(v){ return Math.round(v*1000); }
+function dwgDir(o){ var t=[]; if(Math.abs(o.r)>=0.0005) t.push(Math.abs(dwgMm(o.r))+' '+(o.r>0?'right':'left')); if(Math.abs(o.up)>=0.0005) t.push(Math.abs(dwgMm(o.up))+' '+(o.up>0?'up':'down')); return t.join(', ')||'spot on'; }
+/* ---------- loading the drawing ---------- */
+function dwgPick(){ var i=document.getElementById('dwgIn'); if(!i){ i=document.createElement('input'); i.type='file'; i.id='dwgIn'; i.accept='.pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*'; i.style.display='none'; document.body.appendChild(i); i.onchange=function(){ var f=i.files&&i.files[0]; i.value=''; if(f) dwgLoad(f, 1); }; } i.click(); }
+function dwgScript(urls){ return new Promise(function(ok, no){ if(window.pdfjsLib) return ok(window.pdfjsLib); var k=0; (function next(){ if(k>=urls.length) return no(new Error('the PDF reader could not be fetched (no internet?)')); var s=document.createElement('script'); s.src=urls[k++]; s.onload=function(){ window.pdfjsLib?ok(window.pdfjsLib):next(); }; s.onerror=function(){ s.remove(); next(); }; document.head.appendChild(s); })(); }); }
+var DWG_PDFJS=[['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'],['https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js']];
+function dwgPdfLib(){ return dwgScript(DWG_PDFJS.map(function(p){ return p[0]; })).then(function(L){ var src=(document.querySelector('script[src*="pdf.min.js"]')||{}).src||DWG_PDFJS[0][0]; L.GlobalWorkerOptions.workerSrc=src.replace('pdf.min.js','pdf.worker.min.js'); return L; }); }
+async function dwgRender(f, page){ if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){ var L=await dwgPdfLib(), doc=await L.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise; DWG.pages=doc.numPages; page=Math.max(1, Math.min(doc.numPages, page||1));
+    var pg=await doc.getPage(page), v1=pg.getViewport({scale:1}), s=Math.min(5000/Math.max(v1.width, v1.height), Math.sqrt(2.4e7/(v1.width*v1.height))), vp=pg.getViewport({scale:s}), cv=document.createElement('canvas'); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height); var x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height); await pg.render({canvasContext:x, viewport:vp}).promise; try{ doc.destroy(); }catch(e){} return {cv:cv, page:page}; }
+  DWG.pages=1; var bmp=await createImageBitmap(f), sc=Math.min(1, 6000/Math.max(bmp.width, bmp.height)), c2=document.createElement('canvas'); c2.width=Math.round(bmp.width*sc); c2.height=Math.round(bmp.height*sc); c2.getContext('2d').drawImage(bmp, 0, 0, c2.width, c2.height); if(bmp.close) bmp.close(); return {cv:c2, page:1}; }
+async function dwgLoad(f, page){ var V=dwgM(); if(!V) return; DWG.loading=true; dwgPanel(); setStatus('Reading the drawing '+f.name);
+  try{ var r=await dwgRender(f, page), keepAl=V.has&&V.name===f.name&&V.w===r.cv.width&&V.h===r.cv.height; pushUndo(); DWG.file=f; DWG.src=r.cv; DWG.key=''; V.has=true; V.name=f.name; V.page=r.page; V.w=r.cv.width; V.h=r.cv.height;
+    if(!keepAl){ V.al=[]; V.ck=[]; dwgFit(); } dwgStore(); afterEdit(); toast('Drawing laid over the scan. Now match two points: one on the drawing, then the same one on the scan.', 6000); DWG.tool=V.al.length<2?'al':null; DWG.pend=null; }
+  catch(e){ console.warn(e); toast('Could not read the drawing: '+e.message+'. Save the page as a PNG or JPG and load that instead.', 9000); }
+  DWG.loading=false; setStatus('Ready'); dwgPanel(); planDrawSoon(); }
+/* the drawing's lines picked out in a strong colour on clear, so the scan shows through */
+function dwgView(){ var V=dwgM(); if(!DWG.src) return null; if(V.mode==='as') return DWG.src; var k=V.mode; if(DWG.img&&DWG.key===k) return DWG.img;
+  var s=DWG.src, cv=document.createElement('canvas'); cv.width=s.width; cv.height=s.height; var x=cv.getContext('2d'); x.drawImage(s,0,0); var im=x.getImageData(0,0,cv.width,cv.height), d=im.data, col=k==='blue'?[29,78,216]:k==='black'?[17,24,39]:[220,38,38];
+  for(var i=0;i<d.length;i+=4){ var l=(0.3*d[i]+0.59*d[i+1]+0.11*d[i+2])/255, a=l<0.82?Math.min(1,(0.82-l)/0.45):0; d[i]=col[0]; d[i+1]=col[1]; d[i+2]=col[2]; d[i+3]=Math.round(a*255*(d[i+3]/255)); }
+  x.putImageData(im,0,0); DWG.img=cv; DWG.key=k; return cv; }
+/* ---------- kept in this browser for this scan ---------- */
+function dwgDb(){ return new Promise(function(ok,no){ if(!window.indexedDB) return no(new Error('no db')); var r=indexedDB.open('sb_dwg',1); r.onupgradeneeded=function(){ r.result.createObjectStore('d',{keyPath:'k'}); }; r.onsuccess=function(){ ok(r.result); }; r.onerror=function(){ no(r.error); }; }); }
+function dwgKeyOf(){ return typeof traceKey==='function'?traceKey():null; }
+function dwgStore(){ var k=dwgKeyOf(), V=dwgM(); if(!k||!DWG.src) return; DWG.src.toBlob(function(b){ if(!b) return; dwgDb().then(function(db){ var tx=db.transaction('d','readwrite'); tx.objectStore('d').put({k:k, blob:b, state:JSON.parse(JSON.stringify(V)), t:Date.now()}); }).catch(function(){}); }, 'image/png'); }
+function dwgSaveState(){ var k=dwgKeyOf(), V=dwgM(); if(!k||!V||!V.has) return; dwgDb().then(function(db){ var st=db.transaction('d','readwrite').objectStore('d'), g=st.get(k); g.onsuccess=function(){ var o=g.result; if(!o) return; o.state=JSON.parse(JSON.stringify(V)); st.put(o); }; }).catch(function(){}); }
+function dwgRestore(){ var k=dwgKeyOf(); if(!k||DWG.src||DWG._tried===k) return; DWG._tried=k; dwgDb().then(function(db){ var g=db.transaction('d').objectStore('d').get(k); g.onsuccess=function(){ var o=g.result; if(!o||!o.blob) return; createImageBitmap(o.blob).then(function(bmp){ var cv=document.createElement('canvas'); cv.width=bmp.width; cv.height=bmp.height; cv.getContext('2d').drawImage(bmp,0,0); DWG.src=cv; DWG.key=''; var V=dwgM(); if(!V.has&&o.state) APP.model.dwg=o.state; dwgPanel(); planDrawSoon(); }); }; }).catch(function(){}); }
+function dwgRemove(){ var V=dwgM(); pushUndo(); APP.model.dwg=null; dwgM(); DWG.src=null; DWG.img=null; DWG.tool=null; DWG.pend=null; afterEdit(); var k=dwgKeyOf(); if(k) dwgDb().then(function(db){ db.transaction('d','readwrite').objectStore('d').delete(k); }).catch(function(){}); dwgPanel(); planDrawSoon(); }
+/* ---------- the plan ---------- */
+function dwgShowing(){ var V=APP.model&&APP.model.dwg; return !!(V&&V.has&&V.T&&DWG.src&&(dwgOpen()||V.always||window.LAY_ONLY==='dwg')); }
+function dwgPlanDraw(){ if(!dwgShowing()) return; if(window.LAY_ONLY&&window.LAY_ONLY!=='dwg') return; var V=dwgM(), T=V.T, c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), dpr=planView.dpr||1, z=planView.z, im=dwgView(); if(!im) return;
+  c.save(); c.globalAlpha=V.op; c.imageSmoothingEnabled=true; c.transform(z*T.a, -z*T.b, z*T.b, z*T.a, planView.w/2+(T.tx-planView.cx)*z, planView.h/2-(T.ty-planView.cy)*z); c.drawImage(im, 0, 0); c.restore();
+  c.save(); if(typeof LEV!=='undefined') LEV._bx=[]; var S=function(x,y){ return w2s(x,y); };
+  if(dwgOpen()||window.LAY_ONLY==='dwg') V.al.forEach(function(p, i){ var a=dwgW(T, p.u, p.v), s=S(a[0],a[1]), q=S(p.x,p.y); c.strokeStyle='#1d4ed8'; c.lineWidth=2*dpr; c.beginPath(); c.moveTo(s[0],s[1]); c.lineTo(q[0],q[1]); c.stroke(); c.fillStyle='#fff'; c.fillRect(s[0]-6*dpr, s[1]-6*dpr, 12*dpr, 12*dpr); c.strokeRect(s[0]-6*dpr, s[1]-6*dpr, 12*dpr, 12*dpr); c.beginPath(); c.arc(q[0],q[1],5*dpr,0,7); c.fillStyle='#1d4ed8'; c.fill(); levLabel(c, q[0], q[1]-12*dpr, 'M'+(i+1)+(V.al.length>2?' · '+dwgMm(dwgResid(p))+' mm':''), dpr, '#1d4ed8', true); });
+  V.ck.forEach(function(ck, i){ var o=dwgOff(ck), s=S(o.wx,o.wy), q=S(ck.x,ck.y), ok=dwgMm(o.d)<=V.tol, col=ok?'#15803d':'#b91c1c', an=Math.atan2(q[1]-s[1], q[0]-s[0]), L=Math.hypot(q[0]-s[0], q[1]-s[1]);
+    c.strokeStyle='#111827'; c.lineWidth=2*dpr; c.beginPath(); c.moveTo(s[0]-7*dpr,s[1]); c.lineTo(s[0]+7*dpr,s[1]); c.moveTo(s[0],s[1]-7*dpr); c.lineTo(s[0],s[1]+7*dpr); c.stroke();
+    if(L>3*dpr){ c.strokeStyle=col; c.lineWidth=2.5*dpr; c.beginPath(); c.moveTo(s[0],s[1]); c.lineTo(q[0],q[1]); c.stroke(); if(L>14*dpr){ c.fillStyle=col; c.beginPath(); c.moveTo(q[0],q[1]); c.lineTo(q[0]-9*dpr*Math.cos(an-0.45), q[1]-9*dpr*Math.sin(an-0.45)); c.lineTo(q[0]-9*dpr*Math.cos(an+0.45), q[1]-9*dpr*Math.sin(an+0.45)); c.closePath(); c.fill(); } }
+    c.fillStyle=col; c.beginPath(); c.arc(q[0],q[1],4.5*dpr,0,7); c.fill(); levLabel(c, q[0], q[1]-12*dpr, (ck.name||('C'+(i+1)))+' · '+dwgMm(o.d)+' mm', dpr, col, true); });
+  if(DWG.pend&&dwgOpen()&&!window.LAY_ONLY){ var pw=dwgW(T, DWG.pend.u, DWG.pend.v), ps=S(pw[0],pw[1]); c.strokeStyle=DWG.tool==='al'?'#1d4ed8':'#111827'; c.lineWidth=2*dpr; c.setLineDash([5*dpr,4*dpr]); c.beginPath(); c.arc(ps[0],ps[1],10*dpr,0,7); c.stroke(); if(DWG.hov){ var hs=S(DWG.hov[0],DWG.hov[1]); c.beginPath(); c.moveTo(ps[0],ps[1]); c.lineTo(hs[0],hs[1]); c.stroke(); } c.setLineDash([]); }
+  if(DWG.tool&&dwgOpen()&&!window.LAY_ONLY){ var msg=DWG.tool==='mv'?'Drag the drawing to move it roughly into place':DWG.tool==='al'?(DWG.pend?'Now click the same point on the scan':'Click a point you can see on the drawing (a corner, a kerb end)'):(DWG.pend?'Now click where it is on the scan':'Click the point on the drawing you want to check'); c.font='600 '+(13*dpr)+'px system-ui'; var mw=c.measureText(msg).width+24*dpr; c.fillStyle='rgba(17,24,39,.9)'; c.fillRect(planView.w/2-mw/2, 14*dpr, mw, 30*dpr); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(msg, planView.w/2, 34*dpr); c.textAlign='left'; }
+  c.restore(); }
+sbAfter('planDraw', function(r){ try{ dwgPlanDraw(); }catch(e){ console.warn(e); } return r; });
+/* ---------- clicks ---------- */
+function dwgEv(e){ if(e.target!==planCv||APP.view==='3d') return null; return evPos(e); }
+window.addEventListener('pointerdown', function(e){ if(!dwgOpen()||!DWG.tool||e.button!==0) return; var p=dwgEv(e); if(!p) return; e.preventDefault(); e.stopImmediatePropagation(); DWG.dn={x:e.clientX, y:e.clientY, wx:p.wx, wy:p.wy}; if(DWG.tool==='mv'){ var V=dwgM(); pushUndo(); DWG.drag={wx:p.wx, wy:p.wy, tx:V.T.tx, ty:V.T.ty}; } }, true);
+window.addEventListener('mousedown', function(e){ if(dwgOpen()&&DWG.tool&&e.button===0&&e.target===planCv){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+window.addEventListener('pointermove', function(e){ if(!dwgOpen()) return; var p=dwgEv(e); if(!p) return; DWG.hov=[p.wx,p.wy]; if(DWG.drag){ var V=dwgM(); V.T.tx=DWG.drag.tx+(p.wx-DWG.drag.wx); V.T.ty=DWG.drag.ty+(p.wy-DWG.drag.wy); e.stopImmediatePropagation(); } if(DWG.tool) planDrawSoon(); }, true);
+window.addEventListener('pointerup', function(e){ if(!dwgOpen()) return; if(DWG.drag){ DWG.drag=null; DWG.dn=null; e.stopImmediatePropagation(); afterEdit(); dwgSaveState(); dwgPanel(); return; } if(!DWG.dn||!DWG.tool) return; var d=DWG.dn; DWG.dn=null; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; var p=dwgEv(e); if(!p) return; e.preventDefault(); e.stopImmediatePropagation(); dwgClick(p.wx, p.wy); }, true);
+window.addEventListener('keydown', function(e){ if(!dwgOpen()) return; if(e.key==='Escape'&&(DWG.tool||DWG.pend)){ DWG.tool=null; DWG.pend=null; dwgPanel(); planDrawSoon(); } }, true);
+function dwgClick(x, y){ var V=dwgM(); if(!V.T) return;
+  if(!DWG.pend){ var uv=dwgUV(V.T, x, y); if(uv[0]<0||uv[1]<0||uv[0]>V.w||uv[1]>V.h){ toast('That is off the drawing. Click on the drawing itself.', 2500); return; } DWG.pend={u:+uv[0].toFixed(2), v:+uv[1].toFixed(2)}; planDrawSoon(); return; }
+  pushUndo(); var P=DWG.pend; DWG.pend=null;
+  if(DWG.tool==='al'){ V.al.push({u:P.u, v:P.v, x:+x.toFixed(4), y:+y.toFixed(4)}); dwgSolve(); if(V.al.length>=2&&V.al.length<3) toast('Lined up on 2 points. A third point far from the others shows how well it fits.', 5000); }
+  else if(DWG.tool==='ck'){ var n=V.ck.length+1; V.ck.push({u:P.u, v:P.v, x:+x.toFixed(4), y:+y.toFixed(4), name:'C'+n}); var o=dwgOff(V.ck[V.ck.length-1]); toast('C'+n+': '+dwgMm(o.d)+' mm off the drawing ('+dwgDir(o)+').', 5000); }
+  afterEdit(); dwgSaveState(); dwgPanel(); planDrawSoon(); }
+/* ---------- the panel ---------- */
+function dwgSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbDwgSec'); if(!s){ s=document.createElement('div'); s.id='sbDwgSec'; s.className='sec'; s.dataset.sec='dwg'; s.innerHTML='<h2>Drawing check</h2><div class="body"></div>'; } if(s.parentNode!==side) side.appendChild(s); return s; }
+function dwgPanel(){ var s=dwgSec(); if(!s) return; var b=s.querySelector('.body'), V=dwgM(); if(!V||!APP.res){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return; } if(!DWG.src) dwgRestore();
+  var h='', btn=function(id, t, on, tip){ return '<button id="'+id+'" class="dBtn'+(on?' on':'')+'"'+(tip?' title="'+tip+'"':'')+'>'+t+'</button>'; };
+  if(DWG.loading) h+='<p class="mini">Reading the drawing...</p>';
+  if(!V.has){ h+='<p class="mini">Lay the site plan over the scan and check where things were built against it: footings, kerbs, plots, drainage runs. Load the drawing as a PDF or a picture.</p><div class="dRow">'+btn('dwLoad','Load drawing...', true)+'</div>'; b.innerHTML=h; dwgBind(b); return; }
+  if(V.has&&!DWG.src&&!DWG.loading) h+='<p class="mini">The drawing picture is not in this browser. Load '+dwgEsc(V.name)+' again to carry on.</p>';
+  h+='<div class="dFile"><b>'+dwgEsc(V.name)+'</b>'+(DWG.pages>1?' <span class="mini">page <select id="dwPage">'+Array.from({length:DWG.pages}, function(_,i){ return '<option'+(i+1===V.page?' selected':'')+'>'+(i+1)+'</option>'; }).join('')+'</select> of '+DWG.pages+'</span>':'')+'</div><div class="dRow">'+btn('dwLoad','Replace...')+btn('dwDel','Remove')+'</div>';
+  /* lining up */ var ok=V.al.length>=2; h+='<div class="dH">1. Line it up</div><p class="mini">'+(ok?'Lined up on '+V.al.length+' matched points.':'Match '+(2-V.al.length)+' more point'+(V.al.length===1?'':'s')+': click it on the drawing, then the same point on the scan. Pick points far apart.')+'</p>';
+  h+='<div class="dRow">'+btn('dwAl', DWG.tool==='al'?'Matching... (Esc stops)':'+ Match a point', DWG.tool==='al')+btn('dwMv', 'Move by dragging', DWG.tool==='mv')+'</div><div class="dRow">'+btn('dwRot','Turn 90°')+btn('dwFit','Fit over the scan')+'</div>';
+  if(V.al.length){ h+='<div class="dList">'+V.al.map(function(p, i){ return '<div class="dIt"><span>M'+(i+1)+(V.al.length>2?' · fits within '+dwgMm(dwgResid(p))+' mm':'')+'</span><button data-dal="'+i+'" title="Remove">✕</button></div>'; }).join('')+'</div>'; }
+  if(ok){ var k=dwgK(V.T), ang=Math.atan2(V.T.b, V.T.a)*180/Math.PI, sd=Math.hypot(V.al[1].x-V.al[0].x, V.al[1].y-V.al[0].y); h+='<p class="mini">Turned '+Math.abs(ang).toFixed(1)+'° '+(ang<0?'clockwise':'anticlockwise')+' · M1 to M2 is '+fmt(sd,3)+' m on the scan.'+(V.al.length>2?' Worst fit '+Math.max.apply(null, V.al.map(function(p){ return dwgMm(dwgResid(p)); }))+' mm.':'')+'</p>';
+    h+='<div class="row"><label title="From the drawing\'s dimensions, if you know it">M1 to M2 on the drawing (m)</label><input type="number" id="dwKnown" step="0.001" min="0" value="'+(V.known||'')+'" placeholder="optional"></div>';
+    if(V.known){ var diff=(sd-V.known)/V.known*100; h+='<p class="mini" style="color:'+(Math.abs(diff)>1?'#b45309':'inherit')+'">The scan reads '+Math.abs(diff).toFixed(2)+'% '+(diff>=0?'longer':'shorter')+' than the drawing between these points'+(Math.abs(diff)>1?'. Drone scans without ground control are often 1 to 3% out: check the scan scale before trusting offsets.':'.')+'</p><label class="mini dTk"><input type="checkbox" id="dwHold"'+(V.hold?' checked':'')+'> Keep the drawing\'s scale (only turn and shift it)</label>'; } }
+  /* showing */ h+='<div class="dH">2. Show</div><div class="row"><label>See through</label><input type="range" id="dwOp" min="0.15" max="1" step="0.05" value="'+V.op+'"></div><div class="row"><label>Lines</label><select id="dwMode">'+[['red','Red lines'],['blue','Blue lines'],['black','Black lines'],['as','As drawn']].map(function(o){ return '<option value="'+o[0]+'"'+(V.mode===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div><label class="mini dTk"><input type="checkbox" id="dwAlw"'+(V.always?' checked':'')+'> Keep showing the drawing with other tools</label>';
+  /* checks */ h+='<div class="dH">3. Check points</div>'; if(!ok) h+='<p class="mini">Line the drawing up first.</p>'; else { h+='<div class="dRow">'+btn('dwCk', DWG.tool==='ck'?'Checking... (Esc stops)':'+ Check a point', DWG.tool==='ck', 'Click the point on the drawing, then where it is on the scan')+'</div><div class="row"><label>Tolerance (mm)</label><input type="number" id="dwTol" min="1" step="5" value="'+V.tol+'"></div>';
+    if(V.ck.length){ var np=0; h+='<div class="dList">'+V.ck.map(function(ck, i){ var o=dwgOff(ck), pass=dwgMm(o.d)<=V.tol; if(pass) np++; return '<div class="dIt"><i style="background:'+(pass?'#15803d':'#b91c1c')+'"></i><span><input class="dNm" data-dnm="'+i+'" value="'+dwgEsc(ck.name)+'"> <b>'+dwgMm(o.d)+' mm</b><br><span class="mini">'+dwgDir(o)+' · '+(pass?'within':'outside')+' '+V.tol+' mm</span></span><button data-dck="'+i+'" title="Remove">✕</button></div>'; }).join('')+'</div><div class="dRes"><div><span>Within tolerance</span><b>'+np+' of '+V.ck.length+'</b></div><div><span>Largest</span><b>'+Math.max.apply(null, V.ck.map(function(c){ return dwgMm(dwgOff(c).d); }))+' mm</b></div></div>'; }
+    else h+='<p class="mini">Click a point on the drawing (a footing corner, a kerb line), then where it really is on the scan.</p>'; }
+  h+='<div class="dH">Export</div><div class="dRow">'+btn('dwPdf','Set-out check PDF')+btn('dwCsv','CSV')+'</div><p class="mini">Offsets are only as good as the scan\'s scale and the matched points. Use points that are clear on both.</p>';
+  b.innerHTML=h; dwgBind(b); }
+function dwgBind(b){ var V=dwgM(), q=function(id){ return b.querySelector('#'+id); }, tool=function(t){ DWG.tool=DWG.tool===t?null:t; DWG.pend=null; dwgPanel(); planDrawSoon(); }, ch=function(fn){ return function(){ pushUndo(); fn.apply(this, arguments); afterEdit(); dwgSaveState(); dwgPanel(); planDrawSoon(); }; };
+  if(q('dwLoad')) q('dwLoad').onclick=dwgPick; if(q('dwDel')) q('dwDel').onclick=dwgRemove;
+  if(q('dwPage')) q('dwPage').onchange=function(){ if(DWG.file) dwgLoad(DWG.file, +this.value); else toast('Load the PDF again to change the page.', 3000); };
+  if(q('dwAl')) q('dwAl').onclick=function(){ tool('al'); }; if(q('dwMv')) q('dwMv').onclick=function(){ tool('mv'); }; if(q('dwCk')) q('dwCk').onclick=function(){ tool('ck'); };
+  if(q('dwRot')) q('dwRot').onclick=ch(function(){ var T=V.T, c=dwgW(T, V.w/2, V.h/2), a=T.a, bb=T.b; T.a=-bb; T.b=a; var c2=dwgW(T, V.w/2, V.h/2); T.tx+=c[0]-c2[0]; T.ty+=c[1]-c2[1]; V.al=[]; });
+  if(q('dwFit')) q('dwFit').onclick=ch(function(){ V.al=[]; dwgFit(); });
+  b.querySelectorAll('[data-dal]').forEach(function(x){ x.onclick=ch(function(){ V.al.splice(+x.dataset.dal,1); if(V.al.length) dwgSolve(); }); });
+  b.querySelectorAll('[data-dck]').forEach(function(x){ x.onclick=ch(function(){ V.ck.splice(+x.dataset.dck,1); }); });
+  b.querySelectorAll('[data-dnm]').forEach(function(x){ x.onchange=ch(function(){ V.ck[+x.dataset.dnm].name=x.value.slice(0,40)||('C'+(+x.dataset.dnm+1)); }); });
+  if(q('dwKnown')) q('dwKnown').onchange=ch(function(){ var v=parseFloat(q('dwKnown').value); V.known=v>0?v:null; if(!V.known) V.hold=false; dwgSolve(); });
+  if(q('dwHold')) q('dwHold').onchange=ch(function(){ V.hold=q('dwHold').checked; dwgSolve(); });
+  if(q('dwOp')) q('dwOp').oninput=function(){ V.op=+this.value; planDrawSoon(); }; if(q('dwOp')) q('dwOp').onchange=function(){ afterEdit(); dwgSaveState(); };
+  if(q('dwMode')) q('dwMode').onchange=ch(function(){ V.mode=q('dwMode').value; });
+  if(q('dwAlw')) q('dwAlw').onchange=ch(function(){ V.always=q('dwAlw').checked; });
+  if(q('dwTol')) q('dwTol').onchange=ch(function(){ var v=parseFloat(q('dwTol').value); V.tol=v>0?v:50; });
+  if(q('dwPdf')) q('dwPdf').onclick=dwgPdf; if(q('dwCsv')) q('dwCsv').onclick=dwgCsv; }
+/* ---------- exports ---------- */
+function dwgBase(){ return (typeof baseName==='function'?baseName():'scan').replace(/^(INT_|EXT_)+/,''); }
+function dwgBox(){ var V=dwgM(), T=V.T, P=[[0,0],[V.w,0],[V.w,V.h],[0,V.h]].map(function(p){ return dwgW(T, p[0], p[1]); }), rb=APP.res.robust, xs=P.map(function(p){ return p[0]; }), ys=P.map(function(p){ return p[1]; });
+  var b=[Math.max(Math.min.apply(null,xs), rb.x[0]-5), Math.max(Math.min.apply(null,ys), rb.y[0]-5), Math.min(Math.max.apply(null,xs), rb.x[1]+5), Math.min(Math.max.apply(null,ys), rb.y[1]+5)]; if(b[2]<=b[0]||b[3]<=b[1]) b=[rb.x[0], rb.y[0], rb.x[1], rb.y[1]]; b.only='dwg'; return b; }
+function dwgPdf(){ var V=dwgM(); if(!V.has||!DWG.src||V.al.length<2){ toast('Load the drawing and line it up first.', 3000); return; } setStatus('Making the set-out check');
+  try{ var base=dwgBase(), site=base.replace(/[_-]+/g,' '), keepT=DWG.tool, keepP=DWG.pend; DWG.tool=null; DWG.pend=null; var plan=layPlanCanvas(dwgBox()); DWG.tool=keepT; DWG.pend=keepP;
+    var offs=V.ck.map(dwgOff), np=offs.filter(function(o){ return dwgMm(o.d)<=V.tol; }).length, sd=Math.hypot(V.al[1].x-V.al[0].x, V.al[1].y-V.al[0].y), pages=[];
+    var lines=[['h','Drawing'],[V.name.length>34?V.name.slice(0,32)+'...':V.name, ''],['Matched points', String(V.al.length)]];
+    if(V.al.length>2) lines.push(['Worst fit', Math.max.apply(null, V.al.map(function(p){ return dwgMm(dwgResid(p)); }))+' mm']);
+    if(V.known) lines.push(['Scan vs drawing', ((sd-V.known)/V.known*100).toFixed(2)+'%']);
+    lines.push(['h','Checks'],['Points checked', String(V.ck.length)],['Tolerance', V.tol+' mm'],['Within', np+' of '+V.ck.length, true]); if(offs.length) lines.push(['Largest', Math.max.apply(null, offs.map(function(o){ return dwgMm(o.d); }))+' mm']);
+    lines.push(['h','Key'],['sw','Within tolerance','#15803d'],['sw','Outside tolerance','#b91c1c'],['sw','Matched point','#1d4ed8']);
+    pages.push(laySheet('Set-out check', site+' · '+V.name+' laid over the scan · arrows run from the drawing to the scan', plan, lines));
+    if(V.ck.length){ for(var s0=0;s0<V.ck.length;s0+=30){ var P=rsPage('Set-out check: points', site+' · offset from the drawing to the scan, right and up as the drawing is printed'), rows=V.ck.slice(s0, s0+30).map(function(ck, j){ var o=offs[s0+j], pass=dwgMm(o.d)<=V.tol; return [String(s0+j+1), ck.name, dwgMm(o.d)+' mm', (o.r>=0?'+':'')+dwgMm(o.r), (o.up>=0?'+':'')+dwgMm(o.up), pass?'Within':'OUTSIDE']; });
+        rsTable(P.x, 110, 300, [['No.',0],['Point',140],['Offset',900,'right'],['Right (mm)',1250,'right'],['Up (mm)',1550,'right'],['Result',1700]], rows, 60); pages.push(P.pg); } }
+    var N=rsPage('How this was checked', site), x=N.x; x.font='400 34px system-ui'; x.fillStyle='#16202c';
+    ['The drawing was laid over the scan and lined up by matching '+V.al.length+' points that can be seen on both.'+(V.hold?' The drawing\'s own scale was kept; it was only turned and shifted.':' It was turned, sized and shifted to fit them best.'),
+     'Each check is a point picked on the drawing and the same point picked on the scan. The offset is the distance between them on plan.',
+     'Right and up are as the drawing is printed. Heights are not checked here.',
+     'Offsets can only be as good as the scan\'s scale and the picking. Drone scans without ground control points are often 1 to 3% out in scale;',
+     'a known length measured on site, or ground control, removes most of that. Check anything near the tolerance on site before acting on it.'].forEach(function(t, i){ x.fillText(t, 110, 330+i*64); });
+    pages.push(N.pg);
+    download('EXT_'+base+'_setout_check.pdf', pdfFromCanvases(pages)); toast('Set-out check saved: '+pages.length+' pages.', 3000); }
+  catch(e){ console.warn(e); toast('Could not make the PDF: '+e.message, 5000); } setStatus('Ready'); }
+function dwgCsv(){ var V=dwgM(); if(!V.ck.length){ toast('Check a point first.', 2500); return; } var q=function(s){ s=String(s); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }, L=['Point,Offset (mm),Right (mm),Up (mm),Result,Drawing x (m),Drawing y (m),Scan x (m),Scan y (m)'];
+  V.ck.forEach(function(ck){ var o=dwgOff(ck); L.push([q(ck.name), dwgMm(o.d), dwgMm(o.r), dwgMm(o.up), dwgMm(o.d)<=V.tol?'Within':'Outside', o.wx.toFixed(3), o.wy.toFixed(3), ck.x.toFixed(3), ck.y.toFixed(3)].join(',')); });
+  L.push('', 'Tolerance (mm),'+V.tol, 'Drawing,'+q(V.name), 'Matched points,'+V.al.length); download('EXT_'+dwgBase()+'_setout_check.csv', new Blob([L.join('\n')], {type:'text/csv'})); }
+/* ---------- the rail ---------- */
+SKIN_IC.dwg='M4 4h12l4 4v12H4zM16 4v4h4M8 13l3 3 5-6';
+SBP_ITEMS.push(['dwg','Drawing check','dwg','Lay the site plan (PDF or picture) over the scan, line it up, and check where things were built against it, with offsets in mm and a PDF']);
+sbAfter('sbPanel', function(r){ try{ if(SBP.key==='dwg'){ dwgPanel(); if(APP.view==='3d'&&typeof wsView==='function') wsView('plan'); } else { DWG.tool=null; DWG.pend=null; } planDrawSoon(); }catch(e){ console.warn(e); } return r; });
+sbAfter('openFile', function(r){ DWG.src=null; DWG.img=null; DWG.tool=null; DWG.pend=null; DWG._tried=''; DWG.pages=0; DWG.file=null; return r; });
+(function(){ sbAfter('buildSidebar', function(r){ try{ dwgPanel(); }catch(e){} return r; }); try{ dwgPanel(); }catch(e){}
+  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=dwg] #side .sec[data-sec=dwg]{display:block}body.sbSkin:not(.sbPanelOn) #sbDwgSec,body:not(.hasScan) #sbDwgSec{display:none}'+
+    '#sbDwgSec .dRow{display:flex;gap:6px;margin:6px 0}#sbDwgSec .dBtn{flex:1;border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:7px 8px;cursor:pointer;font:inherit;font-size:12px}#sbDwgSec .dBtn.on{background:#0f766e;border-color:#0f766e;color:#fff}'+
+    '#sbDwgSec .dH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:14px 0 4px}#sbDwgSec .dFile{font-size:12px;margin:4px 0;word-break:break-all}#sbDwgSec .dList{display:flex;flex-direction:column;gap:4px;margin:6px 0}'+
+    '#sbDwgSec .dIt{display:flex;align-items:flex-start;gap:8px;border:1px solid var(--sbLn);background:var(--bg3);border-radius:8px;padding:6px 8px;font-size:12px}#sbDwgSec .dIt>span{flex:1;min-width:0}#sbDwgSec .dIt button{border:0;background:none;color:inherit;cursor:pointer;opacity:.7}#sbDwgSec .dIt i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-top:4px;flex:0 0 10px}'+
+    '#sbDwgSec .dNm{width:90px;border:1px solid var(--sbLn);background:transparent;color:inherit;border-radius:5px;padding:1px 4px;font:inherit;font-size:12px}#sbDwgSec .dTk{display:flex;gap:6px;align-items:center;margin:4px 0}#sbDwgSec .dRes div{display:flex;justify-content:space-between;padding:2px 0;font-size:12px}#sbDwgSec .row input[type=range]{flex:1}';
+  document.head.appendChild(c); })();
 
 
 </script>

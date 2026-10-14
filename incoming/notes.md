@@ -1,7 +1,0 @@
-- New Drawing check on the rail: load a site plan (PDF or picture) and it lays over the scan.
-- Line it up: + Match a point, click it on the drawing then on the scan; two or more points, worst fit shown from three.
-- Optional known distance shows how far the scan scale is out, with Keep the drawing's scale.
-- Red, blue or black lines, see-through slider, Turn 90°, Move by dragging.
-- + Check a point: offset in mm, right/left and up/down on the drawing, pass or fail against your tolerance.
-- Set-out check PDF and CSV.
-- The drawing stays with the scan in this browser.

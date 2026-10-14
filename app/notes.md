@@ -1,5 +1,7 @@
-- Site checks > Roof: ridges, hips, valleys, eaves and verges found where the slopes you read meet, with lengths, on the plan and in 3D.
-- Roof report: new Roof lines page; materials page now prices ridge and hip tiles, valley troughs, guttering, fascia and verge trim.
-- Quantities > Add roof: brings the roof lines with it.
-- Slope areas no longer double count where two slopes overlap.
-- Fixed: adding the roof to Quantities could stop with an error.
+- New Drawing check on the rail: load a site plan (PDF or picture) and it lays over the scan.
+- Line it up: + Match a point, click it on the drawing then on the scan; two or more points, worst fit shown from three.
+- Optional known distance shows how far the scan scale is out, with Keep the drawing's scale.
+- Red, blue or black lines, see-through slider, Turn 90°, Move by dragging.
+- + Check a point: offset in mm, right/left and up/down on the drawing, pass or fail against your tolerance.
+- Set-out check PDF and CSV.
+- The drawing stays with the scan in this browser.
