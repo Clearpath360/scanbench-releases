@@ -1,6 +1,5 @@
-# Scan Bench r350
+# Scan Bench r351
 
-- Weather story: Sky & weather, Play story or Make video for a 15 s film: afternoon, rain comes in, puddles fill, night with a lamp.
-- Weather story: everything goes back to your own settings after it plays.
-- Headlights: click anywhere on a car; it finds the car, puts the lights on the end facing you (Shift+click for the other end).
-- Timelapse: the slow camera move now aims at what changed between the scans; untick Frame what changed in the gear menu to keep your view.
+- Timelapse: new Wave change in the gear menu; the next scan sweeps across the site from the middle of what changed.
+- Timelapse: Only what changed tick in the gear menu; unchanged parts stay still, only changed parts move to the next scan.
+- Compare: Save aligned button at the top saves each aligned capture as a PLY with the line-up baked in.

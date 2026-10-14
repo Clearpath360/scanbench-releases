@@ -4935,7 +4935,7 @@ function splatEnsure(){
   var VS='#version 300 es\nprecision highp float;precision highp int;precision highp usampler2D;\n'+
     'layout(location=0) in vec2 aQ; layout(location=1) in uint aI;\n'+
     'uniform highp sampler2D uA; uniform highp sampler2D uB; uniform highp sampler2D uC; uniform mediump sampler2D uD;\n'+
-    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform highp sampler2D uTopTex; uniform vec4 uTopB; uniform vec2 uTopS; uniform float uSnowC; uniform vec4 uPud; uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform sampler2D uRefl; uniform float uReflOn; uniform vec4 uMir; uniform vec2 uSnowD; uniform sampler2D uVolTex; uniform sampler2D uVolZ; uniform vec4 uVolB; uniform vec4 uVolS; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
+    'uniform vec3 uPal[8]; uniform float uIso; uniform float uTbOn; uniform vec3 uTbC; uniform vec3 uTbU; uniform vec3 uTbV; uniform vec3 uTbW; uniform vec3 uTbH; uniform vec4 uRng[4]; uniform float uRngN; uniform vec4 uTr; uniform vec4 uRngJ; uniform float uTrN; uniform vec4 uWv; uniform sampler2D uChgTex; uniform vec4 uChgB; uniform vec2 uChgS; uniform float uHideA; uniform vec2 uGrad; uniform float uGrOn; uniform vec4 uGr; uniform float uGrT; uniform vec4 uFg; uniform vec3 uFgCol; uniform vec4 uWx; uniform vec3 uEyeW; uniform highp sampler2D uTopTex; uniform vec4 uTopB; uniform vec2 uTopS; uniform float uSnowC; uniform vec4 uPud; uniform vec3 uSkyH; uniform vec3 uSkyZ; uniform sampler2D uRefl; uniform float uReflOn; uniform vec4 uMir; uniform vec2 uSnowD; uniform sampler2D uVolTex; uniform sampler2D uVolZ; uniform vec4 uVolB; uniform vec4 uVolS; uniform float uLtN; uniform vec4 uLP[8]; uniform vec4 uLC[8]; uniform vec4 uLD[8]; uniform vec4 uLR[8]; uniform float uLAmb; uniform mat4 uV; uniform mat4 uP; uniform vec2 uF; uniform vec2 uVp; uniform float uZMax; uniform float uBright; uniform float uMaxVar; uniform float uFaint; uniform float uOrtho; uniform vec2 uSlab; uniform float uZMin; uniform vec4 uBox; uniform float uBoxOn; uniform vec4 uCl[4]; uniform float uCutOn;\n'+
     'out vec4 vCol; out vec2 vPos;\n'+
     'float pzh(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); } float pzn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(pzh(i),pzh(i+vec2(1.0,0.0)),f.x), mix(pzh(i+vec2(0.0,1.0)),pzh(i+vec2(1.0,1.0)),f.x), f.y); }\n'+
     'void main(){ int W='+W+'; ivec2 tc=ivec2(int(aI)%W, int(aI)/W); vec4 A=texelFetch(uA,tc,0); vec4 B=texelFetch(uB,tc,0); vec2 C=texelFetch(uC,tc,0).xy; vec4 D=texelFetch(uD,tc,0);\n'+
@@ -4966,7 +4966,14 @@ function splatEnsure(){
 ' if(uGrOn>0.5){ rgb=rgb*(1.0+uGr.x); rgb=(rgb-0.5)*uGr.y+0.5; float gl0=dot(rgb,vec3(0.3,0.59,0.11)); rgb=mix(vec3(gl0),rgb,uGr.z); rgb+=vec3(uGr.w*0.08, -uGrT*0.06, -uGr.w*0.08); rgb=clamp(rgb,0.0,1.0); }\n'+
     ' if(uIso>0.5&&(sty>=255||(sty&8)==0)){ fa*=0.08; rgb=vec3(dot(rgb,vec3(0.3,0.59,0.11))); }\n'+
     ' if(uTbOn>0.5){ vec3 dd=A.xyz-uTbC; if(abs(dot(dd,uTbU))<=uTbH.x&&abs(dot(dd,uTbV))<=uTbH.y&&abs(dot(dd,uTbW))<=uTbH.z) rgb=mix(rgb, vec3(1.0,0.45,0.1), 0.55); }\n'+
-    ' float hA=uHideA; float fm=0.0; if(hA>1.5){ hA-=2.0; fm=1.0; } float al=1.0-hA; float fi=float(aI); for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ al=1.0-uRng[k].z; fm=uRng[k].w; } } if(al<0.003) return; if(al<0.997){ if(fm>0.5) fa*=al; else { uint hu=aI*747796405u+2891336453u; hu=((hu>>((hu>>28u)+4u))^hu)*277803737u; hu=(hu>>22u)^hu; float hh=float(hu&16777215u)/16777215.0; if(hh>al) return; } }\n'+
+    ' float hA=uHideA; float fm=0.0; if(hA>1.5){ hA-=2.0; fm=1.0; } float al=1.0-hA; float fi=float(aI); for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ al=1.0-uRng[k].z; fm=uRng[k].w; } }\n'+
+    /* r351 timelapse: a wave front, and change-only (each spot keeps the last scan it changed in) */
+    ' if(uTr.x>0.5){ float jj=-1.0; bool inR=false; for(int k=0;k<4;k++){ if(float(k)<uRngN&&fi>=uRng[k].x&&fi<uRng[k].y){ jj=uRngJ[k]; inR=true; } } if(!inR&&fi<uTrN) jj=0.0;\n'+
+    '  if(jj>-0.5){ float P=uTr.z, w=uTr.y, bits=255.0; if(uChgB.w>0.5){ vec2 jt=vec2(fract(sin(fi*12.9898)*43758.55),fract(sin(fi*78.233)*12543.17))-0.5; vec2 tc=(A.xy-uChgB.xy)*uChgB.z+jt*0.9; if(tc.x>=0.0&&tc.y>=0.0&&tc.x<uChgS.x&&tc.y<uChgS.y) bits=floor(texelFetch(uChgTex,ivec2(tc),0).r*255.0+0.5); }\n'+
+    '   float s0=0.0, s1=0.0; for(int i=1;i<8;i++){ float f2=float(i); float bb=mod(floor(bits/exp2(f2)),2.0); if(bb>0.5&&f2<=P) s0=f2; if(bb>0.5&&f2<=P+1.0) s1=f2; }\n'+
+    '   float eg=0.0; if(mod(uTr.x,4.0)>1.5){ float dw=length(A.xy-uWv.xy)*uWv.z, fr=w*1.3-0.15; w=1.0-smoothstep(fr-0.05,fr+0.05,dw); if(uTr.y>0.001&&uTr.y<0.999) eg=exp(-pow((dw-fr)/0.04,2.0))*uWv.w; }\n'+
+    '   al=(abs(jj-s0)<0.5?1.0-w:0.0)+(abs(jj-s1)<0.5?w:0.0); if(abs(jj-s1)<0.5&&s1!=s0) rgb+=vec3(0.45,0.7,1.0)*eg; } }\n'+
+    ' if(al<0.003) return; if(al<0.997){ if(fm>0.5) fa*=al; else { uint hu=aI*747796405u+2891336453u; hu=((hu>>((hu>>28u)+4u))^hu)*277803737u; hu=(hu>>22u)^hu; float hh=float(hu&16777215u)/16777215.0; if(hh>al) return; } }\n'+
     ' vec2 ext=(abs(M1)+abs(M2))*4.0/uVp; if(abs(ndc.x)-ext.x>1.0||abs(ndc.y)-ext.y>1.0) return;\n'+
     ' if(uVolB.w>0.5){ vec2 tv=(A.xy-uVolB.xy)*uVolB.z; if(tv.x>=0.0&&tv.y>=0.0&&tv.x<uVolS.x&&tv.y<uVolS.y){ float vz=texelFetch(uVolZ,ivec2(tv),0).r; if(abs(A.z-vz)<uVolS.z){ vec4 vc=texelFetch(uVolTex,ivec2(tv),0); rgb=mix(rgb, vc.rgb, vc.a); } } }\n'+
     ' vCol=vec4(rgb*uBright, min(1.0, A.w*fa)); vPos=aQ;\n'+
@@ -8422,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r350';
+var SB_BUILD='2026-10-14 r351';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24486,6 +24493,71 @@ sbAround('tlpAutoKeys', function(next){ if(MS.autoFrame===false) return next(); 
 sbAfter('tlpEnsureMove', function(r){ try{ if(MS._autoKeys&&TF.box&&MS.autoFrame!==false) toast('The camera move is aimed at what changed (about '+Math.round(TF.box.area)+' m²). Untick Frame what changed in ⚙ to keep your view.', 5000); }catch(e){} return r; });
 sbAfter('msDraw', function(r){ try{ var u=msUI(), S=u&&u.querySelector('.msSet'); if(!S||S.querySelector('#tlpFrame')) return r; var l=document.createElement('label'); l.innerHTML='<input type="checkbox" id="tlpFrame"'+(MS.autoFrame!==false?' checked':'')+'> Frame what changed';
     l.querySelector('input').onchange=function(){ MS.autoFrame=this.checked; if(MS._autoKeys){ MS.keys=[]; MS._autoKeys=false; } }; S.appendChild(l); }catch(e){ console.warn(e); } return r; });
+
+/* ===== Timelapse transitions (r351), after Multi Splat and splats4D:
+   Wave: the next scan sweeps across the site as a front from the middle of what changed, with a soft blue edge.
+   Only what changed: each half-metre spot keeps showing the last scan it changed in, so unchanged ground and buildings stay still
+   instead of fading between two near-identical copies; only the parts that changed move from one scan to the next. ===== */
+if(MS.chgOnly==null) MS.chgOnly=false;
+var TC={key:'', tex:null, G:null};
+/* one bit per change: bit i is set on a spot when it differs between scan i-1 and scan i of the timelapse */
+function tcBits(){ var R=APP.res, L=msAligned(); if(!R||L.length<2) return null; var key=L.map(function(o){ var p=cmpProp(o.s), D=p&&PROPS.data[p.src]; return o.k+':'+(o.k===0?R.n:(D?D.n:0))+':'+(p?[p.x,p.y,p.z,p.rot].join(','):''); }).join('|');
+  if(TC.key===key) return TC.G; TC.key=key; TC.G=null;
+  var sc=(typeof fScale==='function'?fScale():1)||1, rb=R.robust, W=rb.x[1]-rb.x[0], H=rb.y[1]-rb.y[0], cell=Math.max(0.5*sc, Math.max(W,H)/300), G={x0:rb.x[0]-2*sc, y0:rb.y[0]-2*sc, cell:cell, z0:rb.z[0]-1*sc, z1:rb.z[1]+3*sc}; G.nx=Math.ceil((W+4*sc)/cell); G.ny=Math.ceil((H+4*sc)/cell);
+  var tops=L.map(function(o){ if(o.k===0) return tfTop(R.pos, R.n, R.del, R.opa, G); var p=cmpProp(o.s), D=p&&PROPS.data[p.src]; if(!D||!D.pos) return null; return tfTop(typeof propWorld==='function'?propWorld(p, D):D.pos, D.n, D.del, D.opa, G); });
+  var N=G.nx*G.ny, bits=new Uint8Array(N), thr=0.35*sc;
+  for(var i=1;i<tops.length&&i<8;i++){ var A=tops[i-1], B=tops[i]; if(!A||!B) continue; var m=new Uint8Array(N), m2=new Uint8Array(N);
+    for(var c=0;c<N;c++){ var a=A[c], b=B[c]; if((a>-1e8)!==(b>-1e8)) m[c]=1; else if(a>-1e8&&Math.abs(a-b)>thr) m[c]=1; }
+    /* drop lone squares (scan noise), then grow by one square so the whole of the changed thing goes over together */
+    for(var y=1;y<G.ny-1;y++) for(var x=1;x<G.nx-1;x++){ var q=y*G.nx+x; if(!m[q]) continue; var nb=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) if((dx||dy)&&m[q+dy*G.nx+dx]) nb++; if(nb>=2) for(var ey=-1;ey<=1;ey++) for(var ex=-1;ex<=1;ex++) m2[q+ey*G.nx+ex]=1; }
+    for(c=0;c<N;c++) if(m2[c]) bits[c]|=(1<<i); }
+  G.bits=bits; G.n=0; for(c=0;c<N;c++) if(bits[c]) G.n++; G.area=G.n*cell*cell/(sc*sc);
+  try{ var gl=GL; if(TC.tex) gl.deleteTexture(TC.tex); TC.tex=gl.createTexture(); gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, TC.tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, G.nx, G.ny, 0, gl.RED, gl.UNSIGNED_BYTE, bits); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); gl.activeTexture(gl.TEXTURE0); }catch(e){ console.warn(e); TC.tex=null; }
+  TC.G=G; return G; }
+function tcActive(){ return !!(typeof MS!=='undefined'&&MS.on&&MS.tab==='time'&&(MS.kind==='wave'||MS.chgOnly)&&msAligned().length>1); }
+sbAfter('cmpUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL, Lc=SPL.loc; if(Lc.uTr===undefined){ ['uTr','uRngJ','uTrN','uWv','uChgTex','uChgB','uChgS'].forEach(function(k){ Lc[k]=gl.getUniformLocation(SPL.prog,k); }); } if(!Lc.uTr) return r; gl.useProgram(SPL.prog);
+    if(!tcActive()){ gl.uniform4f(Lc.uTr, 0,0,0,0); return r; } var st=MS.st||msState(MS.t); if(!st||st.wipe||!st.cur){ gl.uniform4f(Lc.uTr, 0,0,0,0); return r; }
+    var L=msAligned(), S=cmpList(), pos=S.map(function(){ return -1; }); L.forEach(function(o, i){ pos[o.k]=i; }); var P=L.findIndex(function(o){ return o.k===st.cur.k; }), u=st.nxt?st.u:0;
+    var J=new Float32Array(4), n=0; for(var k=1;k<S.length&&n<4;k++){ var sg=cmpSeg(S[k]); if(!sg) continue; J[n]=pos[k]; n++; } gl.uniform4fv(Lc.uRngJ, J);
+    gl.uniform1f(Lc.uTrN, (typeof PROPS!=='undefined'&&PROPS.base&&PROPS.base.n)?PROPS.base.n:APP.res.n); gl.uniform4f(Lc.uTr, 1+(MS.kind==='wave'?2:0), u, Math.max(0,P), 0);
+    var rb=APP.res.robust, B=(typeof tfChange==='function')?tfChange():null, cx=B?(B.x0+B.x1)/2:(rb.x[0]+rb.x[1])/2, cy=B?(B.y0+B.y1)/2:(rb.y[0]+rb.y[1])/2, Rm=0; [[rb.x[0],rb.y[0]],[rb.x[1],rb.y[0]],[rb.x[0],rb.y[1]],[rb.x[1],rb.y[1]]].forEach(function(q){ Rm=Math.max(Rm, Math.hypot(q[0]-cx, q[1]-cy)); });
+    gl.uniform4f(Lc.uWv, cx, cy, 1/Math.max(1e-3, Rm), 0.5);
+    var G=MS.chgOnly?tcBits():null; if(G&&TC.tex){ gl.activeTexture(gl.TEXTURE10); gl.bindTexture(gl.TEXTURE_2D, TC.tex); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(Lc.uChgTex, 10); gl.uniform4f(Lc.uChgB, G.x0, G.y0, 1/G.cell, 1); gl.uniform2f(Lc.uChgS, G.nx, G.ny); } else gl.uniform4f(Lc.uChgB, 0,0,0,0); }catch(e){ console.warn(e); } return r; });
+/* with Only what changed, an earlier scan can still be on screen, so none are left out of the sort */
+sbAround('splatHideRanges', function(next){ if(MS.chgOnly&&tcActive()) return null; return next(); });
+/* the settings: Wave in the Change list, and the Only what changed tick */
+sbAfter('msDraw', function(r){ try{ var u=msUI(), K=u&&u.querySelector('#msKind'); if(K&&!K.querySelector('option[value=wave]')){ var o=document.createElement('option'); o.value='wave'; o.textContent='Wave'; if(MS.kind==='wave') o.selected=true; K.insertBefore(o, K.children[1]||null); }
+    var S=u&&u.querySelector('.msSet'); if(S&&!S.querySelector('#tlpChg')){ var l=document.createElement('label'); l.title='Parts that did not change stay perfectly still; only what changed moves to the next scan'; l.innerHTML='<input type="checkbox" id="tlpChg"'+(MS.chgOnly?' checked':'')+'> Only what changed';
+      l.querySelector('input').onchange=function(){ MS.chgOnly=this.checked; if(this.checked){ var G=tcBits(); if(G) toast('Only what changed: '+Math.round(G.area)+' m² changed between the scans; the rest stays still.', 5000); else toast('Needs at least two aligned scans.', 3000); } SPL.lastKey=''; requestRender(false); }; S.appendChild(l); } }catch(e){ console.warn(e); } return r; });
+
+/* ===== Save aligned scans (r351): each aligned capture is saved as its own PLY with the line-up baked in, so it opens in place
+   next to the first scan's exported PLY in any other app. Positions, splat turn and size are all moved together. ===== */
+function saHeader(buf){ var u=new Uint8Array(buf, 0, Math.min(buf.byteLength, 65536)), s='', i; for(i=0;i<u.length;i++){ s+=String.fromCharCode(u[i]); if(s.length>10&&s.slice(-11)==='end_header\n') break; } if(!/end_header\n$/.test(s)) return null;
+  if(!/format binary_little_endian/.test(s)) return null; var lines=s.split('\n'), el=null, props=[], n=0, first=null, SZ={char:1,uchar:1,int8:1,uint8:1,short:2,ushort:2,int16:2,uint16:2,int:4,uint:4,int32:4,uint32:4,float:4,float32:4,double:8,float64:8};
+  lines.forEach(function(l){ var w=l.trim().split(/\s+/); if(w[0]==='element'){ el=w[1]; if(!first) first=el; if(el==='vertex') n=+w[2]; } else if(w[0]==='property'&&el==='vertex'&&w[1]!=='list') props.push({name:w[2], type:w[1], size:SZ[w[1]]||4}); });
+  if(first!=='vertex'||!n) return null; var off=0, P={}; props.forEach(function(p){ p.off=off; off+=p.size; P[p.name]=p; }); return {len:s.length, n:n, stride:off, P:P}; }
+function saQuat(R){ var t=R[0]+R[4]+R[8], w, x, y, z; if(t>0){ var S=Math.sqrt(t+1)*2; w=S/4; x=(R[7]-R[5])/S; y=(R[2]-R[6])/S; z=(R[3]-R[1])/S; }
+  else if(R[0]>R[4]&&R[0]>R[8]){ S=Math.sqrt(1+R[0]-R[4]-R[8])*2; w=(R[7]-R[5])/S; x=S/4; y=(R[1]+R[3])/S; z=(R[2]+R[6])/S; } else if(R[4]>R[8]){ S=Math.sqrt(1+R[4]-R[0]-R[8])*2; w=(R[2]-R[6])/S; x=(R[1]+R[3])/S; y=S/4; z=(R[5]+R[7])/S; }
+  else { S=Math.sqrt(1+R[8]-R[0]-R[4])*2; w=(R[3]-R[1])/S; x=(R[2]+R[6])/S; y=(R[5]+R[7])/S; z=S/4; } return [w,x,y,z]; }
+function saOne(s){ var p=cmpProp(s), D=p&&PROPS.data[p.src]; if(!D||!D.buf){ toast('This capture has no file data to save.', 4000); return false; } var H=saHeader(D.buf); if(!H||!H.P.x||!H.P.y||!H.P.z||H.P.x.type.indexOf('float')<0){ toast((s.label||s.name)+': only binary PLY captures can be saved this way.', 5000); return false; }
+  if(H.n!==D.n){ toast((s.label||s.name)+' was loaded thinned ('+D.n.toLocaleString()+' of '+H.n.toLocaleString()+' splats), so it cannot be saved aligned.', 6000); return false; }
+  var Wp=propWorld(p, D), src=new DataView(D.buf, H.len), st=Math.max(1, Math.floor(H.n/4000)), pairs=[];
+  for(var i=0;i<H.n;i+=st){ var o=i*H.stride; pairs.push({a:[Wp[i*3],Wp[i*3+1],Wp[i*3+2]], b:[src.getFloat32(o+H.P.x.off,true), src.getFloat32(o+H.P.y.off,true), src.getFloat32(o+H.P.z.off,true)]}); }
+  var X=msSolve(pairs, true); if(!X){ toast('Could not work out the line-up to save.', 4000); return false; } var sc=X.s||1, q=saQuat(X.R), ls=Math.log(sc);
+  var out=new Uint8Array(D.buf.byteLength); out.set(new Uint8Array(D.buf)); var dv=new DataView(out.buffer, H.len), Q=['rot_0','rot_1','rot_2','rot_3'].map(function(k){ return H.P[k]; }), hasQ=Q.every(function(v){ return v&&v.type.indexOf('float')>=0; }), SC=['scale_0','scale_1','scale_2'].map(function(k){ return H.P[k]; }).filter(Boolean), NN=['nx','ny','nz'].map(function(k){ return H.P[k]; }), hasN=NN.every(function(v){ return v&&v.type.indexOf('float')>=0; }), R=X.R;
+  for(i=0;i<H.n;i++){ var b=i*H.stride; dv.setFloat32(b+H.P.x.off, Wp[i*3], true); dv.setFloat32(b+H.P.y.off, Wp[i*3+1], true); dv.setFloat32(b+H.P.z.off, Wp[i*3+2], true);
+    if(hasQ){ var w0=dv.getFloat32(b+Q[0].off,true), x0=dv.getFloat32(b+Q[1].off,true), y0=dv.getFloat32(b+Q[2].off,true), z0=dv.getFloat32(b+Q[3].off,true);
+      dv.setFloat32(b+Q[0].off, q[0]*w0-q[1]*x0-q[2]*y0-q[3]*z0, true); dv.setFloat32(b+Q[1].off, q[0]*x0+q[1]*w0+q[2]*z0-q[3]*y0, true); dv.setFloat32(b+Q[2].off, q[0]*y0-q[1]*z0+q[2]*w0+q[3]*x0, true); dv.setFloat32(b+Q[3].off, q[0]*z0+q[1]*y0-q[2]*x0+q[3]*w0, true); }
+    if(ls) SC.forEach(function(c){ if(c.type.indexOf('float')>=0) dv.setFloat32(b+c.off, dv.getFloat32(b+c.off,true)+ls, true); });
+    if(hasN){ var a0=dv.getFloat32(b+NN[0].off,true), a1=dv.getFloat32(b+NN[1].off,true), a2=dv.getFloat32(b+NN[2].off,true); dv.setFloat32(b+NN[0].off, R[0]*a0+R[1]*a1+R[2]*a2, true); dv.setFloat32(b+NN[1].off, R[3]*a0+R[4]*a1+R[5]*a2, true); dv.setFloat32(b+NN[2].off, R[6]*a0+R[7]*a1+R[8]*a2, true); } }
+  var nm=(s.label&&!/^Scan \d+$/.test(s.label)?s.label:(s.name||'capture')).replace(/\.[a-z0-9]+$/i,'').replace(/[^\w\- ]+/g,'_');
+  download(nm+'_aligned.ply', new Blob([out], {type:'application/octet-stream'})); return {n:H.n, rms:X.rms}; }
+function saSave(){ var L=msAligned().filter(function(o){ return o.k>0; }); if(!L.length){ toast('Align a capture first.', 3000); return; } var ok=0; setStatus('Saving aligned scans');
+  setTimeout(function(){ L.forEach(function(o){ try{ if(saOne(o.s)) ok++; }catch(e){ console.warn(e); toast('Saving '+(o.s.label||o.s.name)+' failed: '+e.message, 5000); } }); setStatus('Ready');
+    if(ok) toast('Saved '+ok+' aligned scan'+(ok>1?'s':'')+'. They line up with the first scan saved through Export, PLY.', 6000); }, 30); }
+sbAfter('msDraw', function(r){ try{ var u=msUI(), T=u&&u.querySelector('.msTop'); if(!T||T.querySelector('#saSave')) return r; var b=document.createElement('button'); b.id='saSave'; b.textContent='Save aligned'; b.title='Save each aligned capture as a PLY with the line-up baked in'; b.onclick=saSave;
+    var done=[].slice.call(T.querySelectorAll('button')).filter(function(x){ return /Done/.test(x.textContent); })[0]; if(done) T.insertBefore(b, done); else T.appendChild(b); }catch(e){ console.warn(e); } return r; });
 
 
 </script>
