@@ -1,5 +1,5 @@
-# Scan Bench r358
+# Scan Bench r359
 
-- Open: .ksplat files (GaussianSplats3D viewer format, compression levels 0, 1 and 2) now open directly.
-- .spz, .splat and .sog already opened before this release.
-- Extra colour detail (SH) in .ksplat is left out; base colours are kept.
+- Sky & weather > Weather film: pick the story (Rain comes in, Storm builds, Snow falls, Rain clears, Mist lifts at dawn, Day into night).
+- Length in seconds, From and To time of day, Camera (push in, pull out, orbit, still, your walk-through path), Amount, Puddles, Lamp at dusk.
+- Settings are remembered.

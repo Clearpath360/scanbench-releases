@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r358';
+var SB_BUILD='2026-10-14 r359';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24466,40 +24466,90 @@ window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&LT.headPick
 window.addEventListener('mousedown', function(e){ if(LT.headPick&&e.target===glCv){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 window.addEventListener('pointermove', function(e){ if(LT.headPick&&e.target===glCv) glCv.style.cursor='crosshair'; }, true);
 
-/* ===== Weather story (r350): one click makes a 15 second film of the site: late afternoon, the clouds come over, rain starts,
-   puddles fill from the deepest spots outwards, and it gets dark with the lamps on. The camera makes a slow push in with a small turn.
+/* ===== Weather story (r350, options r359): a short film of the site where the weather changes.
+   Pick the story (rain comes in, storm, snow, rain clears, mist lifts, day into night), its length, the time of day it runs from and to,
+   the camera move (push in, pull out, orbit, still, or your own walk-through path), how strong the weather gets, puddles and lamps.
    Play shows it live; Make video renders it frame by frame through the walk-through video maker. Everything is put back after. ===== */
-var WS={on:false, T:15, cam0:null, keep:null, raf:0, addLamp:null};
+var WS={on:false, T:15, cam0:null, keep:null, raf:0, TL:null};
+/* each value goes from a to b between parts p0 and p1 of the film */
+var WS_STORIES={
+  rain:{name:'Rain comes in', t:[17.4,21], pud:true, k:{clouds:[0.3,0.85,0.05,0.35], rain:[0,0.75,0.25,0.45], fog:[0,0.12,0.3,0.7]}, grow:[0,1,0.32,0.88]},
+  storm:{name:'Storm builds', t:[16,19.5], pud:true, k:{clouds:[0.35,1,0.05,0.4], rain:[0,1,0.3,0.5], fog:[0,0.2,0.3,0.7], wind:[0,0.8,0.2,0.6]}, flash:0.5, grow:[0,1,0.35,0.85]},
+  snow:{name:'Snow falls', t:[15,18.5], pud:false, k:{clouds:[0.3,0.8,0.05,0.35], snow:[0,0.8,0.25,0.45], snowCover:[0,0.9,0.35,0.95], fog:[0,0.1,0.3,0.7], wind:[0,0.2,0.2,0.5]}},
+  clear:{name:'Rain clears', t:[13,18], pud:true, k:{clouds:[0.85,0.2,0.3,0.8], rain:[0.75,0,0.15,0.5], fog:[0.12,0,0.2,0.7]}},
+  mist:{name:'Mist lifts at dawn', t:[5.5,9.5], pud:false, k:{fog:[0.5,0,0.3,0.85], mist:[0.6,0,0.3,0.85], clouds:[0.35,0.15,0.3,0.9]}},
+  night:{name:'Day into night', t:[15,22], pud:false, k:{clouds:[0.25,0.25,0,1]}}
+};
+var WS_SCALED={rain:1, snow:1, fog:1, mist:1, wind:1};
+function wsCfg(){ if(!WS.cfg){ var d={story:'rain', T:15, t0:17.4, t1:21, cam:'push', str:1, pud:true, lamps:true}; try{ var j=JSON.parse(localStorage.getItem('sbWsCfg')||'null'); if(j) Object.assign(d, j); }catch(e){} if(!WS_STORIES[d.story]) d.story='rain'; WS.cfg=d; } return WS.cfg; }
+function wsSave(){ try{ localStorage.setItem('sbWsCfg', JSON.stringify(WS.cfg)); }catch(e){} }
 function wsSm(a, b, u){ var x=Math.max(0, Math.min(1, (u-a)/(b-a))); return x*x*(3-2*x); }
-function wsStoryCam(t){ var c=WS.cam0, u=t/WS.T, e=wsSm(0,1,u); return {tx:c.tx, ty:c.ty, tz:c.tz, dist:c.dist*(1.1-0.22*e), yaw:c.yaw-0.18+0.36*e, pitch:c.pitch+0.03-0.04*e}; }
-function wsApply(t){ var S=wxS(); if(!S) return; var u=t/WS.T;
-  S.on=true; S.wet=true; S.anim=true; S.time=17.4+2.2*wsSm(0.05,0.6,u)+1.4*wsSm(0.6,0.95,u); S.clouds=0.3+0.55*wsSm(0.05,0.35,u); S.rain=0.75*wsSm(0.25,0.45,u); S.fog=0.12*wsSm(0.3,0.7,u); S.puddles=WS.pud; S.snow=0; S.snowCover=0;
-  WP.grow=wsSm(0.32,0.88,u); WX.tv=1000+t; if(WS.lamp){ WS.lamp.str=2.0*wsSm(0.4,0.6,u); } }
-/* the walk-through maker is handed the story's own camera path while the story renders */
-sbAround('wtTimeline', function(next){ if(WS.on) return {T:WS.T, P:[], segs:[{}]}; return next(); });
-sbAround('wtAt', function(next, TL, t){ if(WS.on) return wsStoryCam(t); return next(); });
+function wsStoryCam(t){ var C=wsCfg(), c=WS.cam0, u=Math.max(0, Math.min(1, t/WS.T)), e=wsSm(0,1,u);
+  if(C.cam==='path'&&WS.TL) return wtAt(WS.TL, t);
+  if(C.cam==='still') return Object.assign({}, c);
+  if(C.cam==='pull') return {tx:c.tx, ty:c.ty, tz:c.tz, dist:c.dist*(0.88+0.3*e), yaw:c.yaw+0.18-0.36*e, pitch:c.pitch-0.01+0.05*e};
+  if(C.cam==='orbit') return {tx:c.tx, ty:c.ty, tz:c.tz, dist:c.dist, yaw:c.yaw+Math.PI*2*u, pitch:c.pitch};
+  return {tx:c.tx, ty:c.ty, tz:c.tz, dist:c.dist*(1.1-0.22*e), yaw:c.yaw-0.18+0.36*e, pitch:c.pitch+0.03-0.04*e}; }
+function wsApply(t){ var S=wxS(); if(!S) return; var C=wsCfg(), St=WS_STORIES[C.story], u=Math.max(0, Math.min(1, t/WS.T));
+  S.on=true; S.wet=true; S.anim=true; S.stars=true; S.rain=0; S.snow=0; S.snowCover=0; S.fog=0; S.mist=0; S.wind=0; S.lightning=false;
+  S.time=C.t0+(C.t1-C.t0)*(0.5*u+0.5*wsSm(0,1,u));
+  Object.keys(St.k).forEach(function(n){ var q=St.k[n], v=q[0]+(q[1]-q[0])*wsSm(q[2],q[3],u); S[n]=WS_SCALED[n]?Math.min(1, v*C.str):v; });
+  if(St.flash!=null) S.lightning=u>=St.flash;
+  S.puddles=C.pud?WS.pud:0; WP.grow=C.pud&&St.grow?St.grow[0]+(St.grow[1]-St.grow[0])*wsSm(St.grow[2],St.grow[3],u):null;
+  WX.tv=1000+t;
+  if(WS.lamp){ var h=((S.time%24)+24)%24, dark=Math.max(wsSm(18.6,20.2,h), 1-wsSm(5.6,7.4,h)), lit=Math.max(dark, 0.6*wsSm(0.6,0.9,S.clouds||0)*(S.rain>0.3?1:0)); WS.lamp.str=2.0*lit; } }
+/* the walk-through maker is handed the story's own camera path while the story renders (your own path when that is picked) */
+sbAround('wtTimeline', function(next){ if(WS.on&&wsCfg().cam!=='path') return {T:WS.T, P:[], segs:[{}]}; return next(); });
+sbAround('wtAt', function(next, TL, t){ if(WS.on&&wsCfg().cam!=='path') return wsStoryCam(t); return next(); });
 (function(){ var prev=window.wtFrameHook; window.wtFrameHook=function(t){ if(prev) try{ prev(t); }catch(e){ console.warn(e); } if(WS.on) try{ wsApply(t); }catch(e){ console.warn(e); } }; })();
+function wsHasPath(){ try{ return wtTimeline().T>1; }catch(e){ return false; } }
 function wsStart(){ if(!APP.res){ toast('Load a scan first.'); return false; } if(WS.on||WT.busy) return false; if(APP.view!=='3d') wsView('3d');
+  var C=wsCfg(); WS.TL=null; WS.T=Math.max(4, Math.min(120, +C.T||15));
+  if(C.cam==='path'){ var TL=null; try{ TL=wtTimeline(); }catch(e){} if(TL&&TL.T>1){ WS.TL=TL; WS.T=TL.T; } else { toast('There is no walk-through path yet, so the camera pushes in instead. Make one in Walk-through video first.', 5000); C.cam='push'; wsSave(); wsSync(); } }
   var S=wxS(); WS.keep={S:JSON.parse(JSON.stringify(S)), lights:typeof ltM==='function'&&ltM()?JSON.parse(JSON.stringify(ltM().lights||[])):null, lon:typeof ltM==='function'&&ltM()?ltM().lightsOn:null, amb:typeof ltM==='function'&&ltM()?ltM().lightAmb:null, cam:Object.assign({}, cam)};
   WS.cam0=Object.assign({}, cam); WS.pud=Math.max(0.5, S.puddles||0); WS.lamp=null;
-  /* no lights of your own: a street lamp goes where you are looking, for the night part */
-  try{ var M=ltM(); if(M&&!(M.lights||[]).some(function(l){ return l.on&&l.kind!=='sun'; })){ var l=ltMake('lamp'); Object.assign(l, {name:'Story lamp', x:cam.tx, y:cam.ty, z:ltGround(cam.tx,cam.ty)+5*ltSc(), col:'#ffc27a', str:0, reach:9, glow:true}); M.lights=(M.lights||[]).concat([l]); M.lightsOn=true; WS.lamp=l; } }catch(e){ console.warn(e); }
+  /* no lights of your own: a street lamp goes where you are looking, for the dark part */
+  try{ var M=ltM(); if(C.lamps&&M&&!(M.lights||[]).some(function(l){ return l.on&&l.kind!=='sun'; })){ var l=ltMake('lamp'); Object.assign(l, {name:'Story lamp', x:cam.tx, y:cam.ty, z:ltGround(cam.tx,cam.ty)+5*ltSc(), col:'#ffc27a', str:0, reach:9, glow:true}); M.lights=(M.lights||[]).concat([l]); M.lightsOn=true; WS.lamp=l; } }catch(e){ console.warn(e); }
   WS.on=true; wsApply(0); return true; }
-function wsEnd(){ if(!WS.on) return; WS.on=false; if(WS.raf) cancelAnimationFrame(WS.raf); WS.raf=0; var K=WS.keep; WP.grow=null; WX.tv=null;
+function wsEnd(){ if(!WS.on) return; WS.on=false; if(WS.raf) cancelAnimationFrame(WS.raf); WS.raf=0; var K=WS.keep; WP.grow=null; WX.tv=null; WS.TL=null;
   try{ var M=APP.model; if(K){ M.sky=K.S; var L=ltM(); if(L&&K.lights){ L.lights=K.lights; L.lightsOn=K.lon; L.lightAmb=K.amb; } Object.assign(cam, K.cam); } }catch(e){ console.warn(e); }
   try{ wxPanel(); }catch(e){} requestRender(false); wsUI(); }
 function wsPlay(){ if(WS.on){ wsEnd(); return; } if(!wsStart()) return; wsUI(); var t0=performance.now();
-  (function step(){ if(!WS.on) return; var t=(performance.now()-t0)/1000; if(t>=WS.T){ wsEnd(); return; } wsApply(t); Object.assign(cam, wsStoryCam(t)); gl_render(); WS.raf=requestAnimationFrame(step); })(); }
-async function wsVideo(){ if(!window.VideoEncoder){ toast('This browser cannot make video files. Use Chrome or Edge.', 5000); return; } if(!wsStart()) return; wsUI(); toast('Making the weather story video. Esc cancels.', 4000);
+  (function step(){ if(!WS.on) return; var t=(performance.now()-t0)/1000; if(t>=WS.T){ wsEnd(); return; } wsApply(t); var cc=wsStoryCam(t); if(cc) Object.assign(cam, cc); gl_render(); WS.raf=requestAnimationFrame(step); })(); }
+async function wsVideo(){ if(!window.VideoEncoder){ toast('This browser cannot make video files. Use Chrome or Edge.', 5000); return; } if(!wsStart()) return; wsUI(); toast('Making the weather film ('+Math.round(WS.T)+' s). Esc cancels.', 4000);
   var wasOn=WT.on; try{ await wtExport(); }catch(e){ console.warn(e); } if(!wasOn) try{ wtClose(); }catch(e){} wsEnd(); }
 /* the name the video is saved under */
 (function(){ var inner=window.download; window.download=function(name, blob){ if(WS.on&&/_walkthrough_/.test(name)) name=name.replace('_walkthrough_','_weather_story_'); return inner.apply(this, [name, blob].concat([].slice.call(arguments,2))); }; })();
-/* the panel: two buttons under the presets */
-function wsUI(){ var a=document.getElementById('wsPlay'); if(a) a.textContent=WS.on&&!WT.busy?'■ Stop':'▶ Play story'; }
-sbAfter('wxPanel', function(r){ try{ var s=document.getElementById('sbWxSec'); if(!s||document.getElementById('wsRow')) return r; var b=s.querySelector('.body'); if(!b) return r;
-    var d=document.createElement('div'); d.id='wsRow'; d.innerHTML='<div class="row" title="A 15 second film: afternoon, rain comes in, puddles fill, night falls with the lamps on. The camera pushes in slowly from where you are looking."><label>Weather story</label><div class="sbLSeg" style="flex:1;display:flex;gap:6px"><button id="wsPlay" style="flex:1">▶ Play story</button><button id="wsVid" style="flex:1">Make video</button></div></div>';
-    var pre=[].slice.call(b.children).filter(function(x){ return /PRESETS|Presets/.test(x.textContent||'')&&x.querySelectorAll('button').length>2; })[0]; if(pre&&pre.nextSibling) b.insertBefore(d, pre.nextSibling); else b.insertBefore(d, b.firstChild);
-    d.querySelector('#wsPlay').onclick=wsPlay; d.querySelector('#wsVid').onclick=wsVideo; wsUI(); }catch(e){ console.warn(e); } return r; });
+/* the panel */
+function wsHr(h){ h=((h%24)+24)%24; var H=Math.floor(h), m=Math.round((h-H)*60); if(m===60){ H=(H+1)%24; m=0; } return String(H).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+function wsUI(){ var a=document.getElementById('wsPlay'); if(a) a.textContent=WS.on&&!WT.busy?'■ Stop':'▶ Play'; var d=document.getElementById('wsOpts'); if(d){ d.querySelectorAll('select,input').forEach(function(x){ x.disabled=WS.on; }); if(!WS.on&&wsCfg().cam==='path') d.querySelector('#wsLen').disabled=true; } }
+function wsSync(){ var C=wsCfg(), d=document.getElementById('wsOpts'); if(!d) return; var g=function(id){ return d.querySelector('#'+id); };
+  g('wsStory').value=C.story; g('wsLen').value=C.T; g('wsCam').value=C.cam; g('wsT0').value=C.t0; g('wsT1').value=C.t1; g('wsT0V').textContent=wsHr(C.t0); g('wsT1V').textContent=wsHr(C.t1);
+  g('wsStr').value=C.str; g('wsStrV').textContent=Math.round(C.str*100)+'%'; g('wsPud').checked=!!C.pud; g('wsLamp').checked=!!C.lamps;
+  var pth=C.cam==='path'; g('wsLen').disabled=pth||WS.on; g('wsLenN').textContent=pth?'follows your path':'seconds';
+  var o=g('wsCam').querySelector('option[value=path]'); if(o) o.textContent='Your walk-through path'+(wsHasPath()?'':' (none yet)'); }
+sbAfter('wxPanel', function(r){ try{ var s=document.getElementById('sbWxSec'); if(!s||document.getElementById('wsRow')) return r; var b=s.querySelector('.body'); if(!b) return r; var C=wsCfg();
+    var d=document.createElement('div'); d.id='wsRow';
+    var opt=function(o){ return Object.keys(o).map(function(k){ return '<option value="'+k+'">'+o[k]+'</option>'; }).join(''); }, stories={}; Object.keys(WS_STORIES).forEach(function(k){ stories[k]=WS_STORIES[k].name; });
+    d.innerHTML='<div class="wxH">Weather film</div><div id="wsOpts">'+
+      '<div class="row" title="What happens to the weather during the film"><label>Story</label><select id="wsStory" style="flex:1">'+opt(stories)+'</select></div>'+
+      '<div class="row" title="How long the film runs"><label>Length</label><input type="number" id="wsLen" min="4" max="120" step="1" style="width:64px;flex:0 0 64px"><span class="mini" id="wsLenN">seconds</span></div>'+
+      '<div class="row" title="Time of day the film starts at"><label>From</label><input type="range" id="wsT0" min="0" max="24" step="0.25"><span class="mini" id="wsT0V"></span></div>'+
+      '<div class="row" title="Time of day the film ends at"><label>To</label><input type="range" id="wsT1" min="0" max="24" step="0.25"><span class="mini" id="wsT1V"></span></div>'+
+      '<div class="row" title="How the camera moves, starting from where you are looking now"><label>Camera</label><select id="wsCam" style="flex:1">'+opt({push:'Slow push in', pull:'Slow pull out', orbit:'Orbit round', still:'Still', path:'Your walk-through path'})+'</select></div>'+
+      '<div class="row" title="How heavy the rain, snow, fog and wind get"><label>Amount</label><input type="range" id="wsStr" min="0.2" max="1" step="0.05"><span class="mini" id="wsStrV"></span></div>'+
+      '<div class="row"><label>Extras</label><label style="flex:1;display:flex;gap:4px;align-items:center" title="Puddles fill from the lowest spots"><input type="checkbox" id="wsPud">Puddles</label><label style="flex:1;display:flex;gap:4px;align-items:center" title="A street lamp comes on when it gets dark (only when you have no lights of your own)"><input type="checkbox" id="wsLamp">Lamp at dusk</label></div>'+
+      '</div><div class="wxGrid" style="margin-top:6px"><button id="wsPlay">▶ Play</button><button id="wsVid">Make video</button></div><div class="wxH">Weather now</div>';
+    var grid=b.querySelector('.wxGrid'); if(grid&&grid.nextSibling) b.insertBefore(d, grid.nextSibling); else b.appendChild(d);
+    var g=function(id){ return d.querySelector('#'+id); }, ch=function(){ wsSave(); wsSync(); };
+    g('wsStory').onchange=function(){ var St=WS_STORIES[this.value]; C.story=this.value; C.t0=St.t[0]; C.t1=St.t[1]; C.pud=St.pud; ch(); };
+    g('wsLen').onchange=function(){ var v=parseFloat(this.value); if(isFinite(v)) C.T=Math.max(4, Math.min(120, Math.round(v))); ch(); };
+    g('wsLen').addEventListener('keydown', function(e){ e.stopPropagation(); });
+    g('wsT0').oninput=function(){ C.t0=+this.value; ch(); }; g('wsT1').oninput=function(){ C.t1=+this.value; ch(); };
+    g('wsCam').onchange=function(){ C.cam=this.value; if(C.cam==='path'&&!wsHasPath()) toast('Make a walk-through path first (Walk-through video), or the camera will push in instead.', 5000); ch(); };
+    g('wsStr').oninput=function(){ C.str=+this.value; ch(); };
+    g('wsPud').onchange=function(){ C.pud=this.checked; ch(); }; g('wsLamp').onchange=function(){ C.lamps=this.checked; ch(); };
+    g('wsPlay').onclick=wsPlay; g('wsVid').onclick=wsVideo; wsSync(); wsUI(); }catch(e){ console.warn(e); } return r; });
 
 /* ===== Timelapse framing (r350): the slow camera move points at what changed between the scans (a new extension, a dug trench,
    a pile of materials), worked out from the height of every half-metre square in each scan. Untick "Frame what changed" in the
