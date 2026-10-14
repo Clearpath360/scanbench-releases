@@ -1,4 +1,5 @@
-# Scan Bench r371
+# Scan Bench r372
 
-- Levels: See in 3D lays the levels map over the scan (height, flatness, falls and ponding) with the outline, lowest and highest spots, ponding numbers and fall lines.
-- Levels: Start again clears the area, fall lines and gullies (Ctrl+Z puts them back).
+- Levels: Heights of Ground now reads the floor or ground under ceilings, canopies and trees, and uses only the scan between the clip heights.
+- Levels in 3D: the outline follows the surface (no more spikes).
+- Screenshot and smooth video now include the Levels, Site checks and Sections 3D overlays.

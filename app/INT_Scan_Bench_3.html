@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r371';
+var SB_BUILD='2026-10-14 r372';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -14623,7 +14623,7 @@ function sbCopyView(){
   var c=document.createElement('canvas'); c.width=W; c.height=H+cap; var x=c.getContext('2d'); x.fillStyle='#0c0f13'; x.fillRect(0,0,W,H+cap);
   function put(cv){ if(!cv||!cv.width||getComputedStyle(cv).display==='none') return; var q=cv.getBoundingClientRect(); if(!q.width) return; x.drawImage(cv, (q.left-r.left)*dpr, (q.top-r.top)*dpr, q.width*dpr, q.height*dpr); }
   if(CEI.view==='3d'&&APP.view==='3d'){ gl_render(); put(glCv); } else if(CEI.view==='plan') put(planCv); else put($('#ceilCv'));
-  put($('#clnOv')); put($('#mdlOv')); var mb=$('#ceMiniBox'); if(mb&&mb.style.display!=='none') put($('#ceMini'));
+  put($('#clnOv')); put($('#mdlOv')); ['secOv','chkOv','lvOv'].forEach(function(id){ put(document.getElementById(id)); }); var mb=$('#ceMiniBox'); if(mb&&mb.style.display!=='none') put($('#ceMini'));
   // where the mouse pointer is (F8 keeps it in place): a red ring and cross
   var mp=window.SB_PTR; if(mp&&mp.x>=r.left&&mp.x<=r.right&&mp.y>=r.top&&mp.y<=r.bottom){ var px2=(mp.x-r.left)*dpr, py2=(mp.y-r.top)*dpr; x.save(); x.strokeStyle='#ff2d55'; x.lineWidth=2*dpr; x.beginPath(); x.arc(px2,py2,9*dpr,0,Math.PI*2); x.moveTo(px2-16*dpr,py2); x.lineTo(px2-4*dpr,py2); x.moveTo(px2+4*dpr,py2); x.lineTo(px2+16*dpr,py2); x.moveTo(px2,py2-16*dpr); x.lineTo(px2,py2-4*dpr); x.moveTo(px2,py2+4*dpr); x.lineTo(px2,py2+16*dpr); x.stroke();
     x.fillStyle='#ff2d55'; x.font='bold '+(11*dpr)+'px system-ui,sans-serif'; x.fillText('pointer', px2+12*dpr, py2-12*dpr); x.restore(); }
@@ -23879,7 +23879,7 @@ function secHtml(){ if(!APP.res||!SEC.data){ toast('Open Sections on a scan firs
 var LEV={drawing:false, draft:[], hov:null, out:null, key:'', tool:null, dn:null, drag:null, hovV:null, prof:null};
 function levM(){ var M=APP.model; if(!M) return null; if(!M.lev) M.lev={area:null, gullies:[], lines:[], mode:'height', cell:0, ground:true, step:0, spot:2, flatR:1.5, flatMm:5, arrows:true}; var V=M.lev; V.gullies=V.gullies||[]; V.lines=V.lines||[]; return V; }
 function levOpen(){ return typeof SBP!=='undefined'&&SBP.key==='levels'&&APP.res; }
-function levKey(){ var V=levM(); return V?JSON.stringify([V.area, V.gullies, V.cell, V.ground, V.flatR, APP.res&&APP.res.n]):''; }
+function levKey(){ var V=levM(); return V?JSON.stringify([V.area, V.gullies, V.cell, V.ground, V.flatR, APP.res&&APP.res.n, APP.zLoOn&&CEI.zlo, APP.zCutOn&&CEI.zhi]):''; }
 
 /* ---------- the grid of levels over the area ---------- */
 function levBox(Z, g, R){ var nx=g.nx, ny=g.ny, W2=nx+1, SV=new Float64Array((nx+1)*(ny+1)), SC=new Float64Array((nx+1)*(ny+1)), F=new Float32Array(Z.length);
@@ -23891,11 +23891,13 @@ function levRun(){ var V=levM(); LEV.key=levKey(); LEV.out=null; if(!V||!V.area|
   var m=1.5, g={x0:x0-m, y0:y0-m, cell:cell, nx:Math.ceil((x1-x0+2*m)/cell), ny:Math.ceil((y1-y0+2*m)/cell)};
   /* r370: 'ground only' is judged inside the area drawn, not against what is round it, so a raised flat roof or deck is not taken for
      an object standing on the courtyard below; and if most of the area would still go, the area itself is the surface and nothing is taken out */
-  var Z0=volSurface({P:P, n:n, opa:R.opa, del:R.del}, g, false), N=g.nx*g.ny, M=new Uint8Array(N), Z=new Float32Array(N).fill(NaN), w=[]; g.gone=null; LEV.raised=false;
+  /* r372: the points inside the top and bottom clip only (the slider on the right), so a ceiling, a canopy or trees can be cut away */
+  var cl0=APP.zLoOn&&CEI.zlo!=null?CEI.zlo:-1e9, cl1=APP.zCutOn&&CEI.zhi!=null?CEI.zhi:1e9, DL=R.del; if(cl0>-1e8||cl1<1e8){ DL=new Uint8Array(n); for(var ii=0;ii<n;ii++){ var zz=P[ii*3+2]; if((R.del&&R.del[ii])||zz<cl0||zz>cl1) DL[ii]=1; } }
+  var Z0=volSurface({P:P, n:n, opa:R.opa, del:DL}, g, false), N=g.nx*g.ny, M=new Uint8Array(N), Z=new Float32Array(N).fill(NaN), w=[]; g.gone=null; LEV.raised=false;
   var IN=new Uint8Array(N); for(var iy=0;iy<g.ny;iy++) for(var ix=0;ix<g.nx;ix++) if(pointInPoly(g.x0+(ix+0.5)*cell, g.y0+(iy+0.5)*cell, poly)) IN[iy*g.nx+ix]=1;
-  if(V.ground){ var Zm=new Float32Array(N).fill(NaN), nin=0; for(var q0=0;q0<N;q0++) if(IN[q0]){ Zm[q0]=Z0[q0]; nin++; } var gone=volGroundOnly(Zm, g), ng=0; if(gone) for(q0=0;q0<N;q0++) if(IN[q0]&&gone[q0]) ng++;
-    if(gone&&ng>nin*0.5){ gone=null; LEV.raised=true; } if(gone){ for(q0=0;q0<N;q0++) if(gone[q0]) Z0[q0]=NaN; g.gone=gone; } }
-  /* inside the area only, with a 3 x 3 median to take out splat speckle */
+  /* 'Ground': the low surface in each square (the floor under a ceiling, the ground under a canopy), then things standing on it taken out,
+     judged inside the area drawn only, so a raised flat roof is not taken for an object on the courtyard below */
+  if(V.ground){ var lowZ=levLowSurface(P, n, R.opa, DL, g, IN); for(var q0=0;q0<N;q0++) Z0[q0]=IN[q0]?lowZ[q0]:NaN; var Zm=Z0.slice(), gone=volGroundOnly(Zm, g); if(gone){ for(q0=0;q0<N;q0++) if(gone[q0]) Z0[q0]=NaN; g.gone=gone; } }
   for(var cy=0;cy<g.ny;cy++) for(var cx=0;cx<g.nx;cx++){ var q=cy*g.nx+cx; if(!IN[q]) continue; M[q]=1; if(!(Z0[q]===Z0[q])) continue; w.length=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var X=cx+dx, Y=cy+dy; if(X<0||Y<0||X>=g.nx||Y>=g.ny) continue; var v=Z0[Y*g.nx+X]; if(v===v) w.push(v); } w.sort(function(a,b){ return a-b; }); Z[q]=w[w.length>>1]; }
   /* fill small gaps (up to about 3 cells) from their neighbours so the map has no speckle */ for(var it=0;it<3;it++){ var Zn=Z.slice(); for(var cy2=1;cy2<g.ny-1;cy2++) for(var cx2=1;cx2<g.nx-1;cx2++){ var q2=cy2*g.nx+cx2; if(!M[q2]||Z[q2]===Z[q2]||(g.gone&&g.gone[q2])) continue; var sm=0, k2=0; for(var dy2=-1;dy2<=1;dy2++) for(var dx2=-1;dx2<=1;dx2++){ var v2=Z[q2+dy2*g.nx+dx2]; if(v2===v2){ sm+=v2; k2++; } } if(k2>=3) Zn[q2]=sm/k2; } Z=Zn; }
   var vals=[]; for(q=0;q<N;q++) if(Z[q]===Z[q]) vals.push(Z[q]); if(!vals.length){ LEV.err='No scan points inside the area.'; return null; } vals.sort(function(a,b){ return a-b; });
@@ -23907,6 +23909,11 @@ function levRun(){ var V=levM(); LEV.key=levKey(); LEV.out=null; if(!V||!V.area|
   var gap=levStraightedge(Z, g, 3.0), cls=gap.max<=0.003?'SR1':gap.max<=0.005?'SR2':gap.max<=0.010?'SR3':'outside SR3';
   var goneA=0; if(g.gone){ for(q=0;q<N;q++) if(M[q]&&g.gone[q]) goneA+=cell*cell; } LEV.out={goneA:goneA, g:g, Z:Z, M:M, F:F, Sm:Sm, Fill:Fill, ponds:ponds, zl:zl, zh:zh, lo:lo, hi:hi, loI:loI, hiI:hiI, area:vals.length*cell*cell, gap:gap, cls:cls, ms:Math.round(performance.now()-t0), img:{}, cont:{}};
   return LEV.out; }
+/* the low surface in each square: low in the points of that column (a few stray points under the floor are skipped) */
+function levLowSurface(P, n, O, DL, g, IN){ var nx=g.nx, ny=g.ny, N=nx*ny, st=new Uint32Array(N+1), cid=new Int32Array(n), c=g.cell, i, q;
+  for(i=0;i<n;i++){ cid[i]=-1; var z=P[i*3+2]; if(!(z>-9000)||(DL&&DL[i])||(O&&O[i]<60)) continue; var cx=Math.floor((P[i*3]-g.x0)/c), cy=Math.floor((P[i*3+1]-g.y0)/c); if(cx<0||cy<0||cx>=nx||cy>=ny) continue; q=cy*nx+cx; if(!IN[q]) continue; cid[i]=q; st[q+1]++; }
+  for(q=0;q<N;q++) st[q+1]+=st[q]; var zs=new Float32Array(st[N]), fill=st.slice(0,N); for(i=0;i<n;i++){ q=cid[i]; if(q>=0) zs[fill[q]++]=P[i*3+2]; }
+  var Z=new Float32Array(N).fill(NaN); for(q=0;q<N;q++){ var a=st[q], m=st[q+1]-a; if(m<2) continue; var sub=zs.subarray(a,a+m); sub.sort(); Z[q]=sub[Math.min(m-1, Math.floor(m*0.08))]; } volFillHoles(Z, g, 0.5); for(q=0;q<N;q++) if(!IN[q]) Z[q]=NaN; return Z; }
 function levRunSoon(){ if(LEV._t) return; LEV._t=setTimeout(function(){ LEV._t=0; LEV.err=''; try{ levRun(); }catch(e){ console.warn(e); LEV.err='Could not work out the levels: '+e.message; } levPanel(); planDrawSoon(); }, 30); }
 /* priority flood (Barnes et al.): water leaves at the edge of the area and down any gully */
 function levFlood(Z, M, g, gullies){ var nx=g.nx, ny=g.ny, N=nx*ny, F=new Float32Array(N).fill(NaN), done=new Uint8Array(N), H=[], push=function(q, z){ H.push([z,q]); var i=H.length-1; while(i>0){ var p=(i-1)>>1; if(H[p][0]<=H[i][0]) break; var t=H[p]; H[p]=H[i]; H[i]=t; i=p; } }, pop=function(){ var top=H[0], last=H.pop(); if(H.length){ H[0]=last; var i=0; for(;;){ var l=2*i+1, r=l+1, s=i; if(l<H.length&&H[l][0]<H[s][0]) s=l; if(r<H.length&&H[r][0]<H[s][0]) s=r; if(s===i) break; var t=H[s]; H[s]=H[i]; H[i]=t; i=s; } } return top; };
@@ -24051,7 +24058,7 @@ function levPanel(){ var s=levSec(); if(!s) return; var b=s.querySelector('.body
   else h+='<div class="lRow"><button id="lvFall" class="lBtn'+(LEV.tool==='fall'?' on':'')+'" title="Click two points to read the fall between them">'+(LEV.tool==='fall'?(LEV.p1?'Click the second point':'Click the first point'):'Measure a fall')+'</button><button id="lvGully" class="lBtn'+(LEV.tool==='gully'?' on':'')+'" title="Mark a gully or drain: water there runs away instead of ponding">'+(LEV.tool==='gully'?'Click the gully':'+ Gully')+'</button></div>'+
     '<div class="lRow"><button id="lvRedraw" class="lBtn">Redraw area</button><button id="lvClear" class="lBtn">Clear lines</button></div><p class="mini">Drag a corner to move it. Hover the plan for the level, fall and water depth.</p>';
   if(LEV.err) h+='<p class="mini" style="color:#b45309">'+LEV.err+'</p>';
-  if(LEV.raised&&V.ground&&LEV.out) h+='<p class="mini" style="color:#2563eb">Most of this area stands above its surroundings (a flat roof or a deck), so it is all kept as the surface.</p>';
+  if(LEV.out&&(APP.zCutOn||APP.zLoOn)) h+='<p class="mini" style="color:#2563eb">Using only the scan between the clip heights (the slider on the right).</p>';
   if(O&&V.area){ h+='<div class="lH">Results</div><div class="lRes"><div><span>Highest</span><b>'+levN(O.hi)+'</b></div><div><span>Lowest</span><b>'+levN(O.lo)+'</b></div><div><span>3 m straightedge</span><b>'+Math.round(O.gap.max*1000)+' mm · '+O.cls+'</b></div><div><span>Ponding spots</span><b>'+O.ponds.length+(O.ponds[0]?' · up to '+Math.round(Math.max.apply(null, O.ponds.map(function(p){ return p.depth; }))*1000)+' mm':'')+'</b></div>'+(O.goneA>0.05?'<div><span>No data (cars, objects)</span><b>'+fmt(O.goneA,1)+' m² left out</b></div>':'')+'</div>';
     V.lines.forEach(function(Ln,i){ var f=levFall(Ln); h+='<p class="mini"><b style="color:#2563eb">Line '+(i+1)+'</b> '+(f?f.txt:'off the area')+'</p>'; }); if(V.mode==='flat') h+='<p class="mini">Class is from the 3 m straightedge rule (SR1 3 mm, SR2 5 mm, SR3 10 mm, as given in BS 8204; check the standard that applies). Scanner noise of a few mm shows here too.</p>'; }
   h+='<div class="lH">Settings</div>';
@@ -24703,7 +24710,7 @@ function srCompose(x, W, H){ var st=document.getElementById('stage'), r=st.getBo
   x.setTransform(1,0,0,1,0,0); x.fillStyle='#0c0f13'; x.fillRect(0,0,W,H); x.setTransform(k,0,0,k,0,0);
   function put(cv){ if(!cv||!cv.width||getComputedStyle(cv).display==='none') return; var q=cv.getBoundingClientRect(); if(!q.width) return; try{ x.drawImage(cv, (q.left-r.left)*dpr, (q.top-r.top)*dpr, q.width*dpr, q.height*dpr); }catch(e){} }
   if(CEI.view==='3d'&&APP.view==='3d') put(glCv); else if(CEI.view==='plan') put(planCv); else put(document.getElementById('ceilCv'));
-  put(document.getElementById('clnOv')); put(document.getElementById('mdlOv')); var mb=document.getElementById('ceMiniBox'); if(mb&&mb.style.display!=='none') put(document.getElementById('ceMini')); x.setTransform(1,0,0,1,0,0); }
+  put(document.getElementById('clnOv')); put(document.getElementById('mdlOv')); ['secOv','chkOv','lvOv'].forEach(function(id){ put(document.getElementById(id)); }); var mb=document.getElementById('ceMiniBox'); if(mb&&mb.style.display!=='none') put(document.getElementById('ceMini')); x.setTransform(1,0,0,1,0,0); }
 /* straight after each 3D draw, while the picture is still there */
 sbAfter('gl_render', function(r){ try{ if(SREC&&!SREC.done&&CEI.view==='3d'&&APP.view==='3d'){ var now=performance.now(); if(now-SREC.last>=30){ SREC.last=now; srCompose(SREC.x, SREC.cv.width, SREC.cv.height); SREC.n++; } } }catch(e){} return r; });
 function srStart(){ if(!APP.res){ toast('Load a scan first.'); return; } if(SREC||window.SB_REC){ toast('Already recording.', 2000); return; } if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){ toast('This browser cannot record video. Use Chrome or Edge.', 5000); return; }
@@ -25552,13 +25559,13 @@ function lv3Draw(){ var st0=document.getElementById('stage'); if(!st0) return; v
   var dpr=window.devicePixelRatio||1, W=Math.round(st0.clientWidth*dpr), H=Math.round(st0.clientHeight*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=st0.clientWidth+'px'; cv.style.height=st0.clientHeight+'px'; } var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!on) return;
   var O=LEV.out, V=levM(), g=O.g, sr=st0.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), S=function(p){ var s=projectWorld(p); return s?[(s[0]+gr.left-sr.left)*dpr, (s[1]+gr.top-sr.top)*dpr]:null; }, G=lv3Groups(); if(!G) return; var stp=LEV._g3.st, h=stp*g.cell/2, n=0;
   c.globalAlpha=V.mode==='falls'?0.7:0.6; Object.keys(G).forEach(function(k){ var grp=G[k]; c.fillStyle=grp.c; c.beginPath(); grp.q.forEach(function(q){ if(n>60000) return; var x=g.x0+((q%g.nx)+0.5)*g.cell, y=g.y0+(Math.floor(q/g.nx)+0.5)*g.cell, z=(V.mode==='falls'&&O.Fill[q]-O.Z[q]>0.003?O.Fill[q]:O.Z[q])+0.02, A=S([x-h,y-h,z]), B=S([x+h,y-h,z]), C=S([x+h,y+h,z]), D=S([x-h,y+h,z]); if(!A||!B||!C||!D) return; c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.lineTo(C[0],C[1]); c.lineTo(D[0],D[1]); c.closePath(); n++; }); c.fill(); }); c.globalAlpha=1;
-  /* the outline at the surface */ var zAt=function(x,y){ var v=levAt(O.Z,x,y); return v===v?v:(O.lo+O.hi)/2; }; c.strokeStyle='#111827'; c.lineWidth=3*dpr; var P=[]; V.area.forEach(function(a,i){ var b=V.area[(i+1)%V.area.length]; for(var t=0;t<1;t+=0.1){ var x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t; P.push(S([x,y,zAt(x,y)+0.03])); } });
-  c.beginPath(); var on2=false; P.forEach(function(s){ if(!s){ on2=false; return; } if(on2) c.lineTo(s[0],s[1]); else { c.moveTo(s[0],s[1]); on2=true; } }); c.closePath(); c.stroke(); c.strokeStyle='#fde047'; c.lineWidth=1.5*dpr; c.setLineDash([6*dpr,5*dpr]); c.stroke(); c.setLineDash([]);
+  /* the outline at the surface */ var zAt=function(x,y){ for(var r=0;r<=6;r++){ for(var a=0;a<8;a++){ var v=levAt(O.Z, x+Math.cos(a*Math.PI/4)*r*g.cell, y+Math.sin(a*Math.PI/4)*r*g.cell); if(v===v) return v; if(!r) break; } } return null; }; c.strokeStyle='#111827'; c.lineWidth=3*dpr; var P=[]; V.area.forEach(function(a,i){ var b=V.area[(i+1)%V.area.length]; for(var t=0;t<1;t+=0.05){ var x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t, zq=zAt(x,y); P.push(zq==null?null:S([x,y,zq+0.03])); } });
+  c.beginPath(); var on2=false; P.forEach(function(s){ if(!s){ on2=false; return; } if(on2) c.lineTo(s[0],s[1]); else { c.moveTo(s[0],s[1]); on2=true; } }); if(P.every(Boolean)) c.closePath(); c.stroke(); c.strokeStyle='#fde047'; c.lineWidth=1.5*dpr; c.setLineDash([6*dpr,5*dpr]); c.stroke(); c.setLineDash([]);
   LEV._bx=[]; var lab=function(x,y,z,t,bg){ var s=S([x,y,z]); if(!s) return; c.fillStyle=bg||'#111827'; c.beginPath(); c.arc(s[0],s[1],4*dpr,0,7); c.fill(); levLabel(c, s[0], s[1]-8*dpr, t, dpr, bg, true); };
   if(V.mode==='falls') O.ponds.slice(0,20).forEach(function(P2,i){ lab(P2.x, P2.y, levAt(O.Fill,P2.x,P2.y)+0.03, (i+1)+': '+Math.round(P2.depth*1000)+' mm · '+Math.round(P2.litres)+' L', '#d9541c'); });
-  if(V.mode==='flat'&&O.gap.max>0) lab(O.gap.x, O.gap.y, zAt(O.gap.x,O.gap.y)+0.03, Math.round(O.gap.max*1000)+' mm under 3 m', '#7c3aed');
+  if(V.mode==='flat'&&O.gap.max>0) lab(O.gap.x, O.gap.y, (zAt(O.gap.x,O.gap.y)||O.lo)+0.03, Math.round(O.gap.max*1000)+' mm under 3 m', '#7c3aed');
   [[O.loI,'lowest'],[O.hiI,'highest']].forEach(function(e){ if(e[0]<0) return; var x=g.x0+((e[0]%g.nx)+0.5)*g.cell, y=g.y0+(Math.floor(e[0]/g.nx)+0.5)*g.cell; lab(x, y, O.Z[e[0]]+0.03, e[1]+' '+levN(O.Z[e[0]])); });
-  V.lines.forEach(function(Ln,i){ var a=S([Ln[0][0],Ln[0][1],zAt(Ln[0][0],Ln[0][1])+0.05]), b=S([Ln[1][0],Ln[1][1],zAt(Ln[1][0],Ln[1][1])+0.05]); if(!a||!b) return; c.strokeStyle='#2563eb'; c.lineWidth=3*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); var f=levFall(Ln); if(f) levLabel(c, (a[0]+b[0])/2, (a[1]+b[1])/2-8*dpr, (i+1)+': '+f.txt, dpr, '#2563eb'); }); }
+  V.lines.forEach(function(Ln,i){ var za=zAt(Ln[0][0],Ln[0][1]), zb=zAt(Ln[1][0],Ln[1][1]); if(za==null||zb==null) return; var a=S([Ln[0][0],Ln[0][1],za+0.05]), b=S([Ln[1][0],Ln[1][1],zb+0.05]); if(!a||!b) return; c.strokeStyle='#2563eb'; c.lineWidth=3*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); var f=levFall(Ln); if(f) levLabel(c, (a[0]+b[0])/2, (a[1]+b[1])/2-8*dpr, (i+1)+': '+f.txt, dpr, '#2563eb'); }); }
 sbAfter('gl_render', function(r){ try{ lv3Draw(); }catch(e){ console.warn(e); } return r; });
 sbAfter('sbPanel', function(r){ try{ lv3Draw(); }catch(e){} return r; });
 sbAfter('levPanel', function(r){ try{ var s=document.getElementById('sbLevSec'), b=s&&s.querySelector('.body'), V=levM(); if(!b||!V||!V.area||b.querySelector('#lvAgain')) return r;
