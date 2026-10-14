@@ -1,4 +1,3 @@
-# Scan Bench r368
+# Scan Bench r369
 
-- Site checks > Roof: heights (eaves and ridge of each slope above the ground, Pick ground, + Height point for chimneys), + Pin a defect (type, severity, note, close-up photo), report details, Roof report PDF (cover, plan, slopes and heights, defect schedule with photos, elevations, materials).
-- Site checks > Views: Make elevations (true-scale face-on pictures of each side with ground, eaves and ridge lines and a scale bar, Elevations PDF) and View from a height (pick a spot, eye height or floor, look round, Save picture).
+- View from a height: move while looking. Double-click a spot to go there, arrows or W A S D to walk (Shift for 5 m), Q and E or the Floor buttons to go down and up a floor.
