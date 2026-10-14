@@ -1,2 +1,0 @@
-- Level tool renamed Straighten (rail and panel).
-- Levels tool renamed Floor levels (rail, panel, PDF and interactive page).
