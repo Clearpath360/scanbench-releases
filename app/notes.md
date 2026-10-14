@@ -1,5 +1,5 @@
-# Scan Bench r351
+# Scan Bench r352
 
-- Timelapse: new Wave change in the gear menu; the next scan sweeps across the site from the middle of what changed.
-- Timelapse: Only what changed tick in the gear menu; unchanged parts stay still, only changed parts move to the next scan.
-- Compare: Save aligned button at the top saves each aligned capture as a PLY with the line-up baked in.
+- Section PDF: new page 2 shows the ground heights of the whole site, with the section line and the chosen length marked.
+- Section PDF: the key plan is now a top-down picture of the whole scene, with the line, the A ends and the start/end of the length.
+- Section PDF: changing the length always refreshes the height map and 3D pages, even from the Slice tab.
