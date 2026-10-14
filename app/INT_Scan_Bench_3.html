@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r363';
+var SB_BUILD='2026-10-14 r364';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24891,17 +24891,17 @@ function chkFacet(x, y){ var V=chkM(), D=chkDsm(), g=D.g, N=g.nx*g.ny, cx=Math.f
   if(cells&&cells.length>=6){ var inn2=new Uint8Array(N), add=[]; cells.forEach(function(q){ inn2[q]=1; }); cells.forEach(function(c){ var xx=c%g.nx; for(var k=0;k<4;k++){ var nq=k===0?c-1:k===1?c+1:k===2?c-g.nx:c+g.nx; if(nq<0||nq>=N||inn2[nq]) continue; if((k===0&&xx===0)||(k===1&&xx===g.nx-1)) continue; var z=D.Z[nq]; if(z===z&&Math.abs(z-chkPz(D,P,nq))<=tol){ inn2[nq]=1; add.push(nq); } } }); cells=cells.concat(add); }
   if(!cells||cells.length<6) return null; var zmin=Infinity, zmax=-Infinity; cells.forEach(function(q){ var z=chkPz(D,P,q); if(z<zmin) zmin=z; if(z>zmax) zmax=z; });
   var sl=Math.hypot(P.a,P.b), pitch=Math.atan(sl)*180/Math.PI, plan=cells.length*g.cell*g.cell, dir=sl>1e-6?[-P.a/sl, -P.b/sl]:[0,0], cxm=0, cym=0; cells.forEach(function(q){ cxm+=g.x0+(q%g.nx+0.5)*g.cell; cym+=g.y0+(Math.floor(q/g.nx)+0.5)*g.cell; });
-  return {x:+x.toFixed(3), y:+y.toFixed(3), pitch:pitch, plan:plan, area:plan*Math.sqrt(1+sl*sl), dir:dir, zmin:zmin, zmax:zmax, cx:cxm/cells.length, cy:cym/cells.length, n:cells.length, cells:Int32Array.from(cells), slope:sl}; }
+  return {x:+x.toFixed(3), y:+y.toFixed(3), pitch:pitch, plan:plan, area:plan*Math.sqrt(1+sl*sl), dir:dir, zmin:zmin, zmax:zmax, cx:cxm/cells.length, cy:cym/cells.length, n:cells.length, cells:Int32Array.from(cells), slope:sl, P:P}; }
 function chkPitchTxt(f){ return f.pitch<3?'flat, falls 1 in '+(f.slope>1e-4?Math.round(1/f.slope):'∞')+' ('+f.pitch.toFixed(1)+'°)':f.pitch.toFixed(1)+'°'; }
-function chkRoofMask(i){ var V=chkM(), f=V.roofs[i]; if(!f) return null; if(CHK.Rm[i]&&CHK.Rm[i].k===JSON.stringify([f.x,f.y,V.rtol])) return CHK.Rm[i].cells; var r=chkFacet(f.x, f.y); CHK.Rm[i]={k:JSON.stringify([f.x,f.y,V.rtol]), cells:r?r.cells:new Int32Array(0)}; return CHK.Rm[i].cells; }
+function chkRoofMask(i){ var V=chkM(), f=V.roofs[i]; if(!f) return null; if(CHK.Rm[i]&&CHK.Rm[i].k===JSON.stringify([f.x,f.y,V.rtol])) return CHK.Rm[i].cells; var r=chkFacet(f.x, f.y); CHK.Rm[i]={k:JSON.stringify([f.x,f.y,V.rtol]), cells:r?r.cells:new Int32Array(0), P:r?r.P:null}; return CHK.Rm[i].cells; }
 function chkRoofImg(){ var V=chkM(); if(!V.roofs.length) return null; var D=chkDsm(), g=D.g, key=JSON.stringify([V.roofs.map(function(f){ return [f.x,f.y]; }), V.rtol, CHK.Dk]); if(CHK.Rimg&&CHK.RimgK===key) return CHK.Rimg;
   var cv=document.createElement('canvas'); cv.width=g.nx; cv.height=g.ny; var x=cv.getContext('2d'), im=x.createImageData(g.nx, g.ny), d=im.data;
   V.roofs.forEach(function(f, i){ var cells=chkRoofMask(i), c=CHK_CAMCOL[i%CHK_CAMCOL.length], rgb=[parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)]; for(var k=0;k<cells.length;k++){ var q=cells[k], o=((g.ny-1-Math.floor(q/g.nx))*g.nx+(q%g.nx))*4; d[o]=rgb[0]; d[o+1]=rgb[1]; d[o+2]=rgb[2]; d[o+3]=120; } });
   x.putImageData(im,0,0); CHK.Rimg=cv; CHK.RimgK=key; return cv; }
 function chkRoofAdd(x, y){ var V=chkM(), t0=performance.now(), f=chkFacet(x, y); if(!f){ toast('No roof plane found there. Click on a roof.', 3000); return; } pushUndo(); var keep={x:f.x, y:f.y, pitch:f.pitch, plan:f.plan, area:f.area, dir:f.dir, zmin:f.zmin, zmax:f.zmax, cx:f.cx, cy:f.cy, slope:f.slope, name:'Roof '+(V.roofs.length+1)};
-  V.roofs.push(keep); CHK.Rm[V.roofs.length-1]={k:JSON.stringify([f.x,f.y,V.rtol]), cells:f.cells}; CHK.Rimg=null; afterEdit(); chkPanel(); planDrawSoon(); toast(keep.name+': '+chkPitchTxt(f)+', '+fmt(f.area,1)+' m² ('+Math.round(performance.now()-t0)+' ms).', 4000); }
+  V.roofs.push(keep); CHK.Rm[V.roofs.length-1]={k:JSON.stringify([f.x,f.y,V.rtol]), cells:f.cells, P:f.P}; CHK.Rimg=null; afterEdit(); chkPanel(); planDrawSoon(); if(APP.view==='3d') requestRender(false); toast(keep.name+': '+chkPitchTxt(f)+', '+fmt(f.area,1)+' m² ('+Math.round(performance.now()-t0)+' ms).', 4000); }
 /* the facets are re-read if the tolerance changes */
-function chkRoofRefresh(){ var V=chkM(); CHK.Rm=[]; CHK.Rimg=null; V.roofs.forEach(function(f, i){ var r=chkFacet(f.x, f.y); if(r){ ['pitch','plan','area','dir','zmin','zmax','cx','cy','slope'].forEach(function(k){ f[k]=r[k]; }); CHK.Rm[i]={k:JSON.stringify([f.x,f.y,V.rtol]), cells:r.cells}; } }); }
+function chkRoofRefresh(){ var V=chkM(); CHK.Rm=[]; CHK.Rimg=null; V.roofs.forEach(function(f, i){ var r=chkFacet(f.x, f.y); if(r){ ['pitch','plan','area','dir','zmin','zmax','cx','cy','slope'].forEach(function(k){ f[k]=r[k]; }); CHK.Rm[i]={k:JSON.stringify([f.x,f.y,V.rtol]), cells:r.cells, P:r.P}; } }); }
 
 /* ---------- plan drawing ---------- */
 function chkLabel(c, x, y, t, dpr, bg){ return levLabel(c, x, y, t, dpr, bg, true); }
@@ -25015,14 +25015,14 @@ function chkPanel(){ var s=chkSec(); if(!s) return; var b=s.querySelector('.body
   if(q('ckHC')) q('ckHC').onchange=function(){ set('hcell', +this.value, !!CHK.H); };
   if(q('ckCC')) q('ckCC').onchange=function(){ set('ccell', +this.value, true); }; if(q('ckT')) q('ckT').onchange=function(){ set('camT', +this.value, true); };
   if(q('ckRC')) q('ckRC').onchange=function(){ pushUndo(); V.rcell=+this.value; chkDsm(); chkRoofRefresh(); afterEdit(); chkPanel(); planDrawSoon(); };
-  if(q('ckTol')) q('ckTol').onchange=function(){ pushUndo(); V.rtol=+this.value; chkRoofRefresh(); afterEdit(); chkPanel(); planDrawSoon(); };
+  if(q('ckTol')) q('ckTol').onchange=function(){ pushUndo(); V.rtol=+this.value; chkRoofRefresh(); afterEdit(); chkPanel(); planDrawSoon(); requestRender(false); };
   if(q('ckCam')) q('ckCam').onclick=function(){ CHK.tool=CHK.tool==='cam'?null:'cam'; CHK.aim=-1; chkPanel(); requestRender(false); };
   if(q('ckLook')) q('ckLook').onclick=function(){ chkLook(CHK.sel); }; if(q('ckMove')) q('ckMove').onclick=function(){ CHK.tool=CHK.tool==='cmove'?null:'cmove'; chkPanel(); requestRender(false); }; if(q('ckAim')) q('ckAim').onclick=function(){ CHK.tool=CHK.tool==='caim'?null:'caim'; chkPanel(); requestRender(false); };
   if(q('ckRoof')) q('ckRoof').onclick=function(){ CHK.tool=CHK.tool==='roof'?null:'roof'; if(CHK.tool) setTimeout(function(){ try{ chkDsm(); }catch(e){ console.warn(e); } chkPanel(); planDrawSoon(); }, 10); chkPanel(); };
   if(q('ckLev')) q('ckLev').onclick=function(){ var L=levM(); L.mode='falls'; sbPanel('levels'); };
   b.querySelectorAll('[data-cam]').forEach(function(x){ x.onclick=function(){ CHK.sel=+x.dataset.cam; chkPanel(); planDrawSoon(); }; });
   b.querySelectorAll('[data-low]').forEach(function(x){ x.onclick=function(){ var lw=CHK.H.low[+x.dataset.low]; planView.cx=lw.x; planView.cy=lw.y; planDrawSoon(); }; });
-  b.querySelectorAll('[data-rdel]').forEach(function(x){ x.onclick=function(){ pushUndo(); var i=+x.dataset.rdel; V.roofs.splice(i,1); CHK.Rm.splice(i,1); CHK.Rimg=null; afterEdit(); chkPanel(); planDrawSoon(); }; });
+  b.querySelectorAll('[data-rdel]').forEach(function(x){ x.onclick=function(){ pushUndo(); var i=+x.dataset.rdel; V.roofs.splice(i,1); CHK.Rm.splice(i,1); CHK.Rimg=null; afterEdit(); chkPanel(); planDrawSoon(); requestRender(false); }; });
   var cs=V.cams[CHK.sel], cam=function(k, v){ pushUndo(); cs[k]=v; afterEdit(); chkRunSoon(); chkPanel(); planDrawSoon(); };
   if(cs){ b.querySelectorAll('.cCard input').forEach(function(x){ x.addEventListener('keydown', function(e){ e.stopPropagation(); }); });
     if(q('ckCn')) q('ckCn').onchange=function(){ cam('name', this.value.trim()||cs.name); }; if(q('ckFov')) q('ckFov').onchange=function(){ cam('fov', +this.value); }; if(q('ckRes')) q('ckRes').onchange=function(){ cam('res', +this.value); };
@@ -25053,10 +25053,11 @@ function chkCamBasis(c){ var y=c.yaw, t=(c.tilt||0)*Math.PI/180, f=[Math.cos(t)*
 function chkVf(c){ return 2*Math.atan(Math.tan(c.fov*Math.PI/360)*9/16); }
 
 /* ---------- the overlay in the 3D view ---------- */
-function chkOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('chkOv'), V=APP.res&&chkM(), on=!!(V&&chkOpen()&&V.tab==='cam'&&APP.view==='3d'&&!miniVP);
+function chkOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('chkOv'), V=APP.res&&chkM(), on=!!(V&&chkOpen()&&(V.tab==='cam'||(V.tab==='roof'&&V.roofs.length))&&APP.view==='3d'&&!miniVP);
   if(!cv){ if(!on) return; cv=document.createElement('canvas'); cv.id='chkOv'; cv.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:29'; st.appendChild(cv); }
   var dpr=window.devicePixelRatio||1, W=Math.round(st.clientWidth*dpr), H=Math.round(st.clientHeight*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=st.clientWidth+'px'; cv.style.height=st.clientHeight+'px'; }
   var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!on) return; var sr=st.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), S=function(p){ var q=projectWorld(p); return q?[(q[0]+gr.left-sr.left)*dpr, (q[1]+gr.top-sr.top)*dpr]:null; };
+  if(V.tab==='roof'){ chkOvRoof(c, S, dpr, W); return; }
   /* coverage on the ground, about every half metre, one path per detail band */
   var C=CHK.C&&CHK.Ck===chkCamKey()?CHK.C:null; if(C){ var g=C.g, st2=Math.max(1, Math.round(0.4/g.cell)), h=st2*g.cell/2, paths=[[],[],[],[],[]], count=0;
     for(var y=0;y<g.ny;y+=st2) for(var x=0;x<g.nx;x+=st2){ var q=y*g.nx+x, lv=C.best[q]; if(!lv) continue; var f=C.F[q]; if(!(f===f)) continue; var cx=g.x0+(x+0.5)*g.cell, cy=g.y0+(y+0.5)*g.cell, z=f+0.04, A=S([cx-h,cy-h,z]), B=S([cx+h,cy-h,z]), D=S([cx+h,cy+h,z]), E=S([cx-h,cy+h,z]); if(!A||!B||!D||!E) continue; paths[lv].push(A,B,D,E); if(++count>60000) break; }
@@ -25114,6 +25115,17 @@ window.addEventListener('wheel', function(e){ var L=CHK.look; if(!L||e.target!==
 window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&CHK.look){ e.preventDefault(); e.stopImmediatePropagation(); chkLookEnd(); } }, true);
 sbAfter('sbPanel', function(r){ try{ if(SBP.key!=='checks'&&CHK.look) chkLookEnd(); requestRender(false); }catch(e){} return r; });
 sbAfter('wsView', function(r){ try{ if(APP.view!=='3d'&&CHK.look) chkLookEnd(); }catch(e){} return r; });
+
+/* r364: roof planes in 3D, shaded on the roof in their colour, with the fall arrow and the pitch and area */
+function chkOvRoof(c, S, dpr, W){ var V=chkM(), D=chkDsm(), g=D.g, st=Math.max(1, Math.round(0.3/g.cell)), h=st*g.cell/2;
+  V.roofs.forEach(function(f, i){ var cells=chkRoofMask(i), PL=CHK.Rm[i]&&CHK.Rm[i].P, col=CHK_CAMCOL[i%CHK_CAMCOL.length], n=0; c.fillStyle=col; c.globalAlpha=0.45; c.beginPath();
+    for(var k=0;k<cells.length;k++){ var q=cells[k], x=q%g.nx, y=Math.floor(q/g.nx); if(x%st||y%st) continue; var z=D.Z[q]; if(!(z===z)) continue; var cx=g.x0+(x+0.5)*g.cell, cy=g.y0+(y+0.5)*g.cell, Z=function(X,Y){ return PL?PL.a*((X-g.x0)/g.cell-0.5-PL.cx0)*g.cell+PL.b*((Y-g.y0)/g.cell-0.5-PL.cy0)*g.cell+PL.c+0.03:z+0.03; }, A=S([cx-h,cy-h,Z(cx-h,cy-h)]), B=S([cx+h,cy-h,Z(cx+h,cy-h)]), E=S([cx+h,cy+h,Z(cx+h,cy+h)]), F=S([cx-h,cy+h,Z(cx-h,cy+h)]); if(!A||!B||!E||!F) continue; c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.lineTo(E[0],E[1]); c.lineTo(F[0],F[1]); c.closePath(); if(++n>40000) break; }
+    c.fill(); c.globalAlpha=1;
+    var zc=(f.zmin+f.zmax)/2+0.05, ce=S([f.cx, f.cy, zc]); if(!ce) return;
+    if(f.pitch>=1&&(f.dir[0]||f.dir[1])){ var L=Math.max(0.8, Math.min(3, Math.sqrt(f.plan)*0.3)), a=S([f.cx-f.dir[0]*L*0.4, f.cy-f.dir[1]*L*0.4, zc+f.slope*L*0.4]), b=S([f.cx+f.dir[0]*L, f.cy+f.dir[1]*L, zc-f.slope*L]);
+      if(a&&b){ var an=Math.atan2(b[1]-a[1], b[0]-a[0]); c.strokeStyle='#111827'; c.lineWidth=6*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.strokeStyle='#fff'; c.lineWidth=3*dpr; c.stroke(); c.fillStyle='#fff'; c.beginPath(); c.moveTo(b[0],b[1]); c.lineTo(b[0]-13*dpr*Math.cos(an-0.5), b[1]-13*dpr*Math.sin(an-0.5)); c.lineTo(b[0]-13*dpr*Math.cos(an+0.5), b[1]-13*dpr*Math.sin(an+0.5)); c.closePath(); c.fill(); c.strokeStyle='#111827'; c.lineWidth=1.5*dpr; c.stroke(); } }
+    c.font='700 '+(12*dpr)+'px system-ui'; var t=(i+1)+': '+(f.pitch<3?f.pitch.toFixed(1)+'° flat':f.pitch.toFixed(1)+'°')+' · '+fmt(f.area,1)+' m²', w=c.measureText(t).width+12*dpr; c.fillStyle=col; c.fillRect(ce[0]-w/2, ce[1]-34*dpr, w, 20*dpr); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(t, ce[0], ce[1]-20*dpr); c.textAlign='left'; });
+  if(CHK.tool==='roof'){ c.font='600 '+(13*dpr)+'px system-ui'; var msg='Click a roof plane to read it', mw=c.measureText(msg).width+24*dpr; c.fillStyle='rgba(17,24,39,.9)'; c.fillRect(W/2-mw/2, 14*dpr, mw, 30*dpr); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(msg, W/2, 34*dpr); c.textAlign='left'; } }
 
 /* ===== Quantities (r362): draw rooms, floors, garden areas and lines (fences, edging) on the plan; each gets its sizes from the scan
    (a room's height is read from the scan between floor and ceiling) and the materials it needs: paint, flooring, carpet, tiles,

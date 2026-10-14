@@ -1,4 +1,3 @@
-# Scan Bench r363
+# Scan Bench r364
 
-- Slice: now sets the top and bottom clip, so the height band shows in 3D, on the plan (Photo and Points) and in the sections; untick to get your old clip back.
-- Slice: the height readout updates as you move it.
+- Site checks > Roof pitch now shows in 3D: each roof plane shaded in its colour on the roof, with its fall arrow and pitch and area label.
