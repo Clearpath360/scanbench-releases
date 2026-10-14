@@ -1,3 +1,4 @@
-# Scan Bench r364
+# Scan Bench r365
 
-- Site checks > Roof pitch now shows in 3D: each roof plane shaded in its colour on the roof, with its fall arrow and pitch and area label.
+- Roof pitch: reads drone splat roofs far better (loose floater points ignored, grid sized to the scan, tolerance set by how rough the roof is).
+- Roof pitch: clicking a missed patch of a plane already read joins it to that plane.
