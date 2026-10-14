@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r357';
+var SB_BUILD='2026-10-14 r358';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24674,6 +24674,40 @@ document.addEventListener('keydown', function(e){ if(e.key==='F9'){ e.preventDef
    quick moving-camera picture (coarse LOD or speckled fast mode) the whole time. Now driving draws at full quality;
    the quick picture only comes in while you drag the view with the mouse. ===== */
 (function(){ var inner=window.requestRender; window.requestRender=function(m){ if(m&&typeof DRV!=='undefined'&&DRV.on&&!window.SB_BTN) m=false; return inner.call(this, m); }; })();
+
+/* ===== .ksplat in (r358): the format of the GaussianSplats3D viewer (mkkellogg), compression levels 0, 1 and 2, one or more sections.
+   Read the same way that viewer reads it (SplatBuffer): a 4096 byte header, 1024 bytes per section header, then per section
+   the bucket centres and the splats. Centres at level 1 and 2 are 16-bit offsets from their bucket centre; scale and turn are
+   half floats; colour is RGBA bytes. Extra colour detail (SH) is left out; base colours are kept. ===== */
+function ksHalf(h){ var s=(h&0x8000)?-1:1, e=(h>>10)&31, m=h&1023; if(e===0) return s*m*5.960464477539063e-8; if(e===31) return m?NaN:s*Infinity; return s*Math.pow(2, e-15)*(1+m/1024); }
+function ksplatRows(buf){ if(buf.byteLength<4096) throw new Error('it is too short to be a .ksplat file');
+  var u8=new Uint8Array(buf, 0, 4096), u16=new Uint16Array(buf, 0, 2048), u32=new Uint32Array(buf, 0, 1024), f32=new Float32Array(buf, 0, 1024);
+  var vMaj=u8[0], vMin=u8[1], maxSec=u32[1], nSec=u32[2], total=u32[4], lvl=u16[10]; if(vMaj!==0||vMin<1) throw new Error('.ksplat version '+vMaj+'.'+vMin+' cannot be read here (0.1 and newer can)'); if(lvl>2) throw new Error('compression level '+lvl+' is not known');
+  if(!maxSec||maxSec>100000) throw new Error('the section count is not sensible, so this may not be a .ksplat file');
+  var BPS={0:{0:44,1:80,2:140},1:{0:24,1:42,2:72},2:{0:24,1:33,2:48}}, SCO={0:12,1:6,2:6}[lvl], COO={0:40,1:20,2:20}[lvl];
+  var rows=new Float32Array(total*LCC_NP), w=0, C0=0.28209479177387814, base=4096+maxSec*1024, shMax=0, dv=new DataView(buf);
+  for(var s=0;s<maxSec;s++){ var hb=4096+s*1024, H32=new Uint32Array(buf, hb, 256), H16=new Uint16Array(buf, hb, 512), HF=new Float32Array(buf, hb, 256);
+    var cnt=H32[0], maxCnt=H32[1], bSize=H32[2], bCount=H32[3], bBlock=HF[4], bStore=H16[10], range=H32[6]||(lvl?32767:1), full=H32[8], part=H32[9], shDeg=H16[20]; if(shDeg>shMax) shMax=shDeg;
+    var bps=BPS[lvl][shDeg]; if(!bps) throw new Error('SH degree '+shDeg+' is not known'); var meta=part*4, bucketsBytes=bStore*bCount+meta, data=base+bucketsBytes, sf=(bBlock/2)/range;
+    if(data+bps*maxCnt>buf.byteLength) throw new Error('the file is cut short');
+    var plen=part?new Uint32Array(buf.slice(base, base+meta)):null, bArr=lvl?new Float32Array(buf.slice(base+meta, base+meta+bCount*12)):null, bi=0, inB=0, pb=0, lim=full>0?bSize:(plen?plen[0]:cnt);
+    for(var i=0;i<cnt&&w<total;i++,w++){ var o=data+i*bps, r=w*LCC_NP;
+      if(lvl){ while(inB>=lim){ bi++; inB=0; lim=bi<full?bSize:(plen&&plen[bi-full]!=null?plen[bi-full]:cnt); } inB++;
+        for(var a=0;a<3;a++) rows[r+a]=(dv.getUint16(o+a*2,true)-range)*sf+bArr[bi*3+a];
+        for(a=0;a<3;a++) rows[r+7+a]=Math.log(Math.max(1e-7, Math.abs(ksHalf(dv.getUint16(o+SCO+a*2,true)))));
+        for(a=0;a<4;a++) rows[r+10+a]=ksHalf(dv.getUint16(o+SCO+6+a*2,true)); }
+      else { for(a=0;a<3;a++) rows[r+a]=dv.getFloat32(o+a*4,true); for(a=0;a<3;a++) rows[r+7+a]=Math.log(Math.max(1e-7, Math.abs(dv.getFloat32(o+12+a*4,true)))); for(a=0;a<4;a++) rows[r+10+a]=dv.getFloat32(o+24+a*4,true); }
+      for(a=0;a<3;a++) rows[r+3+a]=(dv.getUint8(o+COO+a)/255-0.5)/C0; var al=Math.min(254.5, Math.max(0.5, dv.getUint8(o+COO+3)))/255; rows[r+6]=Math.log(al/(1-al));
+      var qw=rows[r+10], qx=rows[r+11], qy=rows[r+12], qz=rows[r+13], qn=Math.hypot(qw,qx,qy,qz)||1; rows[r+10]=qw/qn; rows[r+11]=qx/qn; rows[r+12]=qy/qn; rows[r+13]=qz/qn; }
+    base+=bucketsBytes+bps*maxCnt; }
+  return {rows:rows, n:w, sh:shMax}; }
+sbInstead('openFile', function(f, keep){ if(!f||f.__sbConv||!/\.ksplat$/i.test(f.name||'')) return SB_GO; var nm=f.name; setStatus('Unpacking '+nm); setProgress(0.02);
+  f.arrayBuffer().then(function(buf){ var r=ksplatRows(buf); var g=fmtRowsToFile(r.rows, r.n, nm.replace(/\.ksplat$/i,'')+'.ply', 'from .ksplat '+nm); openFile(g, keep); APP.fileBytes=f.size; var fi=document.getElementById('fileinfo'); if(fi) fi.textContent=nm+'  '+bytes(f.size);
+    toast(nm+' opened ('+r.n.toLocaleString()+' splats).'+(r.sh?' Its extra colour detail is left out; the base colours are kept.':''), 4500); })
+  .catch(function(e){ setProgress(null); setStatus(''); toast('Could not open '+nm+': '+e.message, 8000); }); });
+(function(){ var fi=document.getElementById('fin'); if(fi&&fi.accept.indexOf('.ksplat')<0) fi.accept+=',.ksplat,.KSPLAT';
+  var sp=window.scanPick; if(typeof sp==='function') window.scanPick=function(){ if(!window.showOpenFilePicker) return sp.apply(this, arguments);
+    window.showOpenFilePicker({types:[{description:'Scan (PLY, E57, SPZ, SPLAT, KSPLAT, SOG)', accept:{'application/octet-stream':['.ply','.e57','.spz','.splat','.ksplat','.sog']}}], multiple:false}).then(function(hs){ var h=hs[0]; return h.getFile().then(function(f){ if(!/\.(spz|splat|ksplat|sog)$/i.test(f.name)&&typeof rcAdd==='function') rcAdd(f, h); openFile(f); }); }).catch(function(e){ if(e&&e.name!=='AbortError') document.getElementById('fin').click(); }); }; })();
 
 
 </script>

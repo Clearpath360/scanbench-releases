@@ -1,3 +1,5 @@
-# Scan Bench r357
+# Scan Bench r358
 
-- Driving: the scan stays at full splat quality while you drive an object; the quick moving picture only shows while you drag the view.
+- Open: .ksplat files (GaussianSplats3D viewer format, compression levels 0, 1 and 2) now open directly.
+- .spz, .splat and .sog already opened before this release.
+- Extra colour detail (SH) in .ksplat is left out; base colours are kept.
