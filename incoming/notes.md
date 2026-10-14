@@ -1,0 +1,1 @@
+- Floor levels in 3D: big areas (quarries, yards) now draw the whole coloured map at every zoom, no black gaps.
