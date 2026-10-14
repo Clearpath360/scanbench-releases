@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r356';
+var SB_BUILD='2026-10-14 r357';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24669,6 +24669,11 @@ function srMenu(){ var old=document.getElementById('srMenu'); if(old){ old.remov
   document.body.appendChild(m); setTimeout(function(){ document.addEventListener('mousedown', function off(e){ if(!m.contains(e.target)&&e.target!==btn){ m.remove(); document.removeEventListener('mousedown', off, true); } }, true); }, 0); }
 (function(){ var b=document.getElementById('btnRec'); if(b){ b.onclick=function(e){ e.stopPropagation(); if(SREC){ srStop(); return; } srMenu(); }; b.title='Record: a smooth video to send (F9), or a quick 5 s recording of a problem (F10)'; } })();
 document.addEventListener('keydown', function(e){ if(e.key==='F9'){ e.preventDefault(); e.stopPropagation(); if(SREC) srStop(); else srStart(); } }, true);
+
+/* ===== Driving at full quality (r357): while an object is driven the app redrew every frame as "moving", so it stayed on the
+   quick moving-camera picture (coarse LOD or speckled fast mode) the whole time. Now driving draws at full quality;
+   the quick picture only comes in while you drag the view with the mouse. ===== */
+(function(){ var inner=window.requestRender; window.requestRender=function(m){ if(m&&typeof DRV!=='undefined'&&DRV.on&&!window.SB_BTN) m=false; return inner.call(this, m); }; })();
 
 
 </script>
