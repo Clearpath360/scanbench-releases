@@ -1,0 +1,2 @@
+- XGRIDS LCC folders now go on Recent, however they were opened (dropped, Choose LCC folder, or picked files).
+- Dropped or chosen folders open again straight from Recent (Chrome and Edge); picked files ask for the folder again.
