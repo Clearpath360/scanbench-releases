@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r370';
+var SB_BUILD='2026-10-14 r371';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -25537,6 +25537,36 @@ function slxApply(){ if(!APP.res) return; var S=APP.slice;
   slxLabel(); }
 sbAfter('applySlice', function(r){ try{ slxApply(); }catch(e){ console.warn(e); } return r; });
 sbAfter('buildSidebar', function(r){ try{ var on=document.getElementById('slOn'); if(on){ var sec=on.closest('.sec'), h=sec&&sec.querySelector('.hint'); if(h) h.textContent='Shows one height band in 3D and on the plan, using the same clip as the slider on the right. Scrub down to the skirting and the true wall face, up to a door head. Untick to go back to the clip you had. The slice only changes the picture, never the measurements.'; slxLabel(); } }catch(e){} return r; });
+
+/* ===== Levels in 3D, and Start again (r371): with Levels open in the 3D view, the levels map (height, flatness, falls with ponding)
+   is laid over the scan surface in the same colours, with the area outline, the lowest and highest spots and the ponding numbers.
+   Start again clears the area, the fall lines and the gullies. ===== */
+function lv3Open(){ return typeof levOpen==='function'&&levOpen()&&APP.view==='3d'&&!miniVP; }
+/* the colours of the plan map, grouped so each colour is one path */
+function lv3Groups(){ var O=LEV.out, V=levM(); if(!O) return null; var im=levImage(); if(!im) return null; var key=V.mode+'|'+V.step+'|'+V.flatMm+'|'+(SEC.cmode||'bands')+'|'+O.ms+'|'+O.g.nx; if(LEV._g3&&LEV._g3.k===key) return LEV._g3.G;
+  var g=O.g, d=im.getContext('2d').getImageData(0,0,g.nx,g.ny).data, st=Math.max(1, Math.round(0.25/g.cell)), G={};
+  for(var y=0;y<g.ny;y+=st) for(var x=0;x<g.nx;x+=st){ var q=y*g.nx+x, z=O.Z[q]; if(!O.M[q]||!(z===z)) continue; var o=((g.ny-1-y)*g.nx+x)*4; if(d[o+3]<10) continue; var k=(d[o]>>3)+','+(d[o+1]>>3)+','+(d[o+2]>>3); (G[k]=G[k]||{c:'rgb('+d[o]+','+d[o+1]+','+d[o+2]+')', q:[]}).q.push(q); }
+  LEV._g3={k:key, G:G, st:st}; return G; }
+function lv3Draw(){ var st0=document.getElementById('stage'); if(!st0) return; var cv=document.getElementById('lvOv'), on=lv3Open()&&LEV.out&&levM().area;
+  if(!cv){ if(!on) return; cv=document.createElement('canvas'); cv.id='lvOv'; cv.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:29'; st0.appendChild(cv); }
+  var dpr=window.devicePixelRatio||1, W=Math.round(st0.clientWidth*dpr), H=Math.round(st0.clientHeight*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=st0.clientWidth+'px'; cv.style.height=st0.clientHeight+'px'; } var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!on) return;
+  var O=LEV.out, V=levM(), g=O.g, sr=st0.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), S=function(p){ var s=projectWorld(p); return s?[(s[0]+gr.left-sr.left)*dpr, (s[1]+gr.top-sr.top)*dpr]:null; }, G=lv3Groups(); if(!G) return; var stp=LEV._g3.st, h=stp*g.cell/2, n=0;
+  c.globalAlpha=V.mode==='falls'?0.7:0.6; Object.keys(G).forEach(function(k){ var grp=G[k]; c.fillStyle=grp.c; c.beginPath(); grp.q.forEach(function(q){ if(n>60000) return; var x=g.x0+((q%g.nx)+0.5)*g.cell, y=g.y0+(Math.floor(q/g.nx)+0.5)*g.cell, z=(V.mode==='falls'&&O.Fill[q]-O.Z[q]>0.003?O.Fill[q]:O.Z[q])+0.02, A=S([x-h,y-h,z]), B=S([x+h,y-h,z]), C=S([x+h,y+h,z]), D=S([x-h,y+h,z]); if(!A||!B||!C||!D) return; c.moveTo(A[0],A[1]); c.lineTo(B[0],B[1]); c.lineTo(C[0],C[1]); c.lineTo(D[0],D[1]); c.closePath(); n++; }); c.fill(); }); c.globalAlpha=1;
+  /* the outline at the surface */ var zAt=function(x,y){ var v=levAt(O.Z,x,y); return v===v?v:(O.lo+O.hi)/2; }; c.strokeStyle='#111827'; c.lineWidth=3*dpr; var P=[]; V.area.forEach(function(a,i){ var b=V.area[(i+1)%V.area.length]; for(var t=0;t<1;t+=0.1){ var x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t; P.push(S([x,y,zAt(x,y)+0.03])); } });
+  c.beginPath(); var on2=false; P.forEach(function(s){ if(!s){ on2=false; return; } if(on2) c.lineTo(s[0],s[1]); else { c.moveTo(s[0],s[1]); on2=true; } }); c.closePath(); c.stroke(); c.strokeStyle='#fde047'; c.lineWidth=1.5*dpr; c.setLineDash([6*dpr,5*dpr]); c.stroke(); c.setLineDash([]);
+  LEV._bx=[]; var lab=function(x,y,z,t,bg){ var s=S([x,y,z]); if(!s) return; c.fillStyle=bg||'#111827'; c.beginPath(); c.arc(s[0],s[1],4*dpr,0,7); c.fill(); levLabel(c, s[0], s[1]-8*dpr, t, dpr, bg, true); };
+  if(V.mode==='falls') O.ponds.slice(0,20).forEach(function(P2,i){ lab(P2.x, P2.y, levAt(O.Fill,P2.x,P2.y)+0.03, (i+1)+': '+Math.round(P2.depth*1000)+' mm · '+Math.round(P2.litres)+' L', '#d9541c'); });
+  if(V.mode==='flat'&&O.gap.max>0) lab(O.gap.x, O.gap.y, zAt(O.gap.x,O.gap.y)+0.03, Math.round(O.gap.max*1000)+' mm under 3 m', '#7c3aed');
+  [[O.loI,'lowest'],[O.hiI,'highest']].forEach(function(e){ if(e[0]<0) return; var x=g.x0+((e[0]%g.nx)+0.5)*g.cell, y=g.y0+(Math.floor(e[0]/g.nx)+0.5)*g.cell; lab(x, y, O.Z[e[0]]+0.03, e[1]+' '+levN(O.Z[e[0]])); });
+  V.lines.forEach(function(Ln,i){ var a=S([Ln[0][0],Ln[0][1],zAt(Ln[0][0],Ln[0][1])+0.05]), b=S([Ln[1][0],Ln[1][1],zAt(Ln[1][0],Ln[1][1])+0.05]); if(!a||!b) return; c.strokeStyle='#2563eb'; c.lineWidth=3*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); var f=levFall(Ln); if(f) levLabel(c, (a[0]+b[0])/2, (a[1]+b[1])/2-8*dpr, (i+1)+': '+f.txt, dpr, '#2563eb'); }); }
+sbAfter('gl_render', function(r){ try{ lv3Draw(); }catch(e){ console.warn(e); } return r; });
+sbAfter('sbPanel', function(r){ try{ lv3Draw(); }catch(e){} return r; });
+sbAfter('levPanel', function(r){ try{ var s=document.getElementById('sbLevSec'), b=s&&s.querySelector('.body'), V=levM(); if(!b||!V||!V.area||b.querySelector('#lvAgain')) return r;
+    var row=document.createElement('div'); row.className='lRow'; row.innerHTML='<button id="lvAgain" class="lBtn" title="Clear the area, the fall lines and the gullies">Start again</button><button id="lv3d" class="lBtn" title="See the levels laid over the scan">'+(APP.view==='3d'?'Back to the plan':'See in 3D')+'</button>';
+    var rd=b.querySelector('#lvRedraw'); var anchor=rd?rd.closest('.lRow'):null; if(anchor&&anchor.nextSibling) b.insertBefore(row, anchor.nextSibling); else b.appendChild(row);
+    row.querySelector('#lvAgain').onclick=function(){ pushUndo(); V.area=null; V.lines=[]; V.gullies=[]; LEV.out=null; LEV.tool=null; LEV.drawing=false; LEV.draft=[]; LEV.prof=null; afterEdit(); levPanel(); planDrawSoon(); requestRender(false); toast('Cleared. Draw a new area to start again (Ctrl+Z puts it back).', 3000); };
+    row.querySelector('#lv3d').onclick=function(){ wsView(APP.view==='3d'?'plan':'3d'); levPanel(); requestRender(false); }; }catch(e){ console.warn(e); } return r; });
+sbAfter('wsView', function(r){ try{ if(typeof levOpen==='function'&&levOpen()) levPanel(); requestRender(false); }catch(e){} return r; });
 
 
 </script>

@@ -1,3 +1,4 @@
-# Scan Bench r370
+# Scan Bench r371
 
-- Levels: a raised flat roof or deck no longer comes out as no data. Heights of Ground is now judged only inside the area you draw.
+- Levels: See in 3D lays the levels map over the scan (height, flatness, falls and ponding) with the outline, lowest and highest spots, ponding numbers and fall lines.
+- Levels: Start again clears the area, fall lines and gullies (Ctrl+Z puts them back).
