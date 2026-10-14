@@ -1,6 +1,4 @@
-# Scan Bench r362
+# Scan Bench r363
 
-- New rail tool Quantities: + Room, + Floor area, + Garden area, + Fence or line, + Roof from Site checks.
-- Rooms read their height from the scan; doors and windows come off the wall area.
-- Materials: paint, flooring packs, carpet, tiles, skirting, turf, gravel, topsoil, slabs, fencing, roof tiles and membrane.
-- Your prices and coverage are kept on this computer; VAT tick; quote PDF with a plan page and room sizes in metres and feet; CSV.
+- Slice: now sets the top and bottom clip, so the height band shows in 3D, on the plan (Photo and Points) and in the sections; untick to get your old clip back.
+- Slice: the height readout updates as you move it.

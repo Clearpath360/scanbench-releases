@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r362';
+var SB_BUILD='2026-10-14 r363';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -25262,6 +25262,17 @@ sbAfter('sbPanel', function(r){ try{ if(SBP.key==='qty'){ qtyPanel(); if(APP.vie
     '#sbQtySec .qCard{border:1px solid var(--sbLn);border-radius:8px;padding:6px 8px;margin:6px 0}#sbQtySec .qTk{flex:1;display:flex;gap:4px;align-items:center;margin:0}#sbQtySec .qLines>div{display:flex;gap:6px;align-items:flex-start;border-top:1px solid var(--sbLn);padding:5px 0;font-size:12px}#sbQtySec .qLines span{flex:1;min-width:0}#sbQtySec .qLines b{white-space:nowrap}#sbQtySec .qLines em{font-style:normal;width:64px;text-align:right}'+
     '#sbQtySec .qTot div{display:flex;justify-content:space-between;padding:2px 0}#sbQtySec .qTot .big{font-size:15px;border-top:1px solid var(--sbLn);margin-top:4px;padding-top:6px}#sbQtySec .qPr{margin:8px 0;font-size:12px}#sbQtySec .qPr summary{cursor:pointer;font-weight:600}#sbQtySec .qPm{margin:6px 0}#sbQtySec .qPm>div{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:3px}#sbQtySec .qPm label{display:flex;flex-direction:column;font-size:11px;color:var(--sbTx2)}#sbQtySec .qPm input{width:100%;box-sizing:border-box}#sbQtySec .row select{flex:1;width:0}';
   document.head.appendChild(c); })();
+
+/* ===== Slice (r363): the Slice panel now drives the one top and bottom clip (the slider on the right), so the band shows in 3D,
+   on the plan in Photo and Points, and in the sections, not only on the old points picture. Untick to go back to the clip you had. ===== */
+var SLX={keep:null, t:0};
+function slxLabel(){ var on=document.getElementById('slOn'); if(!on) return; var row=on.closest('.row'), sp=row&&row.querySelector('span.mini'); if(sp) sp.textContent=APP.slice.on?mm(APP.slice.z)+' ± '+mm(APP.slice.t/2):'full height'; }
+function slxApply(){ if(!APP.res) return; var S=APP.slice;
+  if(S.on){ if(!SLX.keep) SLX.keep=[CEI.zlo, CEI.zhi]; var lo=S.z-S.t/2, hi=S.z+S.t/2; bandSet(lo, hi, false); bandSync(); clearTimeout(SLX.t); SLX.t=setTimeout(function(){ if(!APP.slice.on) return; bandSet(lo, hi, true); bandSync(); }, 250); }
+  else if(SLX.keep){ var k=SLX.keep; SLX.keep=null; clearTimeout(SLX.t); bandSet(k[0], k[1], true); bandSync(); }
+  slxLabel(); }
+sbAfter('applySlice', function(r){ try{ slxApply(); }catch(e){ console.warn(e); } return r; });
+sbAfter('buildSidebar', function(r){ try{ var on=document.getElementById('slOn'); if(on){ var sec=on.closest('.sec'), h=sec&&sec.querySelector('.hint'); if(h) h.textContent='Shows one height band in 3D and on the plan, using the same clip as the slider on the right. Scrub down to the skirting and the true wall face, up to a door head. Untick to go back to the clip you had. The slice only changes the picture, never the measurements.'; slxLabel(); } }catch(e){} return r; });
 
 
 </script>
