@@ -1,5 +1,5 @@
-# Scan Bench r352
+# Scan Bench r353
 
-- Section PDF: new page 2 shows the ground heights of the whole site, with the section line and the chosen length marked.
-- Section PDF: the key plan is now a top-down picture of the whole scene, with the line, the A ends and the start/end of the length.
-- Section PDF: changing the length always refreshes the height map and 3D pages, even from the Slice tab.
+- Sections: the Length row (From, To, Whole line) now sits on one line.
+- Sections: round grab points at both ends of the length in the 3D view too; drag them along the line.
+- Snow: frozen puddles have soft frost instead of square patches; snow and wet ground no longer stop in squares near posts and walls.
