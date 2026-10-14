@@ -8382,15 +8382,15 @@ function rcDb(){ return new Promise(function(ok,no){ if(RCNT.db) return ok(RCNT.
 function rcAll(){ return rcDb().then(function(db){ return new Promise(function(ok){ var out=[], q=db.transaction('files').objectStore('files').openCursor(); q.onsuccess=function(){ var c=q.result; if(c){ if(c.value.k!=='__self__') out.push(c.value); c.continue(); } else ok(out.sort(function(a,b){ return b.t-a.t; })); }; q.onerror=function(){ ok([]); }; }); }).catch(function(){ return []; }); }
 function rcPut(o){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files','readwrite'); tx.objectStore('files').put(o); tx.oncomplete=ok; tx.onerror=ok; }); }).catch(function(){}); }
 function rcDel(k){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files','readwrite'); tx.objectStore('files').delete(k); tx.oncomplete=ok; tx.onerror=ok; }); }).catch(function(){}); }
-function rcAdd(f, h){ if(!f) return; var o={k:f.name+'|'+f.size, name:f.name, size:f.size, t:Date.now(), h:h||null};
+function rcAdd(f, h, x){ if(!f) return; var o={k:f.name+'|'+f.size, name:f.name, size:f.size, t:Date.now(), h:h||null}; if(x) Object.keys(x).forEach(function(k){ o[k]=x[k]; });
   rcAll().then(function(L){ var old=L.filter(function(q){ return q.k===o.k; })[0]; if(!o.h&&old&&old.h) o.h=old.h; return rcPut(o).then(function(){ var extra=L.filter(function(q){ return q.k!==o.k; }).slice(11); return Promise.all(extra.map(function(q){ return rcDel(q.k); })); }); }).then(rcRender); }
 function rcAgo(t){ var d=(Date.now()-t)/1000; return d<90?'just now':d<5400?Math.round(d/60)+' min ago':d<129600?Math.round(d/3600)+' h ago':new Date(t).toLocaleDateString(); }
 function rcRender(){ rcAll().then(function(L){ RCNT.list=L; var el=$('#recentList'), dr=$('#dropRecent');
-  var row=function(q,i,drop){ return '<button class="btn sm rc" data-rc="'+i+'" title="'+(q.h?'Open '+q.name+' again':'Opened before this browser could keep the file: you will be asked to find it')+'"><b>'+q.name.replace(/</g,'&lt;')+'</b><small>'+bytes(q.size)+' &middot; '+rcAgo(q.t)+(q.h?'':' &middot; find file')+'</small></button>'; };
+  var row=function(q,i,drop){ return '<button class="btn sm rc" data-rc="'+i+'" title="'+(q.h?'Open '+q.name+' again':'Opened before this browser could keep the file: you will be asked to find it')+'"><b>'+q.name.replace(/</g,'&lt;')+'</b><small>'+bytes(q.size)+' &middot; '+rcAgo(q.t)+(q.lcc?' &middot; LCC folder':'')+(q.h?'':(q.lcc?' &middot; find folder':' &middot; find file'))+'</small></button>'; };
   if(el) el.innerHTML=L.length?L.map(function(q,i){ return '<div class="rcx">'+row(q,i)+'<button class="btn sm rdel" data-rd="'+i+'" title="Take off the list">&#10005;</button></div>'; }).join(''):'<div class="mini" style="padding:6px">Scans you open will be listed here.</div>';
   if(dr) dr.innerHTML=L.length?'<div class="mini" style="text-align:left">Recent</div>'+L.slice(0,6).map(function(q,i){ return row(q,i,true); }).join(''):'';
   [el,dr].forEach(function(box){ if(!box) return; box.querySelectorAll('[data-rc]').forEach(function(b){ b.onclick=function(){ var m=$('#recentMenu'); if(m) m.open=false; rcOpen(RCNT.list[+b.dataset.rc]); }; }); box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); rcDel(RCNT.list[+b.dataset.rd].k).then(rcRender); }; }); }); }); }
-function rcOpen(q){ if(!q) return; if(!q.h){ toast('Find '+q.name+' again: this browser did not keep that one.', 4000); scanPick(); return; }
+function rcOpen(q){ if(!q) return; if(q.lcc&&typeof lccReopen==='function') return lccReopen(q); if(!q.h){ toast('Find '+q.name+' again: this browser did not keep that one.', 4000); scanPick(); return; }
   var h=q.h, go=function(){ return h.getFile().then(function(f){ rcAdd(f, h); openFile(f); }); };
   (h.queryPermission?h.queryPermission({mode:'read'}):Promise.resolve('granted')).then(function(st){ return st==='granted'?st:h.requestPermission({mode:'read'}); }).then(function(st){ if(st!=='granted'){ toast('The browser needs your OK to open '+q.name+' again.', 4000); return; } return go(); })
     .catch(function(){ toast(q.name+' has moved or been renamed, so it could not be opened. Find it with Open scan.', 6000); rcDel(q.k).then(rcRender); }); }
@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r373';
+var SB_BUILD='2026-10-14 r374';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -18314,11 +18314,11 @@ function lccDlg(R, err){ var d=document.getElementById('lcDlg'); if(!d){ d=docum
     '<div class="lcBtns"><button class="lcP" data-lc="go">Open</button><button data-lc="x">Cancel</button></div>'; }
   d.innerHTML='<div class="lcBox" role="dialog" aria-label="Open XGRIDS LCC"><div class="lcHead"><b>Open XGRIDS LCC</b><button data-lc="x" title="Close">&#10005;</button></div><div class="lcBody">'+body+'</div></div>';
   d.querySelectorAll('[data-lc]').forEach(function(b){ b.onclick=function(){ var k=b.dataset.lc; if(k==='x'){ d.hidden=true; return; } if(k==='dir') lccPickDir(); if(k==='files') lccPickFiles(); if(k==='go'){ var lv=+((d.querySelector('input[name=lcLv]:checked')||{}).value||0); d.hidden=true; lccOpen(R, lv, !!(document.getElementById('lcSky')||{}).checked, !!(document.getElementById('lcLod')||{}).checked); } }; }); }
-function lccPickDir(){ if(window.showDirectoryPicker){ window.showDirectoryPicker({mode:'read'}).then(function(h){ return lccWalkHandle(h, h.name+'/', [], 0); }).then(lccFrom).catch(function(e){ if(e&&e.name==='AbortError') return; lccDirInput(); }); return; } lccDirInput(); }
+function lccPickDir(){ if(window.showDirectoryPicker){ window.showDirectoryPicker({mode:'read'}).then(function(h){ return lccWalkHandle(h, h.name+'/', [], 0).then(function(L){ lccFrom(L, h); }); }).catch(function(e){ if(e&&e.name==='AbortError') return; lccDirInput(); }); return; } lccDirInput(); }
 function lccDirInput(){ var i=document.getElementById('lcDir'); if(!i){ i=document.createElement('input'); i.type='file'; i.id='lcDir'; i.webkitdirectory=true; i.multiple=true; i.style.display='none'; document.body.appendChild(i); i.onchange=function(){ var a=Array.prototype.slice.call(i.files||[]); i.value=''; lccFrom(a); }; } i.click(); }
 function lccPickFiles(){ var i=document.getElementById('lcFiles'); if(!i){ i=document.createElement('input'); i.type='file'; i.id='lcFiles'; i.multiple=true; i.accept='.lcc,.lcc2,.bin,.sog,.spz'; i.style.display='none'; document.body.appendChild(i); i.onchange=function(){ var a=Array.prototype.slice.call(i.files||[]); i.value=''; lccFrom(a); }; } i.click(); }
-function lccFrom(list){ var F=lccIndex(list), found=lccFind(F); if(!found){ lccDlg(null, 'There is no .lcc or .lcc2 file in what was picked.'); return; }
-  lccReadMeta(F, found).then(function(R){ lccDlg(R); }).catch(function(e){ lccDlg(null, 'Could not read it: '+e.message); }); }
+function lccFrom(list, h){ var F=lccIndex(list), found=lccFind(F); if(!found){ lccDlg(null, 'There is no .lcc or .lcc2 file in what was picked.'); return; }
+  lccReadMeta(F, found).then(function(R){ R.rcH=h&&h.kind==='directory'?h:null; R.rcSize=list.reduce(function(a,it){ return a+((it.file||it).size||0); }, 0); lccDlg(R); }).catch(function(e){ lccDlg(null, 'Could not read it: '+e.message); }); }
 async function lccOpen(R, level, sky, lod){ try{
     APP.busy=true; setStatus('Reading '+R.name); setProgress(0.01); $('#drop').classList.add('hide');
     var got=await lccLevelRows(R, level, function(f){ setProgress(0.02+f*0.3); setStatus('Reading '+R.name+' ('+Math.round(f*100)+'%)'); });
@@ -18328,19 +18328,25 @@ async function lccOpen(R, level, sky, lod){ try{
     if(lod){ var tgt=Math.max(250000, R.counts[level]/4), lv=level; while(lv<R.counts.length-1&&R.counts[lv]>tgt) lv++; if(lv>level){ setStatus('Reading the lighter level for moving'); lodR=await lccLevelRows(R, lv); lodR.level=lv; } }
     LCCI.sky=skyR?{raw:skyR, on:true, set:null, key:''}:null; LCCI.lod=lodR?{raw:lodR, on:true, set:null, key:''}:null; LCCI.info={name:R.name, kind:R.kind, level:level, counts:R.counts.slice()};
     APP.busy=false; LCCI.pass=true; /* LCC and LCC2 come from the XGRIDS scanners in true metres */ if(!APP.scaleSet||APP.scaleAuto){ APP.scaleSet=true; APP.scaleAuto=true; } try{ openFile(new File([out], R.name.replace(/\.lcc2?$/i,'')+'.ply', {type:'application/octet-stream'})); } finally{ LCCI.pass=false; }
-    var fi=document.getElementById('fileinfo'); if(fi) fi.textContent=R.name+'  '+(R.kind==='lcc2'?'LCC2':'LCC')+(level?' level '+level:' full detail');
+    lccRecent(R); var fi=document.getElementById('fileinfo'); if(fi) fi.textContent=R.name+'  '+(R.kind==='lcc2'?'LCC2':'LCC')+(level?' level '+level:' full detail');
   }catch(e){ APP.busy=false; setProgress(null); setStatus(''); toast('Could not open the LCC: '+e.message, 8000); } }
+/* an LCC folder goes on the Recent list; with a folder handle (Chrome, Edge) it opens again from there */
+function lccRecent(R){ try{ if(typeof rcAdd==='function') rcAdd({name:R.name, size:R.rcSize||0}, R.rcH||null, {lcc:true}); }catch(e){} }
+function lccReopen(q){ var h=q.h; if(!h||h.kind!=='directory'){ lccDlg(null, 'Pick the '+q.name+' folder again: this browser did not keep it.'); return; }
+  (h.queryPermission?h.queryPermission({mode:'read'}):Promise.resolve('granted')).then(function(st){ return st==='granted'?st:h.requestPermission({mode:'read'}); }).then(function(st){ if(st!=='granted'){ toast('The browser needs your OK to open '+q.name+' again.', 4000); return; }
+    setStatus('Reading the '+h.name+' folder'); return lccWalkHandle(h, h.name+'/', [], 0).then(function(L){ setStatus(''); if(!L.length) throw new Error('empty'); lccFrom(L, h); }); })
+    .catch(function(){ setStatus(''); toast(q.name+' has moved or been renamed, so it could not be opened. Open it with Open XGRIDS LCC folder.', 6000); if(typeof rcDel==='function') rcDel(q.k).then(rcRender); }); }
 /* any other file opened: the LCC extras go */
 sbInstead('openFile', function(f){ if(f&&/\.lcc2?$/i.test(f.name)&&!LCCI.pass){ lccDlg(null, 'Scan Bench needs the whole LCC folder, not just '+f.name+'.'); return; } if(!LCCI.pass){ lccDrop(LCCI.sky); lccDrop(LCCI.lod); LCCI.sky=null; LCCI.lod=null; LCCI.info=null; } return SB_GO; });
 function lccDrop(S){ if(!S||!S.set) return; var gl=GL; S.set.tex.forEach(function(t){ gl.deleteTexture(t); }); gl.deleteVertexArray(S.set.vao); gl.deleteBuffer(S.set.idx); S.set=null; }
 (function(){ var fi=document.getElementById('fin'); if(fi) fi.accept=fi.accept+',.lcc,.LCC,.lcc2';
    sbBefore('scanPick', function(){ });
   /* a dropped LCC folder or its files */
-  window.addEventListener('drop', function(e){ var dt=e.dataTransfer; if(!dt) return; var it=Array.prototype.slice.call(dt.items||[]), ents=it.map(function(x){ return x.webkitGetAsEntry?x.webkitGetAsEntry():null; }).filter(Boolean), fl=Array.prototype.slice.call(dt.files||[]);
+  window.addEventListener('drop', function(e){ var dt=e.dataTransfer; if(!dt) return; var it=Array.prototype.slice.call(dt.items||[]), hps=it.map(function(x){ try{ return x.kind==='file'&&x.getAsFileSystemHandle?x.getAsFileSystemHandle():null; }catch(er){ return null; } }), ents=it.map(function(x){ return x.webkitGetAsEntry?x.webkitGetAsEntry():null; }).filter(Boolean), fl=Array.prototype.slice.call(dt.files||[]);
     var isL=fl.some(function(f){ return /\.lcc2?$/i.test(f.name); }), dir=ents.filter(function(en){ return en.isDirectory; });
     if(!isL&&!dir.length) return; if(!isL&&dir.length&&fl.some(function(f){ return /\.(ply|e57|spz|json|lci|html?)$/i.test(f.name); })) return;
     var out=[]; e.preventDefault(); e.stopImmediatePropagation(); $('#drop').classList.remove('over');
-    Promise.all(ents.map(function(en){ return lccWalkEntry(en, '', out, 0); })).then(function(){ if(!out.length) out=fl.map(function(f){ return {file:f, path:f.name}; }); if(!lccFind(lccIndex(out))){ if(dir.length) toast('That folder has no .lcc or .lcc2 file in it.', 5000); return; } lccFrom(out); }); }, true); })();
+    Promise.all(ents.map(function(en){ return lccWalkEntry(en, '', out, 0); })).then(function(){ if(!out.length) out=fl.map(function(f){ return {file:f, path:f.name}; }); if(!lccFind(lccIndex(out))){ if(dir.length) toast('That folder has no .lcc or .lcc2 file in it.', 5000); return; } var hp=dir.length===1&&ents.length===1?hps.filter(Boolean)[0]:null; (hp||Promise.resolve(null)).catch(function(){ return null; }).then(function(h){ lccFrom(out, h); }); }); }, true); })();
 /* the File menu */
 sbAfter('sbMenus', function(M){ try{ M.forEach(function(m){ var it=m.items||[]; for(var i=0;i<it.length;i++){ if(it[i]&&it[i].t==='Open scan...'&&!it.some(function(q){ return q&&q.t==='Open XGRIDS LCC folder...'; })){ it.splice(i+1, 0, {t:'Open XGRIDS LCC folder...', fn:function(){ lccDlg(null); }}); break; } } });
     var V=M.filter(function(m){ return m.id==='view'; })[0]||M.filter(function(m){ return m.id==='tools'; })[0];
