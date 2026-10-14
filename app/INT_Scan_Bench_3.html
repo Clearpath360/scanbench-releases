@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r353';
+var SB_BUILD='2026-10-14 r354';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24594,6 +24594,39 @@ function saSave(){ var L=msAligned().filter(function(o){ return o.k>0; }); if(!L
     if(ok) toast('Saved '+ok+' aligned scan'+(ok>1?'s':'')+'. They line up with the first scan saved through Export, PLY.', 6000); }, 30); }
 sbAfter('msDraw', function(r){ try{ var u=msUI(), T=u&&u.querySelector('.msTop'); if(!T||T.querySelector('#saSave')) return r; var b=document.createElement('button'); b.id='saSave'; b.textContent='Save aligned'; b.title='Save each aligned capture as a PLY with the line-up baked in'; b.onclick=saSave;
     var done=[].slice.call(T.querySelectorAll('button')).filter(function(x){ return /Done/.test(x.textContent); })[0]; if(done) T.insertBefore(b, done); else T.appendChild(b); }catch(e){ console.warn(e); } return r; });
+
+/* ===== Straighten rings (r354): a box beside the rings to type the angle for each ring, and a pivot you can click onto the scan
+   so the scan turns about that point (like the turn point in the 3D model) instead of its middle. ===== */
+STR.piv=null; STR.pivPick=false;
+sbAround('strPivot', function(next){ if(STR.piv&&STR.pivRes===APP.res) return STR.piv.slice(); return next(); });
+/* a straightening re-works the scan; the pivot goes with it */
+sbAfter('strAfterResult', function(r){ try{ if(STR.piv&&STR._pivMap){ STR.piv=STR._pivMap; STR.pivRes=APP.res; } STR._pivMap=null; snUpd(); }catch(e){} return r; });
+sbBefore('strMapModel', function(f){ try{ if(STR.piv) STR._pivMap=f(STR.piv); }catch(e){} });
+function snInvW(q){ var R=strR3(), p=strPivot(), d=[q[0]-p[0],q[1]-p[1],q[2]-p[2]]; return [p[0]+R[0]*d[0]+R[3]*d[1]+R[6]*d[2], p[1]+R[1]*d[0]+R[4]*d[1]+R[7]*d[2], p[2]+R[2]*d[0]+R[5]*d[1]+R[8]*d[2]]; }
+function snBox(){ var el=document.getElementById('strNum'); if(!el){ el=document.createElement('div'); el.id='strNum'; document.getElementById('stage').appendChild(el);
+    var D=[['x','Tilt front/back','#e05555'],['y','Tilt left/right','#3fb45a'],['z','Turn','#4f86e8']];
+    el.innerHTML=D.map(function(d){ return '<label title="Type how far to turn, then press Enter"><i style="background:'+d[2]+'"></i><span>'+d[1]+'</span><input type="number" step="0.1" data-k="'+d[0]+'" value="0"><em>°</em></label>'; }).join('')+
+      '<div class="snPiv"><button id="snPick" title="Click a point on the scan to turn about">Pick turn point</button><button id="snCtr" title="Turn about the middle of the scan again">Middle</button></div><div class="snHint" id="snHint"></div>';
+    el.querySelectorAll('input').forEach(function(inp){ inp.addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key==='Enter'){ this.blur(); } });
+      inp.onchange=function(){ var v=parseFloat(this.value); if(!isFinite(v)) return; if(STR.busy){ toast('Still straightening, one moment...', 1500); return; } clearTimeout(STR.applyT); strBegin(); STR.justDone=false; strPush(); strSet(this.dataset.k, v); mdlOv(); strApplySoon(900); }; });
+    el.querySelector('#snPick').onclick=function(){ if(strOnAny()||STR.busy){ toast('Let the turn you are making finish first.', 2500); return; } STR.pivPick=!STR.pivPick; glCv.style.cursor=STR.pivPick?'crosshair':''; snUpd(); if(STR.pivPick) toast('Click the point on the scan to turn about. Esc to cancel.', 4000); };
+    el.querySelector('#snCtr').onclick=function(){ if(strOnAny()||STR.busy){ toast('Let the turn you are making finish first.', 2500); return; } STR.piv=null; STR.pivPick=false; snUpd(); mdlOv(); toast('Turning about the middle of the scan.', 2000); };
+    var st=document.createElement('style'); st.textContent='#strNum{position:absolute;z-index:30;display:none;flex-direction:column;gap:4px;background:rgba(10,14,20,.8);color:#e6ebf1;border-radius:10px;padding:8px 10px;font:12px system-ui;min-width:190px}#strNum label{display:flex;align-items:center;gap:6px;margin:0}#strNum label i{width:10px;height:10px;border-radius:50%;flex:0 0 10px}#strNum label span{flex:1;white-space:nowrap}#strNum input{width:64px!important;flex:0 0 64px!important;min-width:0!important;background:#fff;color:#111;border:1px solid #cbd2db;border-radius:6px;padding:2px 4px;font:12px system-ui}#strNum em{font-style:normal;opacity:.8}#strNum .snPiv{display:flex;gap:6px;margin-top:4px}#strNum .snPiv button{flex:1;font:12px system-ui;padding:4px 6px;border-radius:6px;border:1px solid #4b5563;background:#1f2937;color:#e6ebf1;cursor:pointer}#strNum .snPiv button.on{background:#ffb000;color:#111;border-color:#ffb000}#strNum .snHint{opacity:.75;font-size:11px;max-width:200px;white-space:normal}';
+    document.head.appendChild(st); } return el; }
+function snUpd(){ var el=snBox(), on=typeof strRingsOn==='function'&&strRingsOn()&&(STR.open||STR.on); if(!on){ el.style.display='none'; return; }
+  var G=strRingGeom(); el.style.display='flex'; el.style.left=(G.cx+G.R+24)+'px'; el.style.top=(G.cy+24)+'px';
+  el.querySelectorAll('input').forEach(function(inp){ if(document.activeElement!==inp) inp.value=(STR[inp.dataset.k]||0).toFixed(2); inp.disabled=!!STR.busy; });
+  var b=el.querySelector('#snPick'); b.classList.toggle('on', !!STR.pivPick); b.textContent=STR.pivPick?'Click the scan...':'Pick turn point'; el.querySelector('#snCtr').disabled=!STR.piv;
+  el.querySelector('#snHint').textContent=STR.piv&&STR.pivRes===APP.res?'Turning about the point you picked (orange cross).':'Turning about the middle of the scan.'; }
+sbAfter('strPanelUpd', function(r){ try{ snUpd(); }catch(e){} return r; });
+sbAfter('strBar', function(r){ try{ snUpd(); }catch(e){} return r; });
+/* the pivot pick comes before the rings and the orbit */
+window.addEventListener('mousedown', function(e){ if(!STR.pivPick||e.target!==glCv||e.button!==0) return; e.preventDefault(); e.stopImmediatePropagation(); var q=null; try{ q=strPickPt(e); }catch(er){} if(!q){ toast('Click on the scan itself.', 2000); return; }
+  STR.piv=strOnAny()?snInvW(q):q; STR.pivRes=APP.res; STR.pivPick=false; glCv.style.cursor=''; snUpd(); mdlOv(); toast('The scan now turns about the point you clicked.', 2500); }, true);
+window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&STR.pivPick){ STR.pivPick=false; glCv.style.cursor=''; snUpd(); } });
+/* an orange cross on the turn point while the rings are out */
+sbAfter('strDrawOv', function(r, c, dpr){ try{ if(!STR.piv||STR.pivRes!==APP.res||!strRingsOn()||!(STR.open||STR.on)) return r; var G=strRingGeom(), s=projectWorld(strW(STR.piv)); if(!s) return r; var x=(s[0]+G.ox)*dpr, y=(s[1]+G.oy)*dpr, k=dpr;
+    c.save(); c.strokeStyle='#111'; c.lineWidth=5*k; c.beginPath(); c.moveTo(x-11*k,y); c.lineTo(x+11*k,y); c.moveTo(x,y-11*k); c.lineTo(x,y+11*k); c.stroke(); c.strokeStyle='#ffb000'; c.lineWidth=2.5*k; c.stroke(); c.beginPath(); c.arc(x,y,6*k,0,7); c.stroke(); c.restore(); }catch(e){} return r; });
 
 
 </script>

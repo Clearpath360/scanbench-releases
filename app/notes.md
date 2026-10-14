@@ -1,5 +1,4 @@
-# Scan Bench r353
+# Scan Bench r354
 
-- Sections: the Length row (From, To, Whole line) now sits on one line.
-- Sections: round grab points at both ends of the length in the 3D view too; drag them along the line.
-- Snow: frozen puddles have soft frost instead of square patches; snow and wet ground no longer stop in squares near posts and walls.
+- Straighten rings: a box beside the rings to type the degrees for Tilt front/back, Tilt left/right and Turn; press Enter to apply.
+- Straighten rings: Pick turn point, then click the scan; it turns about that point (orange cross). Middle puts it back.
