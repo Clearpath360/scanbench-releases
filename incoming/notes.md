@@ -1,5 +1,0 @@
-- Site checks > Roof: ridges, hips, valleys, eaves and verges found where the slopes you read meet, with lengths, on the plan and in 3D.
-- Roof report: new Roof lines page; materials page now prices ridge and hip tiles, valley troughs, guttering, fascia and verge trim.
-- Quantities > Add roof: brings the roof lines with it.
-- Slope areas no longer double count where two slopes overlap.
-- Fixed: adding the roof to Quantities could stop with an error.
