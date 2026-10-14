@@ -1,2 +1,1 @@
-- Level tool renamed Straighten (rail and panel).
-- Levels tool renamed Floor levels (rail, panel, PDF and interactive page).
+- Floor levels in 3D: big areas (quarries, yards) now draw the whole coloured map at every zoom, no black gaps.
