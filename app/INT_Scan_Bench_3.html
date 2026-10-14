@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r355';
+var SB_BUILD='2026-10-14 r356';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24425,7 +24425,10 @@ function wpDraw(useDT){ var gl=GL, pr=wpProg(); if(!pr||!WP.n) return; var S=wxS
   gl.bindVertexArray(WP.vao); if(useDT&&typeof sbFastNow==='function'&&sbFastNow()) gl.disable(gl.DEPTH_TEST); else gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.TRIANGLES, 0, WP.n);
   gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.bindVertexArray(null); gl.useProgram(SPL.prog); }
 sbAround('splatDraw', function(next, zmax){ if(WXR.inMirror||WP.inDepth) return next(); var on=false, dt=false; try{ on=wpWanted()&&wpBuild(); if(on&&!(window.WPDBG&1)) dt=wpDepthPass(zmax); }catch(e){ console.warn(e); on=false; }
-  var r=next(); if(on){ try{ wpDraw(dt); }catch(e){ console.warn(e); } } return r; });
+  /* the water goes down straight after the scan, before any object drawn on top of it (a driven dog, a GLB model), so they stand in it, not under it */
+  WP.pend=on?{dt:dt}:null; var r=next(); wpFlush(); return r; });
+function wpFlush(){ var q=WP.pend; if(!q) return; WP.pend=null; try{ wpDraw(q.dt); }catch(e){ console.warn(e); } }
+['liveDraw','gmSplatPass'].forEach(function(nm){ if(typeof window[nm]==='function') sbAround(nm, function(next){ if(WP.inDepth) return; if(!WXR.inMirror) wpFlush(); return next(); }); });
 /* the old per-splat puddle tint is switched off while the water surfaces are showing */
 sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog&&SPL.loc.uPud&&wpWanted()&&WP.res===APP.res&&WP.n){ GL.useProgram(SPL.prog); GL.uniform4f(SPL.loc.uPud, 0,0,0,1); if(WXR.inMirror&&SPL.loc.uMir){ var sc=wxSc(); GL.uniform4f(SPL.loc.uMir, 1, wxGroundZ(), 0.18*sc, 1.5*sc); } } }catch(e){} return r; });
 
