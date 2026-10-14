@@ -1,6 +1,6 @@
-# Scan Bench r361
+# Scan Bench r362
 
-- Site checks > CCTV now works in the 3D view: cameras drawn with their view cones, coverage shaded on the ground.
-- + Camera in 3D: click the wall or post it is fixed to, then the spot it points at (sets height, facing and tilt).
-- Look through: see the scan from the camera with its lens; drag to aim, scroll to change the lens, Back or Esc to leave.
-- Move and Aim at a spot buttons for the selected camera, on the plan or in 3D; click a camera in 3D to select it.
+- New rail tool Quantities: + Room, + Floor area, + Garden area, + Fence or line, + Roof from Site checks.
+- Rooms read their height from the scan; doors and windows come off the wall area.
+- Materials: paint, flooring packs, carpet, tiles, skirting, turf, gravel, topsoil, slabs, fencing, roof tiles and membrane.
+- Your prices and coverage are kept on this computer; VAT tick; quote PDF with a plan page and room sizes in metres and feet; CSV.
