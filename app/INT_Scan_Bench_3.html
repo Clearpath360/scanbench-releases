@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r360';
+var SB_BUILD='2026-10-14 r361';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24798,7 +24798,7 @@ function chkFloor(g, C){ var nx=g.nx, ny=g.ny, N=nx*ny, F=new Float32Array(N), o
   for(q=0;q<N;q++){ if(F[q]===F[q]&&op[q]===op[q]&&F[q]-op[q]>0.25){ obj[q]=1; F[q]=op[q]; } else if(!(F[q]===F[q])&&op[q]===op[q]){ F[q]=op[q]; obj[q]=2; } } return {F:F, obj:obj}; }
 function chkAt(A, g, x, y){ if(!A||!g) return NaN; var cx=Math.floor((x-g.x0)/g.cell), cy=Math.floor((y-g.y0)/g.cell); if(cx<0||cy<0||cx>=g.nx||cy>=g.ny) return NaN; return A[cy*g.nx+cx]; }
 function chkKey(){ var V=chkM(), cl=chkClip(); return JSON.stringify([APP.res&&APP.res.n, V.area, cl, !!V.useClip]); }
-function chkRunSoon(){ if(CHK._t) return; CHK._t=setTimeout(function(){ CHK._t=0; CHK.err=''; try{ chkRunTab(); }catch(e){ console.warn(e); CHK.err='Could not work it out: '+e.message; } chkPanel(); planDrawSoon(); }, 40); }
+function chkRunSoon(){ if(CHK._t) return; CHK._t=setTimeout(function(){ CHK._t=0; CHK.err=''; try{ chkRunTab(); }catch(e){ console.warn(e); CHK.err='Could not work it out: '+e.message; } chkPanel(); planDrawSoon(); if(APP.view==='3d') requestRender(false); }, 40); }
 function chkRunTab(){ var V=chkM(); if(V.tab==='head') chkHeadRun(); else if(V.tab==='cam') chkCamRun(); else if(V.tab==='roof') chkDsm(); }
 function chkStale(){ var V=chkM(); if(V.tab==='head') return CHK.Hk!==chkHeadKey(); if(V.tab==='cam') return V.cams.length&&CHK.Ck!==chkCamKey(); if(V.tab==='roof') return CHK.Dk!==chkDsmKey(); return false; }
 
@@ -24941,12 +24941,14 @@ window.addEventListener('pointerdown', function(e){ if(!chkOpen()||e.button!==0)
 window.addEventListener('mousedown', function(e){ if(chkOpen()&&e.button===0&&e.target===planCv&&(CHK.drawing||CHK.tool||CHK.drag||CHK.aim>=0)){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 window.addEventListener('pointermove', function(e){ if(!chkOpen()) return; var p=chkEv(e); if(!p){ if(CHK.hov){ CHK.hov=null; planDrawSoon(); } return; } CHK.hov=[p.wx,p.wy]; var V=chkM();
   if(CHK.aim>=0&&V.cams[CHK.aim]){ var c=V.cams[CHK.aim]; c.yaw=+Math.atan2(p.wy-c.y, p.wx-c.x).toFixed(4); e.stopImmediatePropagation(); }
-  else if(CHK.drag&&V.cams[CHK.drag.i]){ var c2=V.cams[CHK.drag.i]; if(CHK.drag.k==='move'){ c2.x=+p.wx.toFixed(3); c2.y=+p.wy.toFixed(3); } else c2.yaw=+Math.atan2(p.wy-c2.y, p.wx-c2.x).toFixed(4); e.stopImmediatePropagation(); }
+  else if(CHK.drag&&V.cams[CHK.drag.i]){ var c2=V.cams[CHK.drag.i]; if(CHK.drag.k==='move'){ c2.x=+p.wx.toFixed(3); c2.y=+p.wy.toFixed(3); delete c2.gz; } else c2.yaw=+Math.atan2(p.wy-c2.y, p.wx-c2.x).toFixed(4); e.stopImmediatePropagation(); }
   else if(V.tab==='cam'&&!CHK.tool&&!CHK.drawing){ var h=chkCamHit(p); planCv.style.cursor=h?(h.k==='aim'?'crosshair':'move'):''; }
   planDrawSoon(); }, true);
 window.addEventListener('pointerup', function(e){ var V=chkM(); if(CHK.drag){ CHK.drag=null; e.stopImmediatePropagation(); afterEdit(); chkRunSoon(); chkPanel(); return; } if(!CHK.dn) return; var d=CHK.dn; CHK.dn=null; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; var p=chkEv(e); if(!p) return; e.preventDefault(); e.stopImmediatePropagation(); var w=[+p.wx.toFixed(3), +p.wy.toFixed(3)];
   if(CHK.aim>=0){ CHK.aim=-1; CHK.tool=null; planCv.style.cursor=''; afterEdit(); chkRunSoon(); chkPanel(); return; }
   if(CHK.drawing){ if(CHK.draft.length>=3){ var f=w2s(CHK.draft[0][0],CHK.draft[0][1]); if(Math.hypot(f[0]-p.sx, f[1]-p.sy)<12*(planView.dpr||1)){ chkFinish(); return; } } CHK.draft.push(w); planDrawSoon(); return; }
+  if(CHK.tool==='cmove'&&V.cams[CHK.sel]){ pushUndo(); var cm=V.cams[CHK.sel]; cm.x=w[0]; cm.y=w[1]; delete cm.gz; CHK.tool=null; afterEdit(); chkRunSoon(); chkPanel(); planDrawSoon(); return; }
+  if(CHK.tool==='caim'&&V.cams[CHK.sel]){ pushUndo(); var ca=V.cams[CHK.sel]; ca.yaw=+Math.atan2(w[1]-ca.y, w[0]-ca.x).toFixed(4); CHK.tool=null; afterEdit(); chkRunSoon(); chkPanel(); planDrawSoon(); return; }
   if(CHK.tool==='cam'){ pushUndo(); V.cams.push(chkCamNew(w[0], w[1])); CHK.sel=V.cams.length-1; CHK.aim=CHK.sel; toast('Now click where the camera points.', 3000); chkPanel(); planDrawSoon(); return; }
   if(CHK.tool==='roof'){ chkRoofAdd(w[0], w[1]); return; } }, true);
 /* roof planes can be picked in the 3D view too */
@@ -24986,13 +24988,13 @@ function chkPanel(){ var s=chkSec(); if(!s) return; var b=s.querySelector('.body
       if(O.low.length) h+='<div class="cList">'+O.low.slice(0,6).map(function(lw, i){ return '<button class="cIt" data-low="'+i+'"><b>'+(i+1)+'</b> '+chkM2(lw.h)+' · '+fmt(lw.area,1)+' m²</button>'; }).join('')+'</div>'; h+='<p class="mini">Grid '+Math.round(O.g.cell*1000)+' mm, worked out in '+O.ms+' ms. Hover the plan for the floor, underside and headroom.</p>'; }
     else h+='<p class="mini">Working out the headroom...</p>';
     h+='<div class="row"><label>Grid</label><select id="ckHC">'+o(0,'Auto',V.hcell)+[0.05,0.1,0.15,0.25].map(function(v){ return o(v, Math.round(v*1000)+' mm', V.hcell); }).join('')+'</select></div>'; }
-  if(V.tab==='cam'){ var C=CHK.C&&CHK.Ck===chkCamKey()?CHK.C:null; h+='<p class="mini">Place cameras on the plan. Coverage is shaded by how much detail each spot gets, and walls, cars and anything else in the scan block the view.</p><div class="cRow"><button id="ckCam" class="cBtn'+(CHK.tool==='cam'?' on':'')+'">'+(CHK.tool==='cam'?(CHK.aim>=0?'Click where it points':'Click to place it'):'+ Camera')+'</button></div>';
+  if(V.tab==='cam'){ var C=CHK.C&&CHK.Ck===chkCamKey()?CHK.C:null; h+='<p class="mini">Place cameras on the plan or in 3D (in 3D, click the wall or post it is fixed to, then the spot it points at). Coverage is shaded by how much detail each spot gets; walls, cars and anything else in the scan block the view.</p><div class="cRow"><button id="ckCam" class="cBtn'+(CHK.tool==='cam'?' on':'')+'">'+(CHK.tool==='cam'?(CHK.aim>=0?'Click where it points':'Click to place it'):'+ Camera')+'</button></div>';
     h+='<div class="row" title="The height the camera has to see: a face for identifying people"><label>Target at</label><select id="ckT">'+o(0.5,'0.5 m (number plate)',V.camT)+o(1,'1.0 m (body)',V.camT)+o(1.6,'1.6 m (face)',V.camT)+'</select></div>'+areaRow('Coverage is counted inside the area.');
     if(V.cams.length){ h+='<div class="cList">'+V.cams.map(function(c, i){ return '<button class="cIt'+(CHK.sel===i?' on':'')+'" data-cam="'+i+'"><i style="background:'+CHK_CAMCOL[i%CHK_CAMCOL.length]+'"></i><b>'+(i+1)+'</b> '+c.name.replace(/</g,'&lt;')+' · '+Math.round(c.fov)+'°</button>'; }).join('')+'</div>';
       var cs=V.cams[CHK.sel]; if(cs){ h+='<div class="cCard"><div class="row"><label>Name</label><input id="ckCn" type="text" value="'+cs.name.replace(/"/g,'&quot;')+'" style="flex:1;width:0"></div><div class="row"><label>Lens</label><select id="ckFov">'+CHK_LENS.map(function(l){ return o(l[0], l[1], cs.fov); }).join('')+(CHK_LENS.some(function(l){ return l[0]===cs.fov; })?'':o(cs.fov, Math.round(cs.fov)+'°', cs.fov))+'</select></div>'+
         '<div class="row"><label>Resolution</label><select id="ckRes">'+CHK_RES.map(function(r){ return o(r[0], r[1], cs.res); }).join('')+'</select></div><div class="row"><label>Height</label><input type="number" id="ckH" step="0.1" min="0.3" max="30" value="'+cs.h+'" style="width:70px;flex:0 0 70px"><span class="mini">m above ground</span></div>'+
         '<div class="row"><label>Tilt down</label><input type="number" id="ckTi" step="1" min="-30" max="90" value="'+cs.tilt+'" style="width:70px;flex:0 0 70px"><span class="mini">°</span></div><div class="row"><label>Facing</label><input type="number" id="ckYaw" step="1" value="'+Math.round(cs.yaw*180/Math.PI)+'" style="width:70px;flex:0 0 70px"><span class="mini">° (or drag the white handle)</span></div>'+
-        (C&&C.per[CHK.sel]?'<p class="mini">Identify to '+fmt(C.per[CHK.sel].D[0],1)+' m · Recognise '+fmt(C.per[CHK.sel].D[1],1)+' m · Observe '+fmt(C.per[CHK.sel].D[2],1)+' m · Detect '+fmt(C.per[CHK.sel].D[3],1)+' m</p>':'')+'<div class="cRow"><button id="ckDel" class="cBtn">Delete camera</button></div></div>'; } }
+        (C&&C.per[CHK.sel]?'<p class="mini">Identify to '+fmt(C.per[CHK.sel].D[0],1)+' m · Recognise '+fmt(C.per[CHK.sel].D[1],1)+' m · Observe '+fmt(C.per[CHK.sel].D[2],1)+' m · Detect '+fmt(C.per[CHK.sel].D[3],1)+' m</p>':'')+'<div class="cRow"><button id="ckLook" class="cBtn on" title="See the scan from this camera in 3D; drag to aim it">Look through</button></div><div class="cRow"><button id="ckMove" class="cBtn'+(CHK.tool==='cmove'?' on':'')+'" title="Click a new spot, on the plan or on a wall in 3D">'+(CHK.tool==='cmove'?'Click the new spot':'Move')+'</button><button id="ckAim" class="cBtn'+(CHK.tool==='caim'?' on':'')+'" title="Click the spot it should point at">'+(CHK.tool==='caim'?'Click the spot':'Aim at a spot')+'</button></div><div class="cRow"><button id="ckDel" class="cBtn">Delete camera</button></div></div>'; } }
     if(C){ var any=C.tot[1]+C.tot[2]+C.tot[3]+C.tot[4]; h+='<div class="cH">Coverage</div><div class="cRes">'+CHK_DORI.map(function(d, i){ return '<div><span><i style="background:'+d[2]+'"></i>'+d[1]+'</span><b>'+fmt(C.tot[4-i],0)+' m²</b></div>'; }).join('')+'</div><p class="mini">Seen by at least one camera: '+fmt(any,0)+' m²'+(C.floorA>0?' ('+Math.round(100*any/C.floorA)+'% of the ground)':'')+'. Two or more: '+fmt(C.multi,0)+' m². Worked out in '+C.ms+' ms.</p>'; }
     h+='<div class="row"><label>Grid</label><select id="ckCC">'+o(0,'Auto',V.ccell)+[0.1,0.2,0.3,0.5].map(function(v){ return o(v, Math.round(v*1000)+' mm', V.ccell); }).join('')+'</select></div>'; }
   if(V.tab==='roof'){ h+='<p class="mini">Click a roof plane, on the plan or in 3D. The plane is grown out from where you click and its pitch, area and fall are read.</p><div class="cRow"><button id="ckRoof" class="cBtn'+(CHK.tool==='roof'?' on':'')+'">'+(CHK.tool==='roof'?'Click a roof plane... (Esc to stop)':'+ Read a roof plane')+'</button></div>';
@@ -25003,7 +25005,7 @@ function chkPanel(){ var s=chkSec(); if(!s) return; var b=s.querySelector('.body
   if(CHK.err) h+='<p class="mini" style="color:#b45309">'+CHK.err+'</p>';
   if(V.tab!=='pond') h+='<div class="cH">Export</div><div class="cRow"><button id="ckPdf" class="cBtn">PDF</button><button id="ckCsv" class="cBtn">CSV</button></div>';
   b.innerHTML=h; var q=function(id){ return b.querySelector('#'+id); }, set=function(k, v, run){ pushUndo(); V[k]=v; afterEdit(); if(run) chkRunSoon(); chkPanel(); planDrawSoon(); };
-  b.querySelectorAll('[data-ck]').forEach(function(x){ x.onclick=function(){ V.tab=x.dataset.cv; CHK.tool=null; CHK.aim=-1; CHK.drawing=false; chkPanel(); if(chkStale()&&(V.tab==='cam'||V.tab==='roof')&&(V.tab==='roof'||V.cams.length)) chkRunSoon(); planDrawSoon(); }; });
+  b.querySelectorAll('[data-ck]').forEach(function(x){ x.onclick=function(){ V.tab=x.dataset.cv; CHK.tool=null; CHK.aim=-1; CHK.drawing=false; if(CHK.look&&V.tab!=='cam') chkLookEnd(true); chkPanel(); requestRender(false); if(chkStale()&&(V.tab==='cam'||V.tab==='roof')&&(V.tab==='roof'||V.cams.length)) chkRunSoon(); planDrawSoon(); }; });
   if(q('ckDraw')) q('ckDraw').onclick=function(){ CHK.drawing=true; CHK.draft=[]; CHK.tool=null; chkPanel(); if(APP.view==='3d') wsView('plan'); toast('Click round the area on the plan. Click the first point or press Enter to finish.', 4000); };
   if(q('ckWhole')) q('ckWhole').onclick=function(){ set('area', null, true); }; if(q('ckDone')) q('ckDone').onclick=chkFinish; if(q('ckCan')) q('ckCan').onclick=function(){ CHK.drawing=false; CHK.draft=[]; chkPanel(); planDrawSoon(); };
   if(q('ckRun')) q('ckRun').onclick=function(){ setStatus('Working out headroom'); setTimeout(function(){ chkRunSoon(); setStatus('Ready'); }, 20); };
@@ -25014,7 +25016,8 @@ function chkPanel(){ var s=chkSec(); if(!s) return; var b=s.querySelector('.body
   if(q('ckCC')) q('ckCC').onchange=function(){ set('ccell', +this.value, true); }; if(q('ckT')) q('ckT').onchange=function(){ set('camT', +this.value, true); };
   if(q('ckRC')) q('ckRC').onchange=function(){ pushUndo(); V.rcell=+this.value; chkDsm(); chkRoofRefresh(); afterEdit(); chkPanel(); planDrawSoon(); };
   if(q('ckTol')) q('ckTol').onchange=function(){ pushUndo(); V.rtol=+this.value; chkRoofRefresh(); afterEdit(); chkPanel(); planDrawSoon(); };
-  if(q('ckCam')) q('ckCam').onclick=function(){ CHK.tool=CHK.tool==='cam'?null:'cam'; CHK.aim=-1; if(APP.view==='3d') wsView('plan'); chkPanel(); };
+  if(q('ckCam')) q('ckCam').onclick=function(){ CHK.tool=CHK.tool==='cam'?null:'cam'; CHK.aim=-1; chkPanel(); requestRender(false); };
+  if(q('ckLook')) q('ckLook').onclick=function(){ chkLook(CHK.sel); }; if(q('ckMove')) q('ckMove').onclick=function(){ CHK.tool=CHK.tool==='cmove'?null:'cmove'; chkPanel(); requestRender(false); }; if(q('ckAim')) q('ckAim').onclick=function(){ CHK.tool=CHK.tool==='caim'?null:'caim'; chkPanel(); requestRender(false); };
   if(q('ckRoof')) q('ckRoof').onclick=function(){ CHK.tool=CHK.tool==='roof'?null:'roof'; if(CHK.tool) setTimeout(function(){ try{ chkDsm(); }catch(e){ console.warn(e); } chkPanel(); planDrawSoon(); }, 10); chkPanel(); };
   if(q('ckLev')) q('ckLev').onclick=function(){ var L=levM(); L.mode='falls'; sbPanel('levels'); };
   b.querySelectorAll('[data-cam]').forEach(function(x){ x.onclick=function(){ CHK.sel=+x.dataset.cam; chkPanel(); planDrawSoon(); }; });
@@ -25028,7 +25031,7 @@ function chkPanel(){ var s=chkSec(); if(!s) return; var b=s.querySelector('.body
   if(q('ckPdf')) q('ckPdf').onclick=chkPdf; if(q('ckCsv')) q('ckCsv').onclick=chkCsv; }
 SKIN_IC.checks='M12 2l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V5l8-3zM8.5 12l2.5 2.5L16 9.5';
 SBP_ITEMS.push(['checks','Site checks','checks','Headroom map, CCTV coverage and roof pitch from the scan, each with a PDF and CSV']);
-sbAfter('sbPanel', function(r){ try{ if(SBP.key==='checks'){ chkPanel(); if(APP.view==='3d'&&typeof wsView==='function') wsView('plan'); } else { CHK.drawing=false; CHK.tool=null; CHK.aim=-1; } planDrawSoon(); }catch(e){ console.warn(e); } return r; });
+sbAfter('sbPanel', function(r){ try{ if(SBP.key==='checks'){ chkPanel(); if(APP.view==='3d'&&chkM().tab!=='cam'&&typeof wsView==='function') wsView('plan'); } else { CHK.drawing=false; CHK.tool=null; CHK.aim=-1; } planDrawSoon(); }catch(e){ console.warn(e); } return r; });
 (function(){ sbAfter('buildSidebar', function(r){ try{ chkPanel(); }catch(e){} return r; }); try{ chkPanel(); }catch(e){}
   var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=checks] #side .sec[data-sec=checks]{display:block}body.sbSkin:not(.sbPanelOn) #sbChkSec,body:not(.hasScan) #sbChkSec{display:none}'+
     '#sbChkSec .cSeg{display:flex;margin:2px 0 8px}#sbChkSec .cSeg button{flex:1;padding-left:2px;padding-right:2px}#sbChkSec .cRow{display:flex;gap:6px;margin:6px 0}#sbChkSec .cBtn{flex:1;border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 8px;cursor:pointer;font:inherit;font-size:12px}#sbChkSec .cBtn.on{background:var(--acc);border-color:var(--acc);color:#fff}'+
@@ -25036,6 +25039,81 @@ sbAfter('sbPanel', function(r){ try{ if(SBP.key==='checks'){ chkPanel(); if(APP.
     '#sbChkSec .cList{display:flex;flex-direction:column;gap:4px;margin:6px 0}#sbChkSec .cIt{display:flex;align-items:center;gap:6px;text-align:left;border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:5px 8px;font:inherit;font-size:12px;cursor:pointer}#sbChkSec .cIt.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}#sbChkSec .cRf{cursor:default}#sbChkSec .cRf>span{flex:1;min-width:0}#sbChkSec .cRf button{border:0;background:none;color:inherit;cursor:pointer;opacity:.6}'+
     '#sbChkSec .cCard{border:1px solid var(--sbLn);border-radius:8px;padding:6px 8px;margin:4px 0}#sbChkSec .row select{flex:1;width:0}';
   document.head.appendChild(c); })();
+
+/* ===== CCTV in 3D (r361): with the CCTV tab open in the 3D view, each camera is drawn with its view cone and the coverage is
+   shaded on the ground. + Camera works by clicking in 3D: click the wall or post where it is fixed (that sets its height), then the
+   spot it points at (that sets its facing and tilt). Look through shows the scan from the camera with its own lens; drag to pan and
+   tilt it, scroll to change the lens, Esc or Back to leave. ===== */
+CHK.look=null;
+function chkCamEye(i){ var V=chkM(), c=V.cams[i]; if(!c) return null; var P=CHK.C&&CHK.Ck===chkCamKey()&&CHK.C.per[i], gz=P?P.gz:(c.gz!=null?c.gz:chkGroundAt(c.x, c.y)); return [c.x, c.y, gz+c.h]; }
+/* the ground under a spot: low in the points round it */
+function chkGroundAt(x, y){ var R=APP.res, P=R.pos, n=R.n, O=R.opa, DL=R.del, zs=[], r=0.8; for(var tries=0;tries<3&&zs.length<8;tries++){ zs.length=0; for(var i=0;i<n;i++){ var dx=P[i*3]-x, dy=P[i*3+1]-y; if(dx*dx+dy*dy>r*r) continue; if((DL&&DL[i])||(O&&O[i]<60)) continue; var z=P[i*3+2]; if(z>-9000) zs.push(z); } r*=2.5; }
+  if(!zs.length) return R.robust.z[0]; zs.sort(function(a,b){ return a-b; }); return zs[Math.min(zs.length-1, Math.floor(zs.length*0.06))]; }
+function chkCamBasis(c){ var y=c.yaw, t=(c.tilt||0)*Math.PI/180, f=[Math.cos(t)*Math.cos(y), Math.cos(t)*Math.sin(y), -Math.sin(t)], r=[Math.sin(y), -Math.cos(y), 0], u=[r[1]*f[2]-r[2]*f[1], r[2]*f[0]-r[0]*f[2], r[0]*f[1]-r[1]*f[0]]; return {f:f, r:r, u:u}; }
+function chkVf(c){ return 2*Math.atan(Math.tan(c.fov*Math.PI/360)*9/16); }
+
+/* ---------- the overlay in the 3D view ---------- */
+function chkOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('chkOv'), V=APP.res&&chkM(), on=!!(V&&chkOpen()&&V.tab==='cam'&&APP.view==='3d'&&!miniVP);
+  if(!cv){ if(!on) return; cv=document.createElement('canvas'); cv.id='chkOv'; cv.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:29'; st.appendChild(cv); }
+  var dpr=window.devicePixelRatio||1, W=Math.round(st.clientWidth*dpr), H=Math.round(st.clientHeight*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=st.clientWidth+'px'; cv.style.height=st.clientHeight+'px'; }
+  var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!on) return; var sr=st.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), S=function(p){ var q=projectWorld(p); return q?[(q[0]+gr.left-sr.left)*dpr, (q[1]+gr.top-sr.top)*dpr]:null; };
+  /* coverage on the ground, about every half metre, one path per detail band */
+  var C=CHK.C&&CHK.Ck===chkCamKey()?CHK.C:null; if(C){ var g=C.g, st2=Math.max(1, Math.round(0.4/g.cell)), h=st2*g.cell/2, paths=[[],[],[],[],[]], count=0;
+    for(var y=0;y<g.ny;y+=st2) for(var x=0;x<g.nx;x+=st2){ var q=y*g.nx+x, lv=C.best[q]; if(!lv) continue; var f=C.F[q]; if(!(f===f)) continue; var cx=g.x0+(x+0.5)*g.cell, cy=g.y0+(y+0.5)*g.cell, z=f+0.04, A=S([cx-h,cy-h,z]), B=S([cx+h,cy-h,z]), D=S([cx+h,cy+h,z]), E=S([cx-h,cy+h,z]); if(!A||!B||!D||!E) continue; paths[lv].push(A,B,D,E); if(++count>60000) break; }
+    c.globalAlpha=0.42; CHK_DORI.forEach(function(d, i){ var L=paths[4-i]; if(!L.length) return; c.fillStyle=d[2]; c.beginPath(); for(var k=0;k<L.length;k+=4){ c.moveTo(L[k][0],L[k][1]); c.lineTo(L[k+1][0],L[k+1][1]); c.lineTo(L[k+2][0],L[k+2][1]); c.lineTo(L[k+3][0],L[k+3][1]); c.closePath(); } c.fill(); }); c.globalAlpha=1; }
+  /* each camera: a body and its view cone */
+  V.cams.forEach(function(cm, i){ if(CHK.look&&CHK.look.i===i) return; var E=chkCamEye(i); if(!E) return; var col=CHK_CAMCOL[i%CHK_CAMCOL.length], B=chkCamBasis(cm), th=Math.tan(cm.fov*Math.PI/360), tv=Math.tan(chkVf(cm)/2), P=C&&C.per[i], L=Math.min(2.5, P?P.D[0]:2.5), sel=CHK.sel===i;
+    var cor=[[1,1],[-1,1],[-1,-1],[1,-1]].map(function(s){ return S([E[0]+(B.f[0]+B.r[0]*th*s[0]+B.u[0]*tv*s[1])*L, E[1]+(B.f[1]+B.r[1]*th*s[0]+B.u[1]*tv*s[1])*L, E[2]+(B.f[2]+B.r[2]*th*s[0]+B.u[2]*tv*s[1])*L]); }), e=S(E);
+    if(!e) return; if(cor.every(Boolean)){ c.fillStyle=col; c.globalAlpha=sel?0.16:0.09; c.beginPath(); c.moveTo(cor[0][0],cor[0][1]); cor.forEach(function(p){ c.lineTo(p[0],p[1]); }); c.closePath(); c.fill(); c.globalAlpha=1;
+      c.strokeStyle=col; c.lineWidth=(sel?2.2:1.4)*dpr; c.beginPath(); cor.forEach(function(p){ c.moveTo(e[0],e[1]); c.lineTo(p[0],p[1]); }); c.moveTo(cor[0][0],cor[0][1]); cor.forEach(function(p){ c.lineTo(p[0],p[1]); }); c.closePath(); c.stroke(); }
+    var gz=E[2]-cm.h, gp=S([E[0],E[1],gz]); if(gp){ c.strokeStyle='rgba(17,24,39,.6)'; c.lineWidth=1*dpr; c.setLineDash([4*dpr,3*dpr]); c.beginPath(); c.moveTo(e[0],e[1]); c.lineTo(gp[0],gp[1]); c.stroke(); c.setLineDash([]); }
+    c.fillStyle=col; c.beginPath(); c.arc(e[0],e[1],(sel?11:9)*dpr,0,7); c.fill(); c.strokeStyle='#fff'; c.lineWidth=2*dpr; c.stroke(); c.fillStyle='#fff'; c.font='700 '+(11*dpr)+'px system-ui'; c.textAlign='center'; c.fillText(String(i+1), e[0], e[1]+4*dpr); c.textAlign='left';
+    if(sel){ c.font='600 '+(12*dpr)+'px system-ui'; var t=cm.name+' · '+fmt(cm.h,1)+' m · '+Math.round(cm.tilt)+'° down', w=c.measureText(t).width+12*dpr; c.fillStyle='rgba(17,24,39,.9)'; c.fillRect(e[0]+14*dpr, e[1]-11*dpr, w, 22*dpr); c.fillStyle='#fff'; c.fillText(t, e[0]+20*dpr, e[1]+4*dpr); } });
+  if(CHK.look) chkLookFrame(c, W, H, dpr);
+  if(CHK.tool&&!CHK.look){ c.font='600 '+(13*dpr)+'px system-ui'; var msg=CHK.aim>=0?'Click the spot the camera points at':CHK.tool==='cam'?'Click where the camera is fixed (a wall, a post, a ceiling)':CHK.tool==='cmove'?'Click the new spot for '+(V.cams[CHK.sel]||{}).name:'Click the spot '+(V.cams[CHK.sel]||{}).name+' points at', mw=c.measureText(msg).width+24*dpr; c.fillStyle='rgba(17,24,39,.9)'; c.fillRect(W/2-mw/2, 14*dpr, mw, 30*dpr); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(msg, W/2, 34*dpr); c.textAlign='left'; } }
+sbAfter('gl_render', function(r){ try{ chkOv(); }catch(e){ console.warn(e); } return r; });
+
+/* ---------- placing and aiming in 3D ---------- */
+function chkPick3(e){ var q=null; try{ q=strPickPt(e); }catch(er){} if(!q) return null; var R=pickRay(e.clientX, e.clientY); return {q:q, d:R.d}; }
+function chkCamHit3(e){ var V=chkM(), gr=glCv.getBoundingClientRect(), best=-1, bd=16; V.cams.forEach(function(cm, i){ var E=chkCamEye(i), s=E&&projectWorld(E); if(!s) return; var d=Math.hypot(s[0]-(e.clientX-gr.left), s[1]-(e.clientY-gr.top)); if(d<bd){ bd=d; best=i; } }); return best; }
+function chkAimAt(cm, E, T){ var dx=T[0]-E[0], dy=T[1]-E[1], hz=Math.hypot(dx,dy); cm.yaw=+Math.atan2(dy,dx).toFixed(4); cm.tilt=Math.round(Math.atan2(E[2]-T[2], Math.max(0.01,hz))*180/Math.PI); }
+window.addEventListener('mousedown', function(e){ if(!chkOpen()||e.button!==0||e.target!==glCv||chkM().tab!=='cam'||CHK.look) return; var V=chkM();
+  if(!CHK.tool&&CHK.aim<0){ var hi=chkCamHit3(e); if(hi>=0){ e.preventDefault(); e.stopImmediatePropagation(); CHK.sel=hi; chkPanel(); requestRender(false); } return; }
+  e.preventDefault(); e.stopImmediatePropagation(); var p=chkPick3(e); if(!p){ toast('Click on the scan itself.', 2000); return; }
+  if(CHK.aim>=0&&V.cams[CHK.aim]){ var cm=V.cams[CHK.aim]; chkAimAt(cm, chkCamEye(CHK.aim), p.q); CHK.aim=-1; CHK.tool=null; afterEdit(); chkRunSoon(); chkPanel(); requestRender(false); toast(cm.name+': '+Math.round(cm.tilt)+'° down. Drag in Look through to fine tune.', 3000); return; }
+  var E=[p.q[0]-p.d[0]*0.15, p.q[1]-p.d[1]*0.15, p.q[2]-p.d[2]*0.15], gz=chkGroundAt(E[0], E[1]), h=Math.max(0.3, +(E[2]-gz).toFixed(2));
+  if(CHK.tool==='cam'){ pushUndo(); var nc=chkCamNew(E[0], E[1]); nc.h=h; nc.gz=+gz.toFixed(3); V.cams.push(nc); CHK.sel=V.cams.length-1; CHK.aim=CHK.sel; chkPanel(); requestRender(false); return; }
+  var cs=V.cams[CHK.sel]; if(!cs) return; pushUndo();
+  if(CHK.tool==='cmove'){ cs.x=+E[0].toFixed(3); cs.y=+E[1].toFixed(3); cs.h=h; cs.gz=+gz.toFixed(3); }
+  else if(CHK.tool==='caim') chkAimAt(cs, chkCamEye(CHK.sel), p.q);
+  CHK.tool=null; afterEdit(); chkRunSoon(); chkPanel(); requestRender(false); }, true);
+
+/* ---------- look through a camera ---------- */
+function chkLookVs(c){ var asp=glCv.width/Math.max(1,glCv.height), th=Math.tan(c.fov*Math.PI/360), tv=th*9/16; return 2*Math.atan(Math.max(tv, th/asp)); }
+function chkLookApply(){ var L=CHK.look, V=chkM(), c=V&&V.cams[L.i]; if(!c){ chkLookEnd(); return; } var E=chkCamEye(L.i), B=chkCamBasis(c), D=4; cam.tx=E[0]+B.f[0]*D; cam.ty=E[1]+B.f[1]*D; cam.tz=E[2]+B.f[2]*D; cam.dist=D; cam.yaw=Math.atan2(-B.f[1], -B.f[0]); cam.pitch=Math.asin(Math.max(-1,Math.min(1,-B.f[2]))); requestRender(false); }
+function chkLook(i){ var V=chkM(); if(!V.cams[i]) return; if(CHK.look) chkLookEnd(true); if(APP.view!=='3d') wsView('3d'); CHK.look={i:i, keep:Object.assign({}, cam), ortho:APP.ortho3d}; APP.ortho3d=false; CHK.sel=i; CHK.tool=null; CHK.aim=-1; chkLookApply(); chkLookBar(); chkPanel(); }
+function chkLookEnd(quiet){ var L=CHK.look; if(!L) return; CHK.look=null; Object.assign(cam, L.keep); APP.ortho3d=L.ortho; var b=document.getElementById('chkLookBar'); if(b) b.remove(); if(!quiet){ chkPanel(); requestRender(false); } }
+sbAfter('splatView', function(v){ var L=CHK.look; if(!L||miniVP) return v; var c=chkM().cams[L.i]; if(!c) return v; var vs=chkLookVs(c), asp=glCv.width/Math.max(1,glCv.height); v.P=mPersp(vs, asp, 0.02, 400); v.fy=glCv.height/(2*Math.tan(vs/2)); v.ortho=false; return v; });
+sbAround('camMVP', function(next){ var L=CHK.look; if(!L||miniVP) return next(); var c=chkM().cams[L.i]; if(!c) return next(); var asp=glCv.width/Math.max(1,glCv.height), cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch), eye=[cam.tx+cam.dist*cp*Math.cos(cam.yaw), cam.ty+cam.dist*cp*Math.sin(cam.yaw), cam.tz+cam.dist*sp]; return mMul(mPersp(chkLookVs(c), asp, 0.02, 400), mLook(eye,[cam.tx,cam.ty,cam.tz],[0,0,1])); });
+sbAround('pickRay', function(next, x, y){ var L=CHK.look; if(!L) return next(); var c=chkM().cams[L.i], r=glCv.getBoundingClientRect(), nx=((x-r.left)/r.width)*2-1, ny=1-((y-r.top)/r.height)*2, t=Math.tan(chkLookVs(c)/2), asp=r.width/Math.max(1,r.height), B=camBasis(), d=[0,1,2].map(function(k){ return B.fwd[k]+B.right[k]*nx*t*asp+B.up[k]*ny*t; }), n=Math.hypot(d[0],d[1],d[2]); return {o:B.eye, d:[d[0]/n,d[1]/n,d[2]/n]}; });
+/* the camera's own picture is 16:9; outside it is shaded, with the detail bands' distances written along the bottom */
+function chkLookFrame(c, W, H, dpr){ var cm=chkM().cams[CHK.look.i]; if(!cm) return; var vs=chkLookVs(cm), f=H/(2*Math.tan(vs/2)), hw=f*Math.tan(cm.fov*Math.PI/360), hh=f*Math.tan(chkVf(cm)/2), x0=W/2-hw, x1=W/2+hw, y0=H/2-hh, y1=H/2+hh;
+  c.fillStyle='rgba(10,12,16,.62)'; c.fillRect(0,0,W,Math.max(0,y0)); c.fillRect(0,y1,W,H-y1); c.fillRect(0,y0,Math.max(0,x0),y1-y0); c.fillRect(x1,y0,W-x1,y1-y0);
+  c.strokeStyle='#fff'; c.lineWidth=1.5*dpr; c.strokeRect(x0,y0,x1-x0,y1-y0); var k=18*dpr; c.lineWidth=3*dpr; [[x0,y0,1,1],[x1,y0,-1,1],[x0,y1,1,-1],[x1,y1,-1,-1]].forEach(function(q){ c.beginPath(); c.moveTo(q[0]+q[2]*k,q[1]); c.lineTo(q[0],q[1]); c.lineTo(q[0],q[1]+q[3]*k); c.stroke(); });
+  c.beginPath(); c.moveTo(W/2-10*dpr,H/2); c.lineTo(W/2+10*dpr,H/2); c.moveTo(W/2,H/2-10*dpr); c.lineTo(W/2,H/2+10*dpr); c.lineWidth=1.2*dpr; c.stroke();
+  var P=CHK.C&&CHK.C.per[CHK.look.i]; if(P){ c.font='600 '+(12*dpr)+'px system-ui'; var t='Identify to '+fmt(P.D[0],1)+' m · Recognise '+fmt(P.D[1],1)+' m · Observe '+fmt(P.D[2],1)+' m · Detect '+fmt(P.D[3],1)+' m', w=c.measureText(t).width+16*dpr, by=Math.min(H-34*dpr, y1+8*dpr); c.fillStyle='rgba(17,24,39,.85)'; c.fillRect(W/2-w/2, by, w, 24*dpr); c.fillStyle='#fff'; c.textAlign='center'; c.fillText(t, W/2, by+16*dpr); c.textAlign='left'; } }
+function chkLookBar(){ var L=CHK.look; if(!L) return; var b=document.getElementById('chkLookBar'), cm=chkM().cams[L.i]; if(!b){ b=document.createElement('div'); b.id='chkLookBar'; b.style.cssText='position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:31;display:flex;align-items:center;gap:10px;background:#fff;color:#111827;border:1px solid #d1d5db;border-radius:10px;padding:6px 8px 6px 12px;font:13px system-ui;box-shadow:0 4px 16px rgba(0,0,0,.18)'; document.getElementById('stage').appendChild(b); }
+  b.innerHTML='<i style="width:10px;height:10px;border-radius:50%;background:'+CHK_CAMCOL[L.i%CHK_CAMCOL.length]+'"></i><b>'+cm.name.replace(/</g,'&lt;')+'</b><span style="color:#4b5563">'+Math.round(cm.fov)+'° lens · '+Math.round(cm.tilt)+'° down · drag to aim, scroll for the lens</span><button id="chkLookBack" style="font:600 12px system-ui;border:0;border-radius:8px;padding:5px 12px;background:#2563eb;color:#fff;cursor:pointer">Back</button>';
+  b.querySelector('#chkLookBack').onclick=function(){ chkLookEnd(); }; }
+window.addEventListener('pointerdown', function(e){ if(!CHK.look||e.target!==glCv) return; e.preventDefault(); e.stopImmediatePropagation(); CHK.look.dn={x:e.clientX, y:e.clientY, moved:false}; try{ glCv.setPointerCapture(e.pointerId); }catch(er){} pushUndo(); }, true);
+window.addEventListener('mousedown', function(e){ if(CHK.look&&e.target===glCv){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+window.addEventListener('pointermove', function(e){ var L=CHK.look; if(!L||!L.dn) return; e.preventDefault(); e.stopImmediatePropagation(); var cm=chkM().cams[L.i], dx=e.clientX-L.dn.x, dy=e.clientY-L.dn.y; L.dn.x=e.clientX; L.dn.y=e.clientY; L.dn.moved=true; var k=Math.tan(chkLookVs(cm)/2)*2/Math.max(1, glCv.clientHeight);
+  cm.yaw=+(cm.yaw+dx*k).toFixed(4); cm.tilt=Math.max(-30, Math.min(90, +(cm.tilt-dy*k*180/Math.PI).toFixed(1))); chkLookApply(); chkLookBar(); }, true);
+window.addEventListener('pointerup', function(e){ var L=CHK.look; if(!L||!L.dn) return; e.stopImmediatePropagation(); var mv=L.dn.moved; L.dn=null; if(mv){ var cm=chkM().cams[L.i]; cm.tilt=Math.round(cm.tilt); afterEdit(); chkRunSoon(); chkPanel(); } }, true);
+window.addEventListener('wheel', function(e){ var L=CHK.look; if(!L||e.target!==glCv) return; e.preventDefault(); e.stopImmediatePropagation(); var cm=chkM().cams[L.i]; cm.fov=Math.max(15, Math.min(120, Math.round(cm.fov+(e.deltaY>0?3:-3)))); chkLookApply(); chkLookBar(); clearTimeout(L.wt); L.wt=setTimeout(function(){ afterEdit(); chkRunSoon(); chkPanel(); }, 400); }, {capture:true, passive:false});
+window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&CHK.look){ e.preventDefault(); e.stopImmediatePropagation(); chkLookEnd(); } }, true);
+sbAfter('sbPanel', function(r){ try{ if(SBP.key!=='checks'&&CHK.look) chkLookEnd(); requestRender(false); }catch(e){} return r; });
+sbAfter('wsView', function(r){ try{ if(APP.view!=='3d'&&CHK.look) chkLookEnd(); }catch(e){} return r; });
 
 
 </script>

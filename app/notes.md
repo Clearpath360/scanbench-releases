@@ -1,7 +1,6 @@
-# Scan Bench r360
+# Scan Bench r361
 
-- New rail tool Site checks: Headroom, CCTV, Roof pitch, Ponding.
-- Headroom: floor to underside map, red under your limit, amber just over, low spots listed; PDF and CSV.
-- CCTV: place cameras (lens, resolution, height, tilt, facing); coverage shaded Identify / Recognise / Observe / Detect, scan objects block the view; PDF and CSV.
-- Roof pitch: click a roof plane on the plan or in 3D for pitch, slope area, plan area and fall arrow; PDF and CSV.
-- Levels: ponding spots numbered on the Falls map, full ponding schedule page in the PDF.
+- Site checks > CCTV now works in the 3D view: cameras drawn with their view cones, coverage shaded on the ground.
+- + Camera in 3D: click the wall or post it is fixed to, then the spot it points at (sets height, facing and tilt).
+- Look through: see the scan from the camera with its lens; drag to aim, scroll to change the lens, Back or Esc to leave.
+- Move and Aim at a spot buttons for the selected camera, on the plan or in 3D; click a camera in 3D to select it.
