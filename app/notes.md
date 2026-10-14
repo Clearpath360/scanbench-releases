@@ -1,4 +1,4 @@
-# Scan Bench r365
+# Scan Bench r366
 
-- Roof pitch: reads drone splat roofs far better (loose floater points ignored, grid sized to the scan, tolerance set by how rough the roof is).
-- Roof pitch: clicking a missed patch of a plane already read joins it to that plane.
+- Roof pitch: click a roof plane in the list to edit it: Paint more on, Rub out (brush 25 cm to 2 m, on the plan or in 3D), or Draw outline (area from your corners, pitch from the scan).
+- Roof pitch PDF: lists every roof plane (was cut at 14) and the totals now include all of them.
