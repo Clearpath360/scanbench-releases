@@ -1,4 +1,4 @@
-# Scan Bench r354
+# Scan Bench r355
 
-- Straighten rings: a box beside the rings to type the degrees for Tilt front/back, Tilt left/right and Turn; press Enter to apply.
-- Straighten rings: Pick turn point, then click the scan; it turns about that point (orange cross). Middle puts it back.
+- Record button: now asks which kind; Smooth video to send (F9) or Quick record a problem (F10, as before).
+- Smooth video: up to 30 frames a second, full HD, no pointer marks, high quality, MP4 where the browser can; press Stop and save when done (up to 10 min).

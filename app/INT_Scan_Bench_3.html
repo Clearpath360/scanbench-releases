@@ -8429,7 +8429,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-14 r354';
+var SB_BUILD='2026-10-14 r355';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24627,6 +24627,45 @@ window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&STR.pivPick
 /* an orange cross on the turn point while the rings are out */
 sbAfter('strDrawOv', function(r, c, dpr){ try{ if(!STR.piv||STR.pivRes!==APP.res||!strRingsOn()||!(STR.open||STR.on)) return r; var G=strRingGeom(), s=projectWorld(strW(STR.piv)); if(!s) return r; var x=(s[0]+G.ox)*dpr, y=(s[1]+G.oy)*dpr, k=dpr;
     c.save(); c.strokeStyle='#111'; c.lineWidth=5*k; c.beginPath(); c.moveTo(x-11*k,y); c.lineTo(x+11*k,y); c.moveTo(x,y-11*k); c.lineTo(x,y+11*k); c.stroke(); c.strokeStyle='#ffb000'; c.lineWidth=2.5*k; c.stroke(); c.beginPath(); c.arc(x,y,6*k,0,7); c.stroke(); c.restore(); }catch(e){} return r; });
+
+/* ===== Screen record (r355): the red record button now offers two kinds.
+   Quick record (F10): as before, 5 seconds with the pointer and a frame strip, for showing a problem.
+   Smooth video (F9): a clean recording to send to people. Every frame the app draws is caught (no extra drawing, so the app stays
+   as smooth as it is), at up to 30 a second and full HD, no pointer marks, high quality, MP4 where the browser can, until you press Stop. ===== */
+var SREC=null;
+function srCompose(x, W, H){ var st=document.getElementById('stage'), r=st.getBoundingClientRect(), dpr=window.devicePixelRatio||1, k=W/(r.width*dpr);
+  x.setTransform(1,0,0,1,0,0); x.fillStyle='#0c0f13'; x.fillRect(0,0,W,H); x.setTransform(k,0,0,k,0,0);
+  function put(cv){ if(!cv||!cv.width||getComputedStyle(cv).display==='none') return; var q=cv.getBoundingClientRect(); if(!q.width) return; try{ x.drawImage(cv, (q.left-r.left)*dpr, (q.top-r.top)*dpr, q.width*dpr, q.height*dpr); }catch(e){} }
+  if(CEI.view==='3d'&&APP.view==='3d') put(glCv); else if(CEI.view==='plan') put(planCv); else put(document.getElementById('ceilCv'));
+  put(document.getElementById('clnOv')); put(document.getElementById('mdlOv')); var mb=document.getElementById('ceMiniBox'); if(mb&&mb.style.display!=='none') put(document.getElementById('ceMini')); x.setTransform(1,0,0,1,0,0); }
+/* straight after each 3D draw, while the picture is still there */
+sbAfter('gl_render', function(r){ try{ if(SREC&&!SREC.done&&CEI.view==='3d'&&APP.view==='3d'){ var now=performance.now(); if(now-SREC.last>=30){ SREC.last=now; srCompose(SREC.x, SREC.cv.width, SREC.cv.height); SREC.n++; } } }catch(e){} return r; });
+function srStart(){ if(!APP.res){ toast('Load a scan first.'); return; } if(SREC||window.SB_REC){ toast('Already recording.', 2000); return; } if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){ toast('This browser cannot record video. Use Chrome or Edge.', 5000); return; }
+  var st=document.getElementById('stage').getBoundingClientRect(), dpr=window.devicePixelRatio||1, W=Math.round(st.width*dpr), H=Math.round(st.height*dpr), s=Math.min(1, 1920/W, 1080/H); W=Math.round(W*s/2)*2; H=Math.round(H*s/2)*2;
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var x=cv.getContext('2d'); srCompose(x, W, H);
+  var types=['video/mp4;codecs=avc1.640028','video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'], mt=types.filter(function(t){ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } })[0]||'';
+  var stream=cv.captureStream(30), chunks=[], rec; try{ rec=new MediaRecorder(stream, mt?{mimeType:mt, videoBitsPerSecond:12000000}:{videoBitsPerSecond:12000000}); }catch(e){ toast('Could not start recording: '+e.message, 4000); return; }
+  rec.ondataavailable=function(e){ if(e.data&&e.data.size) chunks.push(e.data); };
+  SREC={cv:cv, x:x, rec:rec, chunks:chunks, t0:performance.now(), last:0, n:0, done:false};
+  /* plan and other flat views do not go through the 3D draw, so they are caught 30 times a second instead */
+  (function loop(){ if(!SREC||SREC.done) return; if(!(CEI.view==='3d'&&APP.view==='3d')){ srCompose(x, W, H); SREC.n++; } else if(performance.now()-SREC.last>250){ srCompose(x, W, H); SREC.last=performance.now(); } SREC.raf=requestAnimationFrame(loop); })();
+  var b=document.createElement('div'); b.id='srBadge'; b.style.cssText='position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;background:#111827;color:#fff;font:600 13px system-ui,sans-serif;padding:6px 8px 6px 12px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.4)';
+  b.innerHTML='<span style="width:10px;height:10px;border-radius:50%;background:#e11d48;display:inline-block"></span><span id="srT">0:00</span><button id="srStop" style="font:600 12px system-ui;border:0;border-radius:12px;padding:4px 12px;background:#e11d48;color:#fff;cursor:pointer">Stop and save</button>'; document.body.appendChild(b);
+  b.querySelector('#srStop').onclick=srStop; SREC.tm=setInterval(function(){ if(!SREC) return; var s2=Math.floor((performance.now()-SREC.t0)/1000); var t=document.getElementById('srT'); if(t) t.textContent=Math.floor(s2/60)+':'+String(s2%60).padStart(2,'0'); if(s2>=600) srStop(); }, 500);
+  rec.start(500); requestRender(false); toast('Recording a smooth video. Move round the scan as you want it shown, then press Stop and save (or F9).', 4000); }
+function srStop(){ var S=SREC; if(!S||S.done) return; S.done=true; clearInterval(S.tm); cancelAnimationFrame(S.raf); var b=document.getElementById('srBadge'); if(b) b.remove();
+  S.rec.onstop=function(){ SREC=null; if(!S.chunks.length){ toast('Nothing was recorded.', 3000); return; } var ty=S.rec.mimeType||'video/webm', ext=ty.indexOf('mp4')>=0?'mp4':'webm', secs=Math.round((performance.now()-S.t0)/1000), blob=new Blob(S.chunks, {type:ty});
+    download('EXT_'+baseName().replace(/^(INT_|EXT_)+/,'')+'_video_'+new Date().toISOString().slice(0,10)+'.'+ext, blob); toast('Video saved: '+secs+' s, '+(blob.size/1e6).toFixed(1)+' MB'+(ext==='webm'?'. This browser could not make MP4, so it is WebM':''), 6000); };
+  try{ S.rec.stop(); }catch(e){ SREC=null; } }
+/* the record button asks which kind */
+function srMenu(){ var old=document.getElementById('srMenu'); if(old){ old.remove(); return; } var btn=document.getElementById('btnRec'), r=btn.getBoundingClientRect(), m=document.createElement('div'); m.id='srMenu';
+  m.style.cssText='position:fixed;z-index:99998;top:'+(r.bottom+6)+'px;right:'+Math.max(8, window.innerWidth-r.right)+'px;background:#fff;color:#111827;border:1px solid #d1d5db;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:4px;font:13px system-ui;min-width:250px';
+  var it=function(t, d, k, fn){ var a=document.createElement('button'); a.style.cssText='text-align:left;border:0;background:none;padding:8px 10px;border-radius:8px;cursor:pointer;font:13px system-ui;color:#111827'; a.innerHTML='<b>'+t+'</b> <span style="float:right;color:#6b7280">'+k+'</span><br><span style="color:#6b7280;font-size:12px">'+d+'</span>'; a.onmouseenter=function(){ a.style.background='#f3f4f6'; }; a.onmouseleave=function(){ a.style.background='none'; }; a.onclick=function(){ m.remove(); fn(); }; m.appendChild(a); };
+  it('Smooth video to send', 'Clean and smooth, no pointer marks; record as long as you like, then Stop', 'F9', srStart);
+  it('Quick record a problem', '5 seconds with the pointer, plus a frame strip to paste into the chat', 'F10', sbRecView);
+  document.body.appendChild(m); setTimeout(function(){ document.addEventListener('mousedown', function off(e){ if(!m.contains(e.target)&&e.target!==btn){ m.remove(); document.removeEventListener('mousedown', off, true); } }, true); }, 0); }
+(function(){ var b=document.getElementById('btnRec'); if(b){ b.onclick=function(e){ e.stopPropagation(); if(SREC){ srStop(); return; } srMenu(); }; b.title='Record: a smooth video to send (F9), or a quick 5 s recording of a problem (F10)'; } })();
+document.addEventListener('keydown', function(e){ if(e.key==='F9'){ e.preventDefault(); e.stopPropagation(); if(SREC) srStop(); else srStart(); } }, true);
 
 
 </script>
