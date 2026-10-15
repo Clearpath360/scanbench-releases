@@ -1,2 +1,0 @@
-- Left rail pop-out menus are now solid instead of blurred see-through, and the 3D view redraws when one closes (fix attempt for the 3D view going black after a menu had opened).
-- Night street preset: the two street lights now have different names.

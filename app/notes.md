@@ -1,4 +1,2 @@
-- Lights: you can turn the 3D view while a light waits to be placed; a click places it.
-- Light: Scene slider renamed Overall brightness.
-- Light: Add buttons compacted into one grid.
-- Left rail: panels grouped into Prepare, Look, Measure and Survey; point at a group (or tap it) for its menu.
+- Left rail pop-out menus are now solid instead of blurred see-through, and the 3D view redraws when one closes (fix attempt for the 3D view going black after a menu had opened).
+- Night street preset: the two street lights now have different names.

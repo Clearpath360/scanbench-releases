@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r380';
+var SB_BUILD='2026-10-15 r381';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -25975,7 +25975,7 @@ sbAfter('ltPanel', function(r){ try{ var s=document.getElementById('sbLightSec')
       gr.querySelector('#lt2DelRow').onclick=function(){ pushUndo(); var M=ltM(); M.lights=M.lights.filter(function(q){ return q.grp!==l.grp; }); LT.sel=null; afterEdit(); ltPanel(); live(); toast('Row deleted (Ctrl+Z brings it back).', 2500); }; } }
   }catch(e){ console.warn(e); } return r; });
 /* the Night street preset now uses proper street lights */
-sbInstead('ltPreset', function(k){ if(k!=='night') return SB_GO; var M=ltM(); if(!M) return; pushUndo(); M.lightAmb=0.2; var a=lt2Make('street'), b=lt2Make('street'), sc=ltSc(); a.col=b.col='#ffb15c'; a.x-=12*sc; b.x+=12*sc; [a,b].forEach(function(l){ l.arm=0; var g=ltGround(l.x,l.y); l.z=g+6*sc; }); M.lights=[a,b]; M.lightsOn=true; LT.sel=a.id; afterEdit(); ltPanel(); requestRender(false); toast('Night street: two sodium street lights where you are looking, the rest dimmed.', 4500); });
+sbInstead('ltPreset', function(k){ if(k!=='night') return SB_GO; var M=ltM(); if(!M) return; pushUndo(); M.lightAmb=0.2; var a=lt2Make('street'), sc=ltSc(); M.lights=[a]; var b=lt2Make('street'); a.col=b.col='#ffb15c'; a.x-=12*sc; b.x+=12*sc; [a,b].forEach(function(l){ l.arm=0; var g=ltGround(l.x,l.y); l.z=g+6*sc; }); M.lights=[a,b]; M.lightsOn=true; LT.sel=a.id; afterEdit(); ltPanel(); requestRender(false); toast('Night street: two sodium street lights where you are looking, the rest dimmed.', 4500); });
 
 /* ===== Rail groups (r380): the panels on the left rail are gathered into four groups so the rail fits the screen:
    Prepare, Look, Measure and Survey. Point at a group (or tap it) and its panels open in a small menu beside it.
@@ -25998,6 +25998,9 @@ function sbgFly(G, anchor){ var f0=document.getElementById('sbFly'); if(f0&&f0.d
   f.querySelectorAll('[data-k]').forEach(function(x){ x.onclick=function(e){ e.stopPropagation(); skinFlyClose(); SBG.open=null; sbPanel(x.dataset.k); }; }); }
 (function(){ var c=document.createElement('style'); c.textContent='#sbFly .sbgFi{display:flex;align-items:center;gap:8px}#sbFly .sbgFi .sbIc{width:18px;height:18px;flex:0 0 18px}#sbFly .sbgFi span{flex:1;text-align:left}body.sbSkin #sbRail .sbGrp span{max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
   document.head.appendChild(c); })();
+/* r381: the pop-out menu is solid, not see-through blurred: a blurred panel over the 3D view could leave the 3D view black on some graphics cards once it had been shown */
+(function(){ var c=document.createElement('style'); c.textContent='#sbFly{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#fff!important}html[data-theme=dark] #sbFly{background:#30353c!important}'; document.head.appendChild(c); })();
+sbAfter('skinFlyClose', function(r){ try{ if(APP.res&&APP.view==='3d') requestRender(false); }catch(e){} return r; });
 
 
 </script>
