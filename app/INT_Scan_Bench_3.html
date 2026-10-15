@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r402';
+var SB_BUILD='2026-10-15 r403';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26544,6 +26544,177 @@ function pndOvDraw(){ var st0=document.getElementById('stage'); if(!st0) return;
   c.restore(); }
 sbAfter('gl_render', function(r){ try{ if(!miniVP) pndOvDraw(); }catch(e){ console.warn(e); } return r; });
 sbAfter('wsView', function(r){ try{ pndOvDraw(); if(pndOpen()) pndPanel(); }catch(e){} return r; });
+
+/* ===== Sky & weather effects, batch 1 (r403): shooting stars and a meteor shower, fireworks, fires (firepit, barbecue, candles,
+   fireplace, bonfire) that flicker and light the scan, smoke (a visual effect only), a rainbow (single or double), and the presets
+   Storm passing, Bonfire Night and Golden hour. All in the Sky & weather panel; nothing is added unless chosen.
+   Placed things are dropped with a click on the scan and moved with the same red, green and blue arrows as lights.
+   Everything runs from the weather clock, so pictures and videos show it moving the same way every time. ===== */
+var FX={mode:null, sel:null, drag:null, hov:null, prog:null, buf:null, sky:null, dn:null};
+function fxS(){ var S=wxS(); if(!S) return null; if(!S.fx) S.fx={meteors:0, shower:false, fwCol:'mixed', fwRate:12, rainbow:false, rbDouble:false, items:[]}; var F=S.fx; F.items=F.items||[]; return F; }
+function fxOn(){ return typeof wxOn==='function'&&wxOn()&&!!fxS(); }
+function fxH(n){ var x=Math.sin(n*127.1+311.7)*43758.5453; return x-Math.floor(x); }
+function fxSc(){ return wxSc(); }
+var FX_FIRE={firepit:{name:'Firepit', r:0.45, h:0.9, n:90, str:2.2, reach:5, smoke:0.5, sparks:20},
+  barbecue:{name:'Barbecue', r:0.35, h:0.35, n:40, str:1.2, reach:3, smoke:0.7, sparks:6, coals:true, lift:0.8},
+  candles:{name:'Candles', r:0.015, h:0.05, n:10, str:0.45, reach:1.8, smoke:0, sparks:0, candles:true},
+  fireplace:{name:'Fireplace', r:0.32, h:0.6, n:70, str:1.8, reach:5, smoke:0, sparks:8},
+  bonfire:{name:'Bonfire', r:1.3, h:2.8, n:260, str:4.5, reach:16, smoke:1.2, sparks:70}};
+var FX_FW={mixed:null, gold:[[1,0.78,0.35]], red:[[1,0.25,0.2]], green:[[0.3,1,0.4]], blue:[[0.35,0.55,1]], silver:[[0.9,0.92,1]]}, FX_FWMIX=[[1,0.78,0.35],[1,0.25,0.2],[0.3,1,0.4],[0.35,0.55,1],[0.9,0.92,1],[1,0.4,0.85]];
+function fxName(it){ return it.kind==='fire'?FX_FIRE[it.sub].name:it.kind==='fw'?'Fireworks':'Smoke'; }
+function fxNewId(){ return 'fx'+Date.now().toString(36)+Math.floor(Math.random()*1e4); }
+
+/* ---------- fireworks: each launch point fires rockets on a fixed timetable worked out from the clock ---------- */
+function fxRockets(it, F, t){ var sc=fxSc(), per=60/Math.max(1, F.fwRate||12), out=[], k0=Math.floor((t-5)/per), k1=Math.floor(t/per), seed=fxH(it.x*3.1+it.y*7.7);
+  for(var k=k0;k<=k1;k++){ var t0=k*per+fxH(k*1.7+seed*91)*per*0.6, a=t-t0; if(a<0||a>4.6) continue; var h=fxH(k*3.3+seed*17), up=(14+12*h)*sc, rise=1.5+0.4*fxH(k*5.1+seed), dx=(fxH(k*7.9+seed)-0.5)*6*sc, dy=(fxH(k*2.3+seed*5)-0.5)*6*sc;
+    var pal=FX_FW[F.fwCol||'mixed']||FX_FWMIX, col=pal[Math.floor(fxH(k*11.1+seed*3)*pal.length)%pal.length];
+    out.push({k:k, a:a, rise:rise, top:[it.x+dx, it.y+dy, it.z+up], base:[it.x, it.y, it.z], col:col, seed:k*13.7+seed*101, big:0.8+0.5*h}); }
+  return out; }
+/* ---------- the points: soft glowing dots added on (fire, sparks, fireworks) or laid over (smoke) ---------- */
+function fxProg(){ if(FX.prog||!GL) return FX.prog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; layout(location=2) in vec2 aS; uniform mat4 uM; uniform float uPS; out vec4 vC; out float vAdd; void main(){ vC=aC; vAdd=aS.y; gl_Position=uM*vec4(aP,1.0); gl_PointSize=clamp(uPS*aS.x/max(0.05,gl_Position.w),1.5,256.0); }';
+  var FS='#version 300 es\nprecision mediump float; in vec4 vC; in float vAdd; out vec4 o; void main(){ vec2 q=gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; float f=vAdd>0.5?(pow(1.0-d,1.6)+0.8*exp(-d*30.0)):smoothstep(1.0,0.0,d)*0.9; float a=vC.a*f; o=vec4(vC.rgb*a*(vAdd>0.5?2.2:1.0), vAdd>0.5?0.0:a); }';
+  FX.prog=program(gl, VS, FS); FX.buf=gl.createBuffer(); return FX.prog; }
+function fxBuild(){ var F=fxS(), X=wxState(), t=X.t, sc=fxSc(), V=[], S=X.S, wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wx=Math.cos(wd)*wv, wy=Math.sin(wd)*wv, sky=wxMix([0.55,0.56,0.6],[0.16,0.17,0.2], X.night);
+  var P=function(x,y,z,r,g,b,a,s,add){ V.push(x,y,z,r,g,b,a,s,add?1:0); };
+  F.items.forEach(function(it, ii){ var sd=fxH(ii*9.1+it.x*1.3+it.y*0.7);
+    if(it.kind==='fire'){ var C=FX_FIRE[it.sub]||FX_FIRE.firepit, spots=C.candles?[[0,0,0.12],[0.09,0.05,0.16],[-0.07,0.06,0.1]]:[[0,0,0]], lift=(C.lift||0)*sc;
+      spots.forEach(function(sp, si){ var bx=it.x+sp[0]*sc, by=it.y+sp[1]*sc, bz=it.z+sp[2]*sc+lift;
+        /* the glow at the base */ P(bx,by,bz+C.h*0.25*sc, 1,0.55,0.2, 0.35*(0.85+0.15*Math.sin(t*9+sd*20)), Math.max(0.12, C.r*3.2)*sc, true);
+        if(C.coals){ for(var c=0;c<26;c++){ var cx=bx+(fxH(c*1.3+sd)-0.5)*C.r*2*sc, cy=by+(fxH(c*2.9+sd)-0.5)*C.r*1.4*sc, gl2=0.6+0.4*Math.sin(t*(1.5+fxH(c+sd)*3)+c); P(cx,cy,bz+0.01*sc, 1,0.25*gl2,0.05, 0.7*gl2, 0.07*sc, true); } }
+        for(var i=0;i<C.n;i++){ var h1=fxH(i*1.37+sd*31+si*7), h2=fxH(i*2.71+sd*17+si*3), h3=fxH(i*0.53+sd*7), life=0.45+0.5*h3, ag=((t/life+h1)%1+1)%1, rr=C.r*sc*Math.sqrt(h2)*(1-ag*0.7), an=h1*6.283+t*0.7;
+          var x=bx+Math.cos(an)*rr+Math.sin(t*5+i)*0.03*C.r*sc+wx*ag*C.h*0.5*sc, y=by+Math.sin(an)*rr+wy*ag*C.h*0.5*sc, z=bz+ag*C.h*sc*(0.6+0.6*h2), hot=1-ag;
+          P(x,y,z, 1, 0.35+0.55*hot*hot, 0.08+0.3*hot*hot*hot, 0.55*(1-ag)*(0.6+0.4*Math.sin(t*13+i)), (0.08+0.55*C.r)*(1-ag*0.5)*sc*(C.candles?0.6:1), true); }
+        for(var s=0;s<C.sparks;s++){ var g1=fxH(s*4.1+sd*13), g2=fxH(s*7.3+sd), lf=1.2+1.8*g2, a2=((t/lf+g1)%1+1)%1, sx=bx+(g1-0.5)*C.r*sc+wx*a2*2*sc+Math.sin(t*3+s)*0.2*sc*a2, sy=by+(g2-0.5)*C.r*sc+wy*a2*2*sc, sz=bz+a2*C.h*sc*(1.6+1.4*g1);
+          P(sx,sy,sz, 1,0.7,0.3, 0.9*(1-a2)*(0.5+0.5*Math.sin(t*20+s*3)), 0.035*sc, true); } });
+      if(C.smoke>0&&it.smoke!==false) fxSmoke(P, it.x, it.y, it.z+C.h*0.8*sc+lift, C.smoke, sd, t, sc, wx, wy, sky, X); }
+    else if(it.kind==='smoke') fxSmoke(P, it.x, it.y, it.z, 1, sd, t, sc, wx, wy, sky, X);
+    else if(it.kind==='fw'){ fxRockets(it, F, t).forEach(function(R){ if(R.a<R.rise){ var u=R.a/R.rise, e=1-Math.pow(1-u,2), x=R.base[0]+(R.top[0]-R.base[0])*e, y=R.base[1]+(R.top[1]-R.base[1])*e, z=R.base[2]+(R.top[2]-R.base[2])*e;
+          P(x,y,z, 1,0.85,0.6, 0.95, 0.3*sc, true); for(var j=1;j<10;j++){ var u2=Math.max(0,u-j*0.012), e2=1-Math.pow(1-u2,2); P(R.base[0]+(R.top[0]-R.base[0])*e2, R.base[1]+(R.top[1]-R.base[1])*e2, R.base[2]+(R.top[2]-R.base[2])*e2, 1,0.6,0.3, 0.5*(1-j/10), 0.07*sc, true); } return; }
+        var b=R.a-R.rise, life=2.6; if(b>life) return; var fade=Math.pow(1-b/life,1.5), N=110, v=(6+4*fxH(R.seed))*sc*R.big, gz=4.9*sc;
+        if(b<0.25) P(R.top[0],R.top[1],R.top[2], 1,0.95,0.85, 1-b/0.25, 9*sc*R.big, true);
+        for(var q=0;q<N;q++){ var u1=fxH(q*1.11+R.seed), u3=fxH(q*2.37+R.seed*1.7), th=Math.acos(2*u1-1), ph=u3*6.283, dx=Math.sin(th)*Math.cos(ph), dy=Math.sin(th)*Math.sin(ph), dz=Math.cos(th), dr=v*(1-Math.exp(-b*1.6))/1.6;
+          var x2=R.top[0]+dx*dr+wx*b*1.5*sc, y2=R.top[1]+dy*dr+wy*b*1.5*sc, z2=R.top[2]+dz*dr-0.5*gz*b*b*0.35, tw=0.55+0.45*Math.sin(t*25+q*7.1);
+          P(x2,y2,z2, Math.min(1,R.col[0]*1.4+0.15),Math.min(1,R.col[1]*1.4+0.15),Math.min(1,R.col[2]*1.4+0.15), Math.min(1,fade*tw*1.6), (0.55+0.25*fade)*sc*R.big, true);
+          for(var tr=1;tr<4;tr++){ var bb=Math.max(0,b-tr*0.07), dr2=v*(1-Math.exp(-bb*1.6))/1.6; P(R.top[0]+dx*dr2+wx*bb*1.5*sc, R.top[1]+dy*dr2+wy*bb*1.5*sc, R.top[2]+dz*dr2-0.5*gz*bb*bb*0.35, R.col[0],R.col[1],R.col[2], fade*0.55*(1-tr/4), 0.35*sc*R.big, true); } } }); } });
+  return V; }
+/* smoke: soft grey puffs that rise, spread and drift with the wind; a picture of smoke, nothing more */
+function fxSmoke(P, x, y, z, amt, sd, t, sc, wx, wy, sky, X){ var n=Math.round(46*amt), life=9;
+  for(var i=0;i<n;i++){ var h1=fxH(i*1.91+sd*41), h2=fxH(i*3.17+sd*9), ag=((t/life+h1)%1+1)%1, rise=(1.2+3.5*amt)*sc*ag*(0.8+0.5*h2), drift=(0.4+2.6*Math.hypot(wx,wy))*ag*life*0.35*sc;
+    var dir=Math.hypot(wx,wy)>0.01?[wx/Math.hypot(wx,wy), wy/Math.hypot(wx,wy)]:[0.7,0.7], sw=Math.sin(t*0.6+i)*0.3*sc*ag;
+    var px=x+dir[0]*drift+(h2-0.5)*0.5*sc+sw, py=y+dir[1]*drift+(h1-0.5)*0.5*sc, pz=z+rise, g=0.45+0.25*h2, c=wxMix([g,g,g], sky, 0.5);
+    P(px,py,pz, c[0],c[1],c[2], 0.16*amt*(1-ag)*Math.min(1, ag*6)*(0.8+0.4*X.k*0.5), (0.35+2.2*ag)*sc*(0.6+0.6*amt), false); } }
+function fxDraw(){ if(!fxOn()||APP.view!=='3d'||miniVP) return; var F=fxS(); if(!F.items.length) return; var gl=GL, pr=fxProg(); if(!pr) return; var V=fxBuild(); if(!V.length) return;
+  /* smoke laid over first, then the glowing things added on top */ var Vs=[], Va=[]; for(var i=0;i<V.length;i+=9){ (V[i+8]>0.5?Va:Vs).push.apply(V[i+8]>0.5?Va:Vs, V.slice(i,i+9)); }
+  if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uM'), false, camMVP()); gl.uniform1f(gl.getUniformLocation(pr,'uPS'), glCv.height/(2*Math.tan(0.45)));
+  gl.bindBuffer(gl.ARRAY_BUFFER, FX.buf); [0,1,2].forEach(function(a){ gl.enableVertexAttribArray(a); }); gl.disableVertexAttribArray(3); gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  [Vs, Va].forEach(function(A){ if(!A.length) return; gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(A), gl.STREAM_DRAW); gl.vertexAttribPointer(0,3,gl.FLOAT,false,36,0); gl.vertexAttribPointer(1,4,gl.FLOAT,false,36,12); gl.vertexAttribPointer(2,2,gl.FLOAT,false,36,28); gl.drawArrays(gl.POINTS, 0, A.length/9); });
+  gl.disable(gl.BLEND); gl.depthMask(true); gl.disableVertexAttribArray(1); gl.disableVertexAttribArray(2); }
+sbAfter('gl_render', function(r){ try{ if(!miniVP){ fxDraw(); fxOv(); } }catch(e){ console.warn(e); } return r; });
+
+/* ---------- the fires and the firework bursts light the scan: extra lights after the Light panel's own ---------- */
+function fxLights(t){ var F=fxS(), sc=fxSc(), out=[]; F.items.forEach(function(it, ii){ var sd=fxH(ii*9.1+it.x*1.3+it.y*0.7);
+    if(it.kind==='fire'){ var C=FX_FIRE[it.sub]||FX_FIRE.firepit, fl=0.72+0.18*Math.sin(t*11+sd*30)+0.1*Math.sin(t*23.7+sd*7); out.push({p:[it.x, it.y, it.z+(C.h*0.45+(C.lift||0))*sc], c:[1,0.55,0.22], s:C.str*fl, r:C.reach*sc}); }
+    else if(it.kind==='fw') fxRockets(it, F, t).forEach(function(R){ var b=R.a-R.rise; if(b>=0&&b<1.2) out.push({p:R.top, c:R.col, s:3.5*R.big*Math.exp(-b*3), r:40*sc}); }); });
+  return out; }
+FX.lp={};
+sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog||!fxOn()) return r; var gl=GL, pr=SPL.prog, L=SPL.loc; if(!L.uLtN) return r; var Ls=fxLights(wxT()); if(!Ls.length) return r; gl.useProgram(pr);
+    var n=Math.round(gl.getUniform(pr, L.uLtN)||0), room=Math.max(0, 32-n), loc=function(k,i){ var key=k+i; if(!(key in FX.lp)) FX.lp[key]=gl.getUniformLocation(pr, k+'['+i+']'); return FX.lp[key]; };
+    Ls.sort(function(a,b){ return b.s-a.s; }).slice(0, room).forEach(function(l, j){ var i=n+j; gl.uniform4f(loc('uLP',i), l.p[0], l.p[1], l.p[2], 0); gl.uniform4f(loc('uLC',i), l.c[0], l.c[1], l.c[2], l.s); gl.uniform4f(loc('uLD',i), 0,0,-1, 0); gl.uniform4f(loc('uLR',i), l.r, 1, 0, 0); });
+    var k=Math.min(Ls.length, room); if(k){ if(n===0&&L.uLAmb) gl.uniform1f(L.uLAmb, ltAmb()); gl.uniform1f(L.uLtN, n+k); } }catch(e){ console.warn(e); } return r; });
+
+/* ---------- in the sky: shooting stars and the rainbow, drawn just after the sky ---------- */
+function fxSkyProg(){ if(FX.sky||!GL) return FX.sky; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec2 aP; out vec2 vN; void main(){ vN=aP; gl_Position=vec4(aP,0.9999,1.0); }';
+  var FS='#version 300 es\nprecision highp float; in vec2 vN; out vec4 o; uniform mat4 uInv; uniform vec3 uSun; uniform float uT; uniform float uNight; uniform float uCov; uniform float uPer; uniform float uShow; uniform vec3 uRad; uniform float uRb; uniform float uRb2;\n'+
+    'float h1(float n){ return fract(sin(n*127.1+311.7)*43758.5453); }\n'+
+    'vec3 spec(float x){ x=clamp(x,0.0,1.0); vec3 c=vec3(0.0); c+=vec3(0.55,0.0,0.85)*smoothstep(0.0,0.12,x)*(1.0-smoothstep(0.12,0.28,x)); c+=vec3(0.15,0.25,1.0)*smoothstep(0.1,0.27,x)*(1.0-smoothstep(0.27,0.44,x)); c+=vec3(0.1,0.85,0.35)*smoothstep(0.28,0.45,x)*(1.0-smoothstep(0.45,0.62,x)); c+=vec3(1.0,0.95,0.15)*smoothstep(0.45,0.6,x)*(1.0-smoothstep(0.6,0.75,x)); c+=vec3(1.0,0.5,0.05)*smoothstep(0.6,0.74,x)*(1.0-smoothstep(0.74,0.88,x)); c+=vec3(0.95,0.1,0.08)*smoothstep(0.74,0.88,x)*(1.0-smoothstep(0.95,1.0,x)); return c; }\n'+
+    'void main(){ vec4 a=uInv*vec4(vN,-1.0,1.0), b=uInv*vec4(vN,1.0,1.0); vec3 d=normalize(b.xyz/b.w-a.xyz/a.w); vec3 col=vec3(0.0);\n'+
+    ' if(uPer>0.0&&d.z>0.0&&uNight>0.05){ for(int i=0;i<6;i++){ float fi=float(i); float ti=uT+h1(fi*3.7)*uPer; float k=floor(ti/uPer); float age=(ti-k*uPer)/0.85; if(age>1.0) continue; float s=k*6.0+fi;\n'+
+    '  float az=h1(s)*6.2832, el=0.35+0.85*h1(s+1.3); vec3 m=vec3(cos(el)*cos(az), cos(el)*sin(az), sin(el)); vec3 e1=normalize(cross(m, vec3(0.0,0.0,1.0))); vec3 e2=cross(e1,m); float dm=dot(d,m); if(dm<0.5) continue; vec2 p=vec2(dot(d,e1),dot(d,e2))/dm;\n'+
+    '  vec2 u; if(uShow>0.5){ vec2 r=vec2(dot(uRad,e1),dot(uRad,e2))/max(0.05,dot(uRad,m)); u=normalize(-r+vec2(1e-4)); } else { float an=h1(s+2.1)*6.2832; u=vec2(cos(an),sin(an)); }\n'+
+    '  float len=0.25+0.3*h1(s+3.3); vec2 hd=u*(age*len-len*0.5); float tl=0.06+0.08*h1(s+4.4); vec2 ta=hd-u*tl; vec2 ab=hd-ta; float tt=clamp(dot(p-ta,ab)/dot(ab,ab),0.0,1.0); float dist=length(p-(ta+ab*tt));\n'+
+    '  float br=exp(-pow(dist/0.0019,2.0))*tt*tt*sin(3.1416*min(age,1.0))+exp(-pow(length(p-hd)/0.004,2.0))*sin(3.1416*min(age,1.0))*0.6; col+=vec3(0.9,0.95,1.0)*br*2.6; } col*=uNight*(1.0-uCov); }\n'+
+    ' if(uRb>0.0&&uSun.z>0.0){ vec3 an=-uSun; float th=degrees(acos(clamp(dot(d,an),-1.0,1.0))); float up=smoothstep(-0.02,0.04,d.z); float p1=1.0-abs(th-41.3)/1.0; vec3 rb=spec((th-40.4)/1.9)*smoothstep(0.0,0.6,p1)*0.26; rb+=vec3(0.035)*smoothstep(40.5,32.0,th)*smoothstep(12.0,30.0,th);\n'+
+    '  if(uRb2>0.5) rb+=spec(1.0-(th-50.4)/3.1)*smoothstep(0.0,0.6,1.0-abs(th-51.9)/1.6)*0.09; col+=rb*uRb*up*(1.0-0.55*uCov); }\n'+
+    ' o=vec4(col,1.0); }';
+  FX.sky=program(gl, VS, FS); return FX.sky; }
+function fxSkyDraw(){ var F=fxS(); if(!F||!(F.meteors>0||F.shower||F.rainbow)) return; var gl=GL, pr=fxSkyProg(); if(!pr||!WX.tri) return; var X=wxState(), U=function(n){ return gl.getUniformLocation(pr,n); };
+  gl.useProgram(pr); gl.uniformMatrix4fv(U('uInv'), false, wxInv(camMVP())); gl.uniform3fv(U('uSun'), X.sun.dir); gl.uniform1f(U('uT'), X.t); gl.uniform1f(U('uNight'), X.night); gl.uniform1f(U('uCov'), Math.min(1, X.cov));
+  var dens=Math.max(F.meteors||0, F.shower?0.85:0); gl.uniform1f(U('uPer'), dens>0?(60-57*dens)*(F.shower?0.45:1):0); gl.uniform1f(U('uShow'), F.shower?1:0); var ra=60*Math.PI/180, re=55*Math.PI/180; gl.uniform3f(U('uRad'), Math.cos(re)*Math.cos(ra), Math.cos(re)*Math.sin(ra), Math.sin(re));
+  gl.uniform1f(U('uRb'), F.rainbow?Math.min(1.4, X.k):0); gl.uniform1f(U('uRb2'), F.rbDouble?1:0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, WX.tri); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0); for(var i=1;i<4;i++) gl.disableVertexAttribArray(i);
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
+sbAfter('wxSkyDraw', function(r){ try{ fxSkyDraw(); }catch(e){ console.warn(e); } return r; });
+/* keep it moving while any effect is on */
+sbAround('wxAnimNeed', function(next){ if(next()) return true; var F=fxOn()?fxS():null, S=wxS(); return !!(F&&S&&S.anim!==false&&APP.view==='3d'&&!document.hidden&&(F.items.length||((F.meteors>0||F.shower)&&wxState().night>0.05))); });
+
+/* ---------- placing and moving: click on the scan to drop, then the red, green and blue arrows ---------- */
+function fxUI(){ return SBP.key==='weather'&&APP.view==='3d'&&!miniVP&&!!APP.res&&fxOn(); }
+function fxById(id){ var F=fxS(); return F?F.items.filter(function(x){ return x.id===id; })[0]:null; }
+function fxAxes(it){ if(!it) return []; var La=Math.max(0.25, cam.dist*0.09), c0=[it.x,it.y,it.z]; return [['x','#ef4444',[1,0,0]],['y','#22c55e',[0,1,0]],['z','#3b82f6',[0,0,1]]].map(function(q){ return {k:q[0], col:q[1], ax:q[2], c0:c0, tip:[c0[0]+q[2][0]*La, c0[1]+q[2][1]*La, c0[2]+q[2][2]*La]}; }); }
+function fxOv(){ var st=document.getElementById('stage'); if(!st) return; var cv=document.getElementById('fxOv'); if(!cv){ if(!fxUI()) return; cv=document.createElement('canvas'); cv.id='fxOv'; cv.style.cssText='position:absolute;pointer-events:none;z-index:12'; st.appendChild(cv); }
+  var r=glCv.getBoundingClientRect(), sr=st.getBoundingClientRect(), dpr=window.devicePixelRatio||1, Wd=Math.round(r.width*dpr), Hd=Math.round(r.height*dpr); cv.style.left=(r.left-sr.left)+'px'; cv.style.top=(r.top-sr.top)+'px'; if(cv.width!==Wd||cv.height!==Hd){ cv.width=Wd; cv.height=Hd; cv.style.width=r.width+'px'; cv.style.height=r.height+'px'; }
+  var c=cv.getContext('2d'); c.clearRect(0,0,Wd,Hd); if(!fxUI()) return; var P=function(q){ var s=ltScr(q); return s?[(s[0]-r.left)*dpr, (s[1]-r.top)*dpr]:null; };
+  fxS().items.forEach(function(it){ var p=P([it.x,it.y,it.z]); if(!p) return; var sel=FX.sel===it.id, rr=(sel?8:6)*dpr; c.fillStyle=it.kind==='fire'?'#ff8a3c':it.kind==='fw'?'#c084fc':'#9ca3af'; c.strokeStyle=sel?'#ff8a00':'rgba(0,0,0,.7)'; c.lineWidth=(sel?3:2)*dpr; c.beginPath(); c.arc(p[0],p[1],rr,0,7); c.fill(); c.stroke();
+    c.font='600 '+Math.round(11*dpr)+'px system-ui'; c.textAlign='center'; var w=c.measureText(fxName(it)).width+10*dpr; c.fillStyle='rgba(10,14,20,.78)'; c.fillRect(p[0]-w/2, p[1]-rr-22*dpr, w, 16*dpr); c.fillStyle=sel?'#ffb35c':'#fff'; c.fillText(fxName(it), p[0], p[1]-rr-10*dpr); c.textAlign='left'; });
+  fxAxes(fxById(FX.sel)).forEach(function(h){ var A=P(h.c0), B=P(h.tip); if(!A||!B) return; var on=(FX.drag&&FX.drag.k===h.k)||(FX.hov&&FX.hov.k===h.k), dx=B[0]-A[0], dy=B[1]-A[1], L2=Math.hypot(dx,dy)||1, ux=dx/L2, uy=dy/L2, hw=(on?7:5.5)*dpr, hl=(on?14:11)*dpr;
+    c.strokeStyle=h.col; c.lineWidth=(on?4:3)*dpr; c.beginPath(); c.moveTo(A[0]+dx*0.3, A[1]+dy*0.3); c.lineTo(B[0]-ux*hl*0.6, B[1]-uy*hl*0.6); c.stroke(); c.fillStyle=h.col; c.beginPath(); c.moveTo(B[0],B[1]); c.lineTo(B[0]-ux*hl-uy*hw, B[1]-uy*hl+ux*hw); c.lineTo(B[0]-ux*hl+uy*hw, B[1]-uy*hl-ux*hw); c.closePath(); c.fill(); });
+  if(FX.mode){ c.font='600 '+Math.round(12*dpr)+'px system-ui'; var m='Click on the scan where the '+FX.mode.name.toLowerCase()+' goes (Esc cancels)', w2=c.measureText(m).width+16*dpr; c.fillStyle='rgba(10,14,20,.85)'; c.fillRect(12*dpr, 12*dpr, w2, 24*dpr); c.fillStyle='#fff'; c.fillText(m, 20*dpr, 28*dpr); } }
+function fxHit(x, y){ if(!fxUI()) return null; var best=null, bd=10, it=fxById(FX.sel); fxAxes(it).forEach(function(h){ var A=ltScr(h.c0), B=ltScr(h.tip); if(!A||!B) return; var m=[A[0]+(B[0]-A[0])*0.3, A[1]+(B[1]-A[1])*0.3], vx=B[0]-m[0], vy=B[1]-m[1], l2=vx*vx+vy*vy||1, t=Math.max(0,Math.min(1,((x-m[0])*vx+(y-m[1])*vy)/l2)), d=Math.hypot(m[0]+vx*t-x, m[1]+vy*t-y); if(d<bd){ bd=d; best={id:it.id, part:'ax', k:h.k, h:h}; } });
+  fxS().items.forEach(function(q){ var p=ltScr([q.x,q.y,q.z]); if(!p) return; var d=Math.hypot(p[0]-x,p[1]-y); if(d<Math.min(bd,12)){ bd=d; best={id:q.id, part:'pos'}; } }); return best; }
+function fxAxisT(h, R){ return ltAxisT(h, R); }
+window.addEventListener('pointerdown', function(e){ if(e.target!==glCv||e.button!==0||!fxUI()) return; if(FX.mode){ FX.dn={x:e.clientX, y:e.clientY}; return; }
+  var h=fxHit(e.clientX, e.clientY); if(!h) return; e.preventDefault(); e.stopImmediatePropagation(); var it=fxById(h.id); FX.sel=it.id; pushUndo();
+  if(h.part==='ax'){ var t0=fxAxisT(h.h, pickRay(e.clientX, e.clientY)); FX.drag={id:it.id, k:h.k, ax:h.h, p0:[it.x,it.y,it.z], t0:t0==null?0:t0}; }
+  else { var at=ltPlaneAt(pickRay(e.clientX, e.clientY), it.z)||[it.x,it.y,it.z]; FX.drag={id:it.id, part:'pos', dx:it.x-at[0], dy:it.y-at[1]}; } fxPanelList(); requestRender(false); }, true);
+window.addEventListener('mousedown', function(e){ if(FX.drag){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+window.addEventListener('pointermove', function(e){ var D=FX.drag; if(!D){ if(e.target===glCv&&fxUI()&&!(e.buttons&1)){ var h=fxHit(e.clientX, e.clientY), k=h?h.id+(h.k||h.part):''; if(k!==(FX.hov?FX.hov.id+(FX.hov.k||FX.hov.part):'')){ FX.hov=h; fxOv(); } if(h){ glCv.style.cursor=h.part==='ax'?'grab':'move'; e.stopImmediatePropagation(); } else if(FX.mode) glCv.style.cursor='crosshair'; } return; }
+  if(!(e.buttons&1)){ FX.drag=null; afterEdit(); return; } var it=fxById(D.id); if(!it) return; e.stopImmediatePropagation(); e.preventDefault();
+  if(D.ax){ var t1=fxAxisT(D.ax, pickRay(e.clientX, e.clientY)); if(t1!=null){ var dm=(t1-D.t0)*(e.shiftKey?0.2:1); it.x=D.p0[0]+D.ax.ax[0]*dm; it.y=D.p0[1]+D.ax.ax[1]*dm; it.z=D.p0[2]+D.ax.ax[2]*dm; } }
+  else { var at=ltPlaneAt(pickRay(e.clientX, e.clientY), it.z); if(at){ it.x=at[0]+D.dx; it.y=at[1]+D.dy; } } requestRender(false); }, true);
+window.addEventListener('pointerup', function(e){ if(FX.drag){ FX.drag=null; afterEdit(); fxPanelList(); return; } var d=FX.dn; FX.dn=null; if(!FX.mode||!d||e.target!==glCv||!fxUI()) return; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; e.preventDefault(); e.stopImmediatePropagation();
+  var q=ltScanPt(e.clientX, e.clientY); if(!q){ toast('Click on the scan itself.', 2000); return; } pushUndo(); var M=FX.mode, it={id:fxNewId(), kind:M.kind, sub:M.sub, x:q[0], y:q[1], z:q[2]}; fxS().items.push(it); FX.sel=it.id; FX.mode=null; glCv.style.cursor=''; afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); }, true);
+window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&FX.mode){ FX.mode=null; glCv.style.cursor=''; fxOv(); e.stopImmediatePropagation(); } }, true);
+function fxStartPlace(kind, sub, name){ var S=wxS(); S.on=true; if(APP.view!=='3d') wsView('3d'); FX.mode={kind:kind, sub:sub, name:name}; glCv.style.cursor='crosshair'; requestRender(false); fxOv(); }
+
+/* ---------- the panel: an Effects part under the weather ---------- */
+function fxPanelList(){ var b=document.getElementById('fxList'); if(!b) return; var F=fxS(); b.innerHTML=F.items.length?F.items.map(function(it){ return '<div class="fxRow'+(FX.sel===it.id?' on':'')+'" data-fi="'+it.id+'"><span>'+fxName(it)+'</span>'+(it.kind==='fire'&&FX_FIRE[it.sub].smoke>0?'<button data-fsm="'+it.id+'" title="Smoke from this fire">'+(it.smoke===false?'No smoke':'Smoke')+'</button>':'')+'<button data-fdel="'+it.id+'" title="Remove">✕</button></div>'; }).join(''):'<p class="mini">Nothing placed yet.</p>';
+  b.querySelectorAll('[data-fi]').forEach(function(x){ x.onclick=function(e){ if(e.target.tagName==='BUTTON') return; FX.sel=x.dataset.fi; fxPanelList(); requestRender(false); }; });
+  b.querySelectorAll('[data-fdel]').forEach(function(x){ x.onclick=function(){ pushUndo(); var F2=fxS(); F2.items=F2.items.filter(function(q){ return q.id!==x.dataset.fdel; }); if(FX.sel===x.dataset.fdel) FX.sel=null; afterEdit(); fxPanelList(); requestRender(false); }; });
+  b.querySelectorAll('[data-fsm]').forEach(function(x){ x.onclick=function(){ pushUndo(); var it=fxById(x.dataset.fsm); it.smoke=it.smoke===false; afterEdit(); fxPanelList(); requestRender(false); }; }); }
+sbAfter('wxPanel', function(r){ try{ var b=document.querySelector('#sbWxSec .body'), F=fxS(); if(!b||!F) return r;
+    var grid=b.querySelector('.wxGrid'); if(grid&&!grid.querySelector('[data-wp="stormpass"]')){ [['stormpass','Storm passing'],['bonfire','Bonfire Night'],['golden','Golden hour']].forEach(function(q){ var bt=document.createElement('button'); bt.dataset.wp=q[0]; bt.textContent=q[1]; bt.onclick=function(){ wxPreset(q[0]); requestRender(false); if(wxAnimNeed()) wxLoop(); }; grid.appendChild(bt); }); }
+    if(b.querySelector('#fxBox')) return r; var d=document.createElement('div'); d.id='fxBox'; var pc=function(v){ return v<=0?'off':Math.round(v*100)+'%'; };
+    d.innerHTML='<div class="wxH">Effects</div>'+
+      '<div class="row" title="Shooting stars after dark"><label>Shooting stars</label><input type="range" id="fxMet" min="0" max="1" step="0.05" value="'+(F.meteors||0)+'"><span class="mini" id="fxMetV">'+pc(F.meteors||0)+'</span></div>'+
+      '<div class="row"><label>Meteor shower</label><div class="sbLSeg"><button data-fx="shower" data-v="1" class="'+(F.shower?'on':'')+'">On</button><button data-fx="shower" data-v="0" class="'+(!F.shower?'on':'')+'">Off</button></div></div>'+
+      '<div class="row" title="A rainbow opposite the sun; it follows the sun clock"><label>Rainbow</label><div class="sbLSeg"><button data-fx="rainbow" data-v="1" class="'+(F.rainbow?'on':'')+'">On</button><button data-fx="rainbow" data-v="0" class="'+(!F.rainbow?'on':'')+'">Off</button></div></div>'+
+      (F.rainbow?'<div class="row"><label>Double bow</label><div class="sbLSeg"><button data-fx="rbDouble" data-v="1" class="'+(F.rbDouble?'on':'')+'">On</button><button data-fx="rbDouble" data-v="0" class="'+(!F.rbDouble?'on':'')+'">Off</button></div></div>'+(wxSun().el>42?'<p class="mini">The sun is too high for a rainbow to show: move the time towards morning or evening.</p>':wxSun().el<=0?'<p class="mini">A rainbow needs the sun up.</p>':''):'')+
+      '<div class="wxH">Place in the scene</div><div class="wxGrid">'+Object.keys(FX_FIRE).map(function(k){ return '<button data-fp="fire" data-sub="'+k+'">+ '+FX_FIRE[k].name+'</button>'; }).join('')+'<button data-fp="fw">+ Fireworks</button><button data-fp="smoke">+ Smoke</button></div>'+
+      '<div class="row" title="Colour of the fireworks"><label>Firework colour</label><select id="fxFwC">'+['mixed','gold','red','green','blue','silver'].map(function(k){ return '<option value="'+k+'"'+((F.fwCol||'mixed')===k?' selected':'')+'>'+k.charAt(0).toUpperCase()+k.slice(1)+'</option>'; }).join('')+'</select></div>'+
+      '<div class="row" title="How many rockets a minute from each launch point"><label>Fireworks a minute</label><input type="range" id="fxFwR" min="2" max="40" step="1" value="'+(F.fwRate||12)+'"><span class="mini" id="fxFwRV">'+(F.fwRate||12)+'</span></div>'+
+      '<div id="fxList"></div><p class="mini">Click a button, then click on the scan where it goes. Pick one to move it with the red, green and blue arrows. Fires flicker and light the scan round them. Smoke is a visual effect only, not a fire or smoke model.</p>';
+    var tip=b.querySelector('.wxH:last-of-type'), anchor=[].slice.call(b.querySelectorAll('.wxH')).filter(function(h){ return /Lights/.test(h.textContent); })[0]; if(anchor) b.insertBefore(d, anchor); else b.appendChild(d);
+    fxPanelList(); var live=function(){ requestRender(false); if(wxAnimNeed()) wxLoop(); };
+    d.querySelectorAll('[data-fx]').forEach(function(x){ x.onclick=function(){ pushUndo(); F[x.dataset.fx]=x.dataset.v==='1'; wxS().on=true; afterEdit(); wxPanel(); live(); }; });
+    d.querySelectorAll('[data-fp]').forEach(function(x){ x.onclick=function(){ var k=x.dataset.fp, sub=x.dataset.sub||null; fxStartPlace(k==='fire'?'fire':k, sub, k==='fire'?FX_FIRE[sub].name:k==='fw'?'Fireworks':'Smoke'); }; });
+    var m=d.querySelector('#fxMet'); m.onpointerdown=function(){ pushUndo(); }; m.oninput=function(){ F.meteors=+this.value; wxS().on=true; d.querySelector('#fxMetV').textContent=pc(F.meteors); live(); }; m.onchange=function(){ afterEdit(); };
+    var fr=d.querySelector('#fxFwR'); fr.onpointerdown=function(){ pushUndo(); }; fr.oninput=function(){ F.fwRate=+this.value; d.querySelector('#fxFwRV').textContent=F.fwRate; live(); }; fr.onchange=function(){ afterEdit(); };
+    d.querySelector('#fxFwC').onchange=function(){ pushUndo(); F.fwCol=this.value; afterEdit(); live(); }; }catch(e){ console.warn(e); } return r; });
+(function(){ var c=document.createElement('style'); c.textContent='#fxList{margin:6px 0}#fxList .fxRow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid var(--sbLn);border-radius:7px;margin:3px 0;cursor:pointer}#fxList .fxRow.on{border-color:#ff8a00;background:rgba(255,138,0,.08)}#fxList .fxRow span{flex:1}#fxList button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:6px;padding:2px 7px;cursor:pointer;font:inherit;font-size:12px}'; document.head.appendChild(c); })();
+
+/* ---------- the new presets ---------- */
+function fxSunTime(el, after){ var S=wxS(), ts=typeof ltTodSun==='function'?ltTodSun():null, keep=S.time, keepT=ts?ts.time:null, best=after?18:7, bd=1e9;
+  for(var h=after?12:4;h<=(after?22.5:12);h+=0.05){ S.time=h; if(ts) ts.time=h; var e=wxSun().el; if(Math.abs(e-el)<bd&&e>0){ bd=Math.abs(e-el); best=h; } } S.time=keep; if(ts) ts.time=keepT; return Math.round(best*20)/20; }
+function fxGroundAhead(d){ var sc=fxSc(), a=cam.yaw+Math.PI, x=cam.tx+Math.cos(a)*d*sc*0, y=cam.ty; return [cam.tx, cam.ty, typeof ltGround==='function'?ltGround(cam.tx, cam.ty):(APP.res.floorLayer||0)]; }
+sbAround('wxPreset', function(next, k){ if(['stormpass','bonfire','golden'].indexOf(k)<0) return next(k); var S=wxS(); if(!S) return; pushUndo(); var F=fxS(), sc=fxSc();
+  if(k==='stormpass'){ Object.assign(S, {time:fxSunTime(14, true), clouds:0.6, speed:0.8, wind:0.4, rain:0.3, snow:0, snowCover:0, fog:0.12, mist:0.05, lightning:false, wet:true, splash:true, stars:false, strength:1.1, puddles:0.45, shaftAmt:0.8}); F.rainbow=true; F.rbDouble=true; }
+  if(k==='bonfire'){ Object.assign(S, {time:20.5, clouds:0.1, speed:0.15, wind:0.12, rain:0, snow:0, snowCover:0, fog:0.12, mist:0.55, lightning:false, stars:true, strength:1, puddles:0, shaftAmt:0}); F.rainbow=false;
+    var g=fxGroundAhead(0); if(!F.items.some(function(q){ return q.kind==='fire'&&q.sub==='bonfire'; })) F.items.push({id:fxNewId(), kind:'fire', sub:'bonfire', x:g[0], y:g[1], z:g[2]}); if(!F.items.some(function(q){ return q.kind==='fw'; })) F.items.push({id:fxNewId(), kind:'fw', x:g[0]+12*sc, y:g[1]+8*sc, z:g[2]}); F.fwRate=Math.max(F.fwRate||12, 14); }
+  if(k==='golden'){ Object.assign(S, {time:fxSunTime(6, true), clouds:0.18, speed:0.2, wind:0.05, rain:0, snow:0, snowCover:0, fog:0.06, mist:0.1, lightning:false, stars:false, strength:1.15, puddles:0, shaftAmt:0.5}); F.rainbow=false; }
+  Object.assign(S, {on:true}); var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=S.time;
+  afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); toast({stormpass:'Storm passing: rain, the sun breaking through and a rainbow', bonfire:'Bonfire Night: a bonfire and fireworks in front of you, cold mist. Move them with the arrows.', golden:'Golden hour: warm low sun and long shadows'}[k]+'. Ctrl+Z undoes it.', 3500); });
 
 
 </script>

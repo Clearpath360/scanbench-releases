@@ -1,7 +1,6 @@
-r402: Ponding tool
-- New Ponding tool in the Measure group (left rail): area, gullies, channel drains, Find the dips, dip list, rain test, dip survey PDF and CSV.
-- Water coloured by depth in five shades, on the plan and in 3D, with numbered pins; click a pin or a list row to pick a dip.
-- Block shows the ground round the picked dip, in place, with its water.
-- Section through it opens Sections with a short cut through the dip and the water line on.
-- Rain test now also lives in Ponding and plays in 3D.
-- Sections keeps the line views and This section PDF; Floor levels keeps heights, flatness, falls and spots.
+r403: Sky & weather effects, batch 1
+- Sky & weather > Effects: Shooting stars slider, Meteor shower, Rainbow with Double bow.
+- Sky & weather > Place in the scene: Firepit, Barbecue, Candles, Fireplace, Bonfire, Fireworks, Smoke; click on the scan to drop, arrows to move, list to remove.
+- Fires flicker and light the scan; bonfire, firepit and barbecue smoke can be switched off per fire.
+- Firework colour and Fireworks a minute settings; bursts light the scene.
+- New presets: Storm passing, Bonfire Night, Golden hour.
