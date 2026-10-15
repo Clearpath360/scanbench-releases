@@ -1,0 +1,1 @@
+- Fixed: the 3D view going dark after a left rail menu had opened (the menu code was overwriting the Colour settings).
