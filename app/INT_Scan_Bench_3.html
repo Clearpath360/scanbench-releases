@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r383';
+var SB_BUILD='2026-10-15 r384';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -23891,9 +23891,9 @@ function secHtml(){ if(!APP.res||!SEC.data){ toast('Open Sections on a scan firs
    Exports: PDF sheet, interactive web page (levels under the pointer), CSV. ===== */
 
 var LEV={drawing:false, draft:[], hov:null, out:null, key:'', tool:null, dn:null, drag:null, hovV:null, prof:null};
-function levM(){ var M=APP.model; if(!M) return null; if(!M.lev) M.lev={area:null, gullies:[], lines:[], mode:'height', cell:0, ground:true, step:0, spot:2, flatR:1.5, flatMm:5, arrows:true}; var V=M.lev; V.gullies=V.gullies||[]; V.lines=V.lines||[]; return V; }
+function levM(){ var M=APP.model; if(!M) return null; if(!M.lev) M.lev={area:null, gullies:[], lines:[], mode:'height', cell:0, ground:true, step:0, spot:2, flatR:1.5, flatMm:5, arrows:true}; var V=M.lev; V.gullies=V.gullies||[]; V.lines=V.lines||[]; V.drains=V.drains||[]; return V; }
 function levOpen(){ return typeof SBP!=='undefined'&&SBP.key==='levels'&&APP.res; }
-function levKey(){ var V=levM(); return V?JSON.stringify([V.area, V.gullies, V.cell, V.ground, V.roof?1:0, V.flatR, APP.res&&APP.res.n, APP.zLoOn&&CEI.zlo, APP.zCutOn&&CEI.zhi]):''; }
+function levKey(){ var V=levM(); return V?JSON.stringify([V.area, V.gullies, V.drains||[], V.cell, V.ground, V.roof?1:0, V.flatR, APP.res&&APP.res.n, APP.zLoOn&&CEI.zlo, APP.zCutOn&&CEI.zhi]):''; }
 
 /* ---------- the grid of levels over the area ---------- */
 function levBox(Z, g, R){ var nx=g.nx, ny=g.ny, W2=nx+1, SV=new Float64Array((nx+1)*(ny+1)), SC=new Float64Array((nx+1)*(ny+1)), F=new Float32Array(Z.length);
@@ -23920,7 +23920,7 @@ function levRun(){ var V=levM(); LEV.key=levKey(); LEV.out=null; if(!V||!V.area|
   var med=vals[vals.length>>1], cut=vals.filter(function(v){ return v>med-0.75&&v<med+0.75; }); if(cut.length<vals.length*0.3) cut=vals; var zl=cut[Math.floor(cut.length*0.02)], zh=cut[Math.min(cut.length-1, Math.floor(cut.length*0.98))]; if(!(zh-zl>0.002)){ zl-=0.001; zh+=0.001; }
   /* flatness: against the local average */ var Rr=Math.max(1, Math.round(V.flatR/cell)), Avg=levBox(Z, g, Rr), F=new Float32Array(N); for(q=0;q<N;q++) F[q]=Z[q]===Z[q]?Z[q]-Avg[q]:NaN;
   /* a smooth copy for the fall arrows */ var Sm=levBox(Z, g, Math.max(1, Math.round(0.6/cell)));
-  /* ponding: fill the hollows from the edge of the area and from the gullies; what the water would fill is the depth */ var Fill=levFlood(Z, M, g, V.gullies), ponds=levPonds(Z, Fill, g);
+  /* ponding: fill the hollows from the edge of the area and from the gullies; what the water would fill is the depth */ var Fill=levFlood(Z, M, g, V.gullies.concat(typeof levDrainPts==='function'?levDrainPts(V.drains, g):[])), ponds=levPonds(Z, Fill, g);
   /* r373: lowest and highest ignore the odd stray reading (the lowest and highest half per cent of squares), so they do not jump with the grid */
   var pk=Math.max(0, Math.min(vals.length-1, Math.floor(vals.length*0.005))), lo=vals[pk], hi=vals[vals.length-1-pk], loI=-1, hiI=-1, bl=1e9, bh=1e9; for(q=0;q<N;q++){ if(!(Z[q]===Z[q])) continue; var dl=Math.abs(Z[q]-lo), dh=Math.abs(Z[q]-hi); if(dl<bl){ bl=dl; loI=q; } if(dh<bh){ bh=dh; hiI=q; } }
   var gap=levStraightedge(Z, g, 3.0), cls=gap.max<=0.003?'SR1':gap.max<=0.005?'SR2':gap.max<=0.010?'SR3':'outside SR3';
@@ -24031,6 +24031,7 @@ window.addEventListener('pointermove', function(e){ if(!levOpen()) return; var p
   if(LEV.drag){ var V=levM(); V.area[LEV.drag.k]=[+p.wx.toFixed(3), +p.wy.toFixed(3)]; e.stopImmediatePropagation(); } else if(!LEV.drawing&&!LEV.tool){ var k=levCorner(p); if(k!==LEV.hovV){ LEV.hovV=k; planCv.style.cursor=k>=0?'move':''; } } planDrawSoon(); }, true);
 window.addEventListener('pointerup', function(e){ if(LEV.drag){ LEV.drag=null; e.stopImmediatePropagation(); afterEdit(); levRunSoon(); return; } if(!LEV.dn) return; var d=LEV.dn; LEV.dn=null; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; var p=levEv(e); if(!p) return; e.preventDefault(); e.stopImmediatePropagation(); var V=levM(), w=[+p.wx.toFixed(3), +p.wy.toFixed(3)];
   if(LEV.drawing){ if(LEV.draft.length>=3){ var f=w2s(LEV.draft[0][0],LEV.draft[0][1]); if(Math.hypot(f[0]-p.sx, f[1]-p.sy)<12*(planView.dpr||1)){ levFinish(); return; } } LEV.draft.push(w); planDrawSoon(); return; }
+  if(LEV.tool==='drain'){ if(!LEV.p1){ LEV.p1=w; levPanel(); planDrawSoon(); return; } pushUndo(); V.drains.push([LEV.p1, w]); LEV.p1=null; LEV.tool=null; afterEdit(); levRunSoon(); levPanel(); return; }
   if(LEV.tool==='gully'){ pushUndo(); V.gullies.push(w); afterEdit(); LEV.tool=null; levRunSoon(); levPanel(); return; }
   if(LEV.tool==='fall'){ if(!LEV.p1){ LEV.p1=w; planDrawSoon(); return; } pushUndo(); V.lines.push([LEV.p1, w]); if(V.lines.length>6) V.lines.shift(); LEV.p1=null; LEV.tool=null; afterEdit(); levPanel(); planDrawSoon(); return; } }, true);
 window.addEventListener('mouseup', function(e){ if(levOpen()&&e.button===0&&e.target===planCv&&(LEV.drawing||LEV.tool)) e.stopImmediatePropagation(); }, true);
@@ -24084,7 +24085,7 @@ function levPanel(){ var s=levSec(); if(!s) return; var b=s.querySelector('.body
   var seg=function(k,v,items){ return '<div class="sbLSeg lSeg">'+items.map(function(it){ return '<button data-lk="'+k+'" data-lv="'+it[0]+'" class="'+(String(v)===String(it[0])?'on':'')+'">'+it[1]+'</button>'; }).join('')+'</div>'; }, o=function(v,l,cur){ return '<option value="'+v+'"'+(+cur===v?' selected':'')+'>'+l+'</option>'; };
   var h=seg('mode', V.mode, [['height','Height'],['flat','Flatness'],['falls','Falls'],['spots','Spot grid']]);
   if(!V.area) h+=LEV.drawing?'<p class="mini">Click round the area on the plan. Click the first point or press Enter to finish.</p><div class="lRow"><button id="lvDone" class="lBtn on">Finish</button><button id="lvCan" class="lBtn">Cancel</button></div>':'<p class="mini">Draw round the area you want levels for (a car park, a yard, a floor).</p><div class="lRow"><button id="lvDraw" class="lBtn on">+ Draw area</button></div>';
-  else h+='<div class="lRow"><button id="lvFall" class="lBtn'+(LEV.tool==='fall'?' on':'')+'" title="Click two points to read the fall between them">'+(LEV.tool==='fall'?(LEV.p1?'Click the second point':'Click the first point'):'Measure a fall')+'</button><button id="lvGully" class="lBtn'+(LEV.tool==='gully'?' on':'')+'" title="Mark a gully or drain: water there runs away instead of ponding">'+(LEV.tool==='gully'?'Click the gully':'+ Gully')+'</button></div>'+
+  else h+='<div class="lRow"><button id="lvFall" class="lBtn'+(LEV.tool==='fall'?' on':'')+'" title="Click two points to read the fall between them">'+(LEV.tool==='fall'?(LEV.p1?'Click the second point':'Click the first point'):'Measure a fall')+'</button><button id="lvGully" class="lBtn'+(LEV.tool==='gully'?' on':'')+'" title="Mark a gully or drain: water there runs away instead of ponding">'+(LEV.tool==='gully'?'Click the gully':'+ Gully')+'</button><button id="lvDrain" class="lBtn'+(LEV.tool==='drain'?' on':'')+'" title="A channel drain (linear drain): click one end, then the other">'+(LEV.tool==='drain'?(LEV.p1?'Click the other end':'Click one end'):'+ Channel drain')+'</button></div>'+
     '<div class="lRow"><button id="lvRedraw" class="lBtn">Redraw area</button><button id="lvClear" class="lBtn">Clear lines</button></div><p class="mini">Drag a corner to move it. Hover the plan for the level, fall and water depth.</p>';
   if(LEV.err) h+='<p class="mini" style="color:#b45309">'+LEV.err+'</p>';
   if(LEV.out&&V.ground&&LEV.out.goneA>0.3*LEV.out.area) h+='<p class="mini" style="color:#b45309">A lot of this area was left out as things standing on the ground. On a flat roof or a deck, pick Heights of: Roof.</p>';
@@ -24104,8 +24105,8 @@ function levPanel(){ var s=levSec(); if(!s) return; var b=s.querySelector('.body
   if(q('lvDraw')) q('lvDraw').onclick=function(){ LEV.drawing=true; LEV.draft=[]; LEV.tool=null; levPanel(); if(APP.view==='3d') wsView('plan'); toast('Click round the area on the plan. Click the first point or press Enter to finish.', 4000); };
   if(q('lvDone')) q('lvDone').onclick=levFinish; if(q('lvCan')) q('lvCan').onclick=function(){ LEV.drawing=false; LEV.draft=[]; levPanel(); planDrawSoon(); };
   if(q('lvRedraw')) q('lvRedraw').onclick=function(){ pushUndo(); V.area=null; LEV.out=null; afterEdit(); LEV.drawing=true; LEV.draft=[]; levPanel(); planDrawSoon(); };
-  if(q('lvClear')) q('lvClear').onclick=function(){ pushUndo(); V.lines=[]; V.gullies=[]; afterEdit(); levRunSoon(); levPanel(); planDrawSoon(); };
-  if(q('lvFall')) q('lvFall').onclick=function(){ LEV.tool=LEV.tool==='fall'?null:'fall'; LEV.p1=null; levPanel(); }; if(q('lvGully')) q('lvGully').onclick=function(){ LEV.tool=LEV.tool==='gully'?null:'gully'; levPanel(); };
+  if(q('lvClear')) q('lvClear').onclick=function(){ pushUndo(); V.lines=[]; V.gullies=[]; V.drains=[]; afterEdit(); levRunSoon(); levPanel(); planDrawSoon(); };
+  if(q('lvFall')) q('lvFall').onclick=function(){ LEV.tool=LEV.tool==='fall'?null:'fall'; LEV.p1=null; levPanel(); }; if(q('lvGully')) q('lvGully').onclick=function(){ LEV.tool=LEV.tool==='gully'?null:'gully'; levPanel(); }; if(q('lvDrain')) q('lvDrain').onclick=function(){ LEV.tool=LEV.tool==='drain'?null:'drain'; LEV.p1=null; levPanel(); };
   if(q('lvStep')) q('lvStep').onchange=function(){ set('step', +this.value); }; if(q('lvFR')) q('lvFR').onchange=function(){ set('flatR', +this.value); levRunSoon(); }; if(q('lvFM')) q('lvFM').onchange=function(){ set('flatMm', +this.value); };
   if(q('lvSp')) q('lvSp').onchange=function(){ set('spot', +this.value); }; if(q('lvCell')) q('lvCell').onchange=function(){ set('cell', +this.value); levRunSoon(); };
   if(q('lvPdf')) q('lvPdf').onclick=levPdf; if(q('lvHtml')) q('lvHtml').onclick=levHtml; if(q('lvCsv')) q('lvCsv').onclick=levCsv; }
@@ -26013,6 +26014,89 @@ function rgpFly(G, anchor){ var f0=document.getElementById('sbFly'); if(f0&&f0.d
 /* r381: the pop-out menu is solid, not see-through blurred: a blurred panel over the 3D view could leave the 3D view black on some graphics cards once it had been shown */
 (function(){ var c=document.createElement('style'); c.textContent='#sbFly{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#fff!important}html[data-theme=dark] #sbFly{background:#30353c!important}'; document.head.appendChild(c); })();
 sbAfter('skinFlyClose', function(r){ try{ if(APP.res&&APP.view==='3d') requestRender(false); }catch(e){} return r; });
+
+/* ===== Rain test and channel drains (r384): in Floor levels, let it rain on the area for a set time and watch the water run
+   down the falls, gather in the low spots, and either drain away (gullies, channel drains, off the edge) or build up and stay.
+   A rough guide to where water goes and whether the drains keep up, not a drainage design: the rate the water runs is simplified. ===== */
+var RAIN={res:null, f:0, play:0, busy:false, prog:0, key:'', cfg:{mm:15, min:30, after:30, gully:3, chan:1, edge:true}};
+/* a channel drain, as gully points along it, for the ponding fill */
+function levDrainPts(drains, g){ var out=[]; (drains||[]).forEach(function(D){ var a=D[0], b=D[1], L=Math.hypot(b[0]-a[0], b[1]-a[1]), n=Math.max(1, Math.ceil(L/Math.max(0.1, g.cell))); for(var i=0;i<=n;i++) out.push([a[0]+(b[0]-a[0])*i/n, a[1]+(b[1]-a[1])*i/n]); }); return out; }
+function rainKey(){ var c=RAIN.cfg; return (LEV.key||'')+'|'+JSON.stringify(c); }
+/* ---------- the run ---------- */
+function rainRun(){ var O=LEV.out, V=levM(); if(!O||RAIN.busy) return; var g=O.g, k=Math.max(1, Math.round(Math.max(g.cell, Math.sqrt(O.area/40000))/g.cell)), s=g.cell*k, nx=Math.ceil(g.nx/k), ny=Math.ceil(g.ny/k), N=nx*ny, Z=new Float32Array(N).fill(NaN), M=new Uint8Array(N), c=RAIN.cfg;
+  for(var y=0;y<ny;y++) for(var x=0;x<nx;x++){ var sm=0, n=0; for(var dy=0;dy<k;dy++) for(var dx=0;dx<k;dx++){ var X=x*k+dx, Y=y*k+dy; if(X>=g.nx||Y>=g.ny) continue; var q0=Y*g.nx+X; if(!O.M[q0]) continue; var z=O.Z[q0]; if(z===z){ sm+=z; n++; } } if(n){ Z[y*nx+x]=sm/n; M[y*nx+x]=1; } }
+  var at=function(px,py){ var X=Math.floor((px-g.x0)/s), Y=Math.floor((py-g.y0)/s); return X<0||Y<0||X>=nx||Y>=ny?-1:Y*nx+X; }, cap=new Float32Array(N);
+  V.gullies.forEach(function(G){ var q=at(G[0],G[1]); if(q>=0&&M[q]) cap[q]+=c.gully*0.001; });
+  (V.drains||[]).forEach(function(D){ var a=D[0], b=D[1], L=Math.hypot(b[0]-a[0], b[1]-a[1]), n=Math.max(1, Math.ceil(L/(s*0.5))); for(var i=0;i<n;i++){ var t=(i+0.5)/n, q=at(a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t); if(q>=0&&M[q]) cap[q]+=c.chan*0.001*L/n; } });
+  var edge=new Uint8Array(N); for(var q=0;q<N;q++){ if(!M[q]) continue; var X2=q%nx, Y2=(q-X2)/nx; if(X2===0||Y2===0||X2===nx-1||Y2===ny-1||!M[q-1]||!M[q+1]||!M[q-nx]||!M[q+nx]) edge[q]=1; }
+  var dt=Math.max(0.5, Math.min(4, s/0.25)), rainS=c.min*60, total=rainS+c.after*60, steps=Math.ceil(total/dt), frames=Math.min(120, steps), every=Math.max(1, Math.floor(steps/frames)), r=c.mm/1000/3600, A=s*s;
+  var h=new Float32Array(N), dh=new Float32Array(N), R={nx:nx, ny:ny, s:s, x0:g.x0, y0:g.y0, Z:Z, M:M, frames:[], stats:[], rainS:rainS, total:total, dt:dt, cap:cap}, step=0, fell=0, drained=0, ran=0;
+  RAIN.busy=true; RAIN.res=null; RAIN.prog=0; rainPanelNote();
+  (function chunk(){ var t0=performance.now();
+    while(step<steps&&performance.now()-t0<30){ var t=step*dt, rn=t<rainS;
+      dh.fill(0);
+      for(var q=0;q<N;q++){ if(!M[q]) continue; if(rn){ h[q]+=r*dt; fell+=r*dt*A; } var hq=h[q]; if(hq<=1e-6) continue; var W=Z[q]+hq, x=q%nx, d0=0, d1=0, d2=0, d3=0, sum=0, mx=0, oe=0;
+        if(x>0&&M[q-1]){ d0=W-Z[q-1]-h[q-1]; if(d0>0){ sum+=d0; if(d0>mx) mx=d0; } else d0=0; }
+        if(x<nx-1&&M[q+1]){ d1=W-Z[q+1]-h[q+1]; if(d1>0){ sum+=d1; if(d1>mx) mx=d1; } else d1=0; }
+        if(q>=nx&&M[q-nx]){ d2=W-Z[q-nx]-h[q-nx]; if(d2>0){ sum+=d2; if(d2>mx) mx=d2; } else d2=0; }
+        if(q<N-nx&&M[q+nx]){ d3=W-Z[q+nx]-h[q+nx]; if(d3>0){ sum+=d3; if(d3>mx) mx=d3; } else d3=0; }
+        if(c.edge&&edge[q]&&hq>0.001){ oe=hq-0.001; sum+=oe; if(oe>mx) mx=oe; }
+        if(sum<=0) continue; var f=Math.min(hq, 0.5*mx);
+        if(d0) dh[q-1]+=f*d0/sum; if(d1) dh[q+1]+=f*d1/sum; if(d2) dh[q-nx]+=f*d2/sum; if(d3) dh[q+nx]+=f*d3/sum; if(oe) ran+=f*oe/sum*A; dh[q]-=f; }
+      for(q=0;q<N;q++){ if(!M[q]) continue; var v=h[q]+dh[q]; if(cap[q]>0&&v>0){ var take=Math.min(v, cap[q]*dt/A); v-=take; drained+=take*A; } h[q]=v>0?v:0; }
+      if(step%every===0||step===steps-1){ var fr=new Uint16Array(N), st=0, mxd=0, wet=0; for(q=0;q<N;q++){ var hv=h[q]; if(hv>0.002){ st+=hv*A; wet+=A; } if(hv>mxd) mxd=hv; fr[q]=Math.min(65535, Math.round(hv*10000)); } R.frames.push(fr); R.stats.push({t:t, rain:rn, fell:fell*1000, standing:st*1000, drained:drained*1000, ran:ran*1000, max:mxd, wet:wet}); }
+      step++; }
+    RAIN.prog=step/steps; rainPanelNote(); if(step<steps){ setTimeout(chunk, 0); return; }
+    RAIN.busy=false; RAIN.res=R; RAIN.key=rainKey(); RAIN.f=0; levPanel(); rainPlay(true); })(); }
+/* ---------- playing it back ---------- */
+function rainPlay(on){ cancelAnimationFrame(RAIN.play); RAIN.play=0; if(!on||!RAIN.res) { rainDrawSoon(); return; } var last=0;
+  (function tick(ts){ if(!RAIN.res) return; if(ts-last>90){ last=ts; RAIN.f++; if(RAIN.f>=RAIN.res.frames.length){ RAIN.f=RAIN.res.frames.length-1; RAIN.play=0; levPanel(); rainDrawSoon(); return; } rainReadout(); rainDrawSoon(); } RAIN.play=requestAnimationFrame(tick); })(0); }
+function rainDrawSoon(){ if(APP.view==='3d') requestRender(false); else planDrawSoon(); }
+function rainTxt(S){ var m=Math.floor(S.t/60); return (S.rain?'Raining, minute '+m+' of '+RAIN.res.rainS/60:'Rain stopped, '+Math.round((S.t-RAIN.res.rainS)/60)+' min after')+' · '+Math.round(S.standing).toLocaleString()+' L standing · deepest '+Math.round(S.max*1000)+' mm'; }
+function rainReadout(){ var el=document.getElementById('rnRead'), sl=document.getElementById('rnF'); if(!RAIN.res) return; var S=RAIN.res.stats[RAIN.f]; if(el) el.textContent=rainTxt(S); if(sl&&document.activeElement!==sl) sl.value=RAIN.f; }
+function rainPanelNote(){ var el=document.getElementById('rnRead'); if(el&&RAIN.busy) el.textContent='Working it out... '+Math.round(RAIN.prog*100)+'%'; }
+/* the water on the plan */
+function rainImg(){ var R=RAIN.res; if(!R) return null; if(R._imgF===RAIN.f&&R._img) return R._img; var cv=R._img||document.createElement('canvas'); cv.width=R.nx; cv.height=R.ny; var x=cv.getContext('2d'), im=x.createImageData(R.nx, R.ny), d=im.data, fr=R.frames[RAIN.f];
+  for(var y=0;y<R.ny;y++) for(var xx=0;xx<R.nx;xx++){ var q=y*R.nx+xx, h=fr[q]/10000; if(h<0.0015||!R.M[q]) continue; var o=((R.ny-1-y)*R.nx+xx)*4, k=Math.min(1, h/0.03); d[o]=Math.round(120-90*k); d[o+1]=Math.round(190-110*k); d[o+2]=255; d[o+3]=Math.round(110+130*k); }
+  x.putImageData(im,0,0); R._img=cv; R._imgF=RAIN.f; return cv; }
+sbAfter('planDraw', function(r){ try{ if(typeof levShowing!=='function'||!levShowing()) return r; if(window.LAY_ONLY&&window.LAY_ONLY!=='lev') return r; var V=levM(), c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), dpr=planView.dpr||1; c.save();
+    if(RAIN.res&&!window.LAY_ONLY){ var R=RAIN.res, im=rainImg(), tl=w2s(R.x0, R.y0+R.ny*R.s); c.imageSmoothingEnabled=true; c.drawImage(im, tl[0], tl[1], R.nx*R.s*planView.z, R.ny*R.s*planView.z); }
+    (V.drains||[]).forEach(function(D){ var a=w2s(D[0][0],D[0][1]), b=w2s(D[1][0],D[1][1]); c.lineCap='butt'; c.strokeStyle='#111827'; c.lineWidth=9*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.strokeStyle='#e5e7eb'; c.lineWidth=5*dpr; c.setLineDash([3*dpr,3*dpr]); c.stroke(); c.setLineDash([]); });
+    if(LEV.tool==='drain'&&LEV.p1&&LEV.hov){ var a2=w2s(LEV.p1[0],LEV.p1[1]), b2=w2s(LEV.hov[0],LEV.hov[1]); c.strokeStyle='#111827'; c.lineWidth=4*dpr; c.setLineDash([6*dpr,4*dpr]); c.beginPath(); c.moveTo(a2[0],a2[1]); c.lineTo(b2[0],b2[1]); c.stroke(); c.setLineDash([]); }
+    if(RAIN.res&&!window.LAY_ONLY){ var S=RAIN.res.stats[RAIN.f], t=rainTxt(S); c.font='600 '+(13*dpr)+'px system-ui'; var w=c.measureText(t).width+24*dpr; c.fillStyle='rgba(17,24,39,.88)'; c.fillRect(planView.w/2-w/2, 14*dpr, w, 30*dpr); c.fillStyle='#bfdbfe'; c.textAlign='center'; c.fillText(t, planView.w/2, 34*dpr); c.textAlign='left'; }
+    c.restore(); }catch(e){ console.warn(e); } return r; });
+/* the water and the drains in 3D, on the levels overlay */
+sbAfter('lv3Draw', function(r){ try{ if(typeof lv3Open!=='function'||!lv3Open()||!LEV.out) return r; var cv=document.getElementById('lvOv'), st=document.getElementById('stage'); if(!cv||!st) return r; var c=cv.getContext('2d'), dpr=window.devicePixelRatio||1, sr=st.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), S=function(p){ var s=projectWorld(p); return s?[(s[0]+gr.left-sr.left)*dpr, (s[1]+gr.top-sr.top)*dpr]:null; }, V=levM(), O=LEV.out;
+    if(RAIN.res){ var R=RAIN.res, fr=R.frames[RAIN.f], hs=R.s/2, n=0, B=[[],[],[]]; for(var q=0;q<fr.length;q++){ var h=fr[q]/10000; if(h<0.0015||!R.M[q]) continue; B[h<0.01?0:h<0.03?1:2].push(q); }
+      ['rgba(147,197,253,.55)','rgba(59,130,246,.65)','rgba(29,78,216,.78)'].forEach(function(col, bi){ c.fillStyle=col; c.beginPath(); B[bi].forEach(function(q){ if(++n>60000) return; var x=R.x0+((q%R.nx)+0.5)*R.s, y=R.y0+(Math.floor(q/R.nx)+0.5)*R.s, z=R.Z[q]+fr[q]/10000+0.01, a=S([x-hs,y-hs,z]), b=S([x+hs,y-hs,z]), e=S([x+hs,y+hs,z]), f=S([x-hs,y+hs,z]); if(!a||!b||!e||!f) return; c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.lineTo(e[0],e[1]); c.lineTo(f[0],f[1]); c.closePath(); }); c.fill(); });
+      var St=R.stats[RAIN.f], t=rainTxt(St); c.font='600 '+(13*dpr)+'px system-ui'; var w=c.measureText(t).width+24*dpr; c.fillStyle='rgba(17,24,39,.88)'; c.fillRect(cv.width/2-w/2, 14*dpr, w, 30*dpr); c.fillStyle='#bfdbfe'; c.textAlign='center'; c.fillText(t, cv.width/2, 34*dpr); c.textAlign='left'; }
+    var zA=function(x,y){ var v=levAt(O.Z,x,y); return v===v?v:null; };
+    (V.drains||[]).forEach(function(D){ var za=zA(D[0][0],D[0][1]), zb=zA(D[1][0],D[1][1]); if(za==null||zb==null) return; var a=S([D[0][0],D[0][1],za+0.03]), b=S([D[1][0],D[1][1],zb+0.03]); if(!a||!b) return; c.strokeStyle='#111827'; c.lineWidth=8*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.strokeStyle='#e5e7eb'; c.lineWidth=4*dpr; c.setLineDash([3*dpr,3*dpr]); c.stroke(); c.setLineDash([]); });
+    V.gullies.forEach(function(G){ var z=zA(G[0],G[1]); if(z==null) return; var p=S([G[0],G[1],z+0.03]); if(!p) return; c.fillStyle='#111827'; c.fillRect(p[0]-7*dpr,p[1]-5*dpr,14*dpr,10*dpr); c.strokeStyle='#fff'; c.lineWidth=1.5*dpr; c.strokeRect(p[0]-7*dpr,p[1]-5*dpr,14*dpr,10*dpr); }); }catch(e){ console.warn(e); } return r; });
+/* ---------- the panel ---------- */
+sbAfter('levPanel', function(r){ try{ var s=document.getElementById('sbLevSec'), b=s&&s.querySelector('.body'), V=levM(); if(!b||!V||!V.area||!LEV.out||b.querySelector('#rnBox')) return r;
+    if(RAIN.res&&RAIN.key!==rainKey()){ RAIN.res=null; rainPlay(false); }
+    var c=RAIN.cfg, o=function(v,l,cur){ return '<option value="'+v+'"'+(+cur===v?' selected':'')+'>'+l+'</option>'; }, d=document.createElement('div'); d.id='rnBox';
+    var h='<div class="lH">Rain test</div><p class="mini">Let it rain on the area and watch where the water runs, where it builds up, and whether the gullies and drains keep up.</p>'+
+      '<div class="row"><label>Rain</label><select id="rnMm">'+o(2,'Light (2 mm an hour)',c.mm)+o(6,'Steady (6 mm an hour)',c.mm)+o(15,'Heavy (15 mm an hour)',c.mm)+o(30,'Very heavy (30 mm an hour)',c.mm)+o(50,'Cloudburst (50 mm an hour)',c.mm)+'</select></div>'+
+      '<div class="row"><label>For</label><select id="rnMin">'+[10,15,30,60,120].map(function(v){ return o(v, v<60?v+' minutes':(v/60)+' hour'+(v>60?'s':''), c.min); }).join('')+'</select></div>'+
+      '<div class="row"><label>Then watch</label><select id="rnAft">'+[0,15,30,60].map(function(v){ return o(v, v?v+' min after':'no time after', c.after); }).join('')+'</select></div>'+
+      '<div class="row" title="An estimate: check what the real gully or outlet takes"><label>Each gully takes</label><select id="rnG">'+[0.5,1,2,3,5,10].map(function(v){ return o(v, v+' litres a second', c.gully); }).join('')+'</select></div>'+
+      '<div class="row" title="An estimate: check the channel drain\'s own figure"><label>Channel drain takes</label><select id="rnC">'+[0.3,0.5,1,2,4].map(function(v){ return o(v, v+' l/s per metre', c.chan); }).join('')+'</select></div>'+
+      '<div class="row"><label>At the edge</label><div class="sbLSeg lSeg"><button data-rne="1" class="'+(c.edge?'on':'')+'">Runs off</button><button data-rne="0" class="'+(!c.edge?'on':'')+'">Held in (kerb, upstand)</button></div></div>'+
+      '<div class="lRow"><button id="rnGo" class="lBtn on">'+(RAIN.busy?'Working...':RAIN.res?'Run again':'▶ Start the rain')+'</button>'+(RAIN.res?'<button id="rnPl" class="lBtn">'+(RAIN.play?'❚❚ Pause':'▶ Play')+'</button><button id="rnX" class="lBtn">Clear water</button>':'')+'</div>';
+    if(RAIN.res){ var R=RAIN.res, L=R.stats[R.stats.length-1], E=R.stats.filter(function(x){ return x.rain; }).pop()||L; h+='<input type="range" id="rnF" min="0" max="'+(R.frames.length-1)+'" value="'+RAIN.f+'" style="width:100%">'+
+      '<div class="lRes"><div><span>Rain that fell</span><b>'+Math.round(L.fell).toLocaleString()+' L</b></div><div><span>Gullies and drains took</span><b>'+Math.round(L.drained).toLocaleString()+' L</b></div><div><span>Ran off the edge</span><b>'+Math.round(L.ran).toLocaleString()+' L</b></div><div><span>Deepest when the rain stopped</span><b>'+Math.round(E.max*1000)+' mm</b></div><div><span>Still standing at the end</span><b>'+Math.round(L.standing).toLocaleString()+' L</b></div><div><span>Wet area at the end</span><b>'+fmt(L.wet,1)+' m²</b></div></div>'; }
+    h+='<p class="mini" id="rnRead">'+(RAIN.busy?'Working it out...':RAIN.res?rainTxt(RAIN.res.stats[RAIN.f]):'')+'</p><p class="mini">A rough guide, not a drainage design: how fast the water runs is simplified, and drain figures are your estimates.</p>';
+    d.innerHTML=h; var ex=b.querySelector('.lH:nth-last-of-type(1)'), heads=b.querySelectorAll('.lH'), exp=null; heads.forEach(function(x){ if(x.textContent==='Export') exp=x; }); if(exp) b.insertBefore(d, exp); else b.appendChild(d);
+    var q=function(id){ return d.querySelector('#'+id); }, cf=function(k, v){ c[k]=v; if(RAIN.res){ RAIN.res=null; rainPlay(false); } levPanel(); };
+    q('rnMm').onchange=function(){ cf('mm', +this.value); }; q('rnMin').onchange=function(){ cf('min', +this.value); }; q('rnAft').onchange=function(){ cf('after', +this.value); }; q('rnG').onchange=function(){ cf('gully', +this.value); }; q('rnC').onchange=function(){ cf('chan', +this.value); };
+    d.querySelectorAll('[data-rne]').forEach(function(x){ x.onclick=function(){ cf('edge', x.dataset.rne==='1'); }; });
+    q('rnGo').onclick=function(){ if(RAIN.busy) return; rainPlay(false); rainRun(); };
+    if(q('rnPl')) q('rnPl').onclick=function(){ if(RAIN.play){ rainPlay(false); } else { if(RAIN.f>=RAIN.res.frames.length-1) RAIN.f=0; rainPlay(true); } levPanel(); };
+    if(q('rnX')) q('rnX').onclick=function(){ rainPlay(false); RAIN.res=null; levPanel(); rainDrawSoon(); };
+    if(q('rnF')) q('rnF').oninput=function(){ rainPlay(false); RAIN.f=+this.value; rainReadout(); rainDrawSoon(); var pl=q('rnPl'); if(pl) pl.textContent='▶ Play'; };
+  }catch(e){ console.warn(e); } return r; });
 
 
 </script>

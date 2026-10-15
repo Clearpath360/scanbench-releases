@@ -1,2 +1,3 @@
-- Floor levels > Heights of: new Roof choice, reads the top surface of a flat roof or deck from a drone scan (Ground and Everything unchanged).
-- Floor levels: a hint suggests Roof when Ground leaves out a lot of the area.
+- Floor levels > Rain test: pick the rain, how long, then Start the rain; watch water run, gather and drain on the plan and in 3D, with litres and depths.
+- Floor levels > + Channel drain: click one end, then the other; it drains in the rain test and the ponding.
+- Rain test settings: gully and channel drain capacity, and whether water runs off the edge or is held in.
