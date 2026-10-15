@@ -1,2 +1,2 @@
-- Floor levels > Hide colours: hides the colour map so you can see the scan for placing gullies and drains.
-- Rain test: the colour map hides by itself while the water shows; Show colours brings it back.
+- Floor levels > + Drain (draw): click along the drain on the plan, round any bends; click the last point again, press Enter or Finish drain to end.
+- Drains show their length on the plan; Backspace takes off the last point while drawing.
