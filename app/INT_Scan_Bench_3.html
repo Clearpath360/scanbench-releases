@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r381';
+var SB_BUILD='2026-10-15 r382';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -25980,23 +25980,23 @@ sbInstead('ltPreset', function(k){ if(k!=='night') return SB_GO; var M=ltM(); if
 /* ===== Rail groups (r380): the panels on the left rail are gathered into four groups so the rail fits the screen:
    Prepare, Look, Measure and Survey. Point at a group (or tap it) and its panels open in a small menu beside it.
    The group holding the open panel is lit, and shows that panel's name under its icon. ===== */
-var SBG_GROUPS=[['prep','Prepare','scan',['load','scale','level','crop','cleanup','slice','clean']],['look','Look','sun',['grade','light','weather']],['meas','Measure','meas',['volume','sections','levels','qty']],['survey','Survey','checks',['checks','dwg','cover']]];
-var SBG={t:0, open:null};
-function sbgItems(){ var have=function(x){ return x[0]==='cleanup'||!!document.querySelector('#side .sec[data-sec="'+x[0]+'"]'); }, used={}, out=[];
-  SBG_GROUPS.forEach(function(G){ var its=G[3].map(function(k){ return SBP_ITEMS.filter(function(x){ return x[0]===k; })[0]; }).filter(function(x){ return x&&have(x); }); its.forEach(function(x){ used[x[0]]=1; }); if(its.length) out.push({k:G[0], name:G[1], ic:G[2], items:its}); });
+var RGP_GROUPS=[['prep','Prepare','scan',['load','scale','level','crop','cleanup','slice','clean']],['look','Look','sun',['grade','light','weather']],['meas','Measure','meas',['volume','sections','levels','qty']],['survey','Survey','checks',['checks','dwg','cover']]];
+var RGP={t:0, open:null};
+function rgpItems(){ var have=function(x){ return x[0]==='cleanup'||!!document.querySelector('#side .sec[data-sec="'+x[0]+'"]'); }, used={}, out=[];
+  RGP_GROUPS.forEach(function(G){ var its=G[3].map(function(k){ return SBP_ITEMS.filter(function(x){ return x[0]===k; })[0]; }).filter(function(x){ return x&&have(x); }); its.forEach(function(x){ used[x[0]]=1; }); if(its.length) out.push({k:G[0], name:G[1], ic:G[2], items:its}); });
   var rest=SBP_ITEMS.filter(function(x){ return !used[x[0]]&&have(x); }); if(rest.length) out.push({k:'more', name:'More', ic:'more', items:rest}); return out; }
-window.sbPanelItems=function(r){ if(!APP.res) return; sbgItems().forEach(function(G){ var cur=G.items.filter(function(x){ return x[0]===SBP.key; })[0], b=document.createElement('button');
+window.sbPanelItems=function(r){ if(!APP.res) return; rgpItems().forEach(function(G){ var cur=G.items.filter(function(x){ return x[0]===SBP.key; })[0], b=document.createElement('button');
     b.className='sbIt sbGrp'+(cur?' on':''); b.dataset.grp=G.k; b.innerHTML=skinIcon(cur?cur[2]:G.ic)+'<span>'+(cur?cur[1]:G.name)+'</span>'; b.title=G.name+': '+G.items.map(function(x){ return x[1]; }).join(', ');
-    b.onclick=function(e){ e.stopPropagation(); if(SBG.open===G.k&&document.getElementById('sbFly')){ skinFlyClose(); SBG.open=null; return; } sbgFly(G, b); };
-    b.onmouseenter=function(){ clearTimeout(SBG.t); SBG.t=setTimeout(function(){ sbgFly(G, b); }, 120); }; b.onmouseleave=function(){ clearTimeout(SBG.t); SBG.t=setTimeout(sbgMaybeClose, 350); }; r.appendChild(b); });
+    b.onclick=function(e){ e.stopPropagation(); if(RGP.open===G.k&&document.getElementById('sbFly')){ skinFlyClose(); RGP.open=null; return; } rgpFly(G, b); };
+    b.onmouseenter=function(){ clearTimeout(RGP.t); RGP.t=setTimeout(function(){ rgpFly(G, b); }, 120); }; b.onmouseleave=function(){ clearTimeout(RGP.t); RGP.t=setTimeout(rgpMaybeClose, 350); }; r.appendChild(b); });
   var sp=document.createElement('div'); sp.className='sbSep'; r.appendChild(sp); };
-function sbgMaybeClose(){ var f=document.getElementById('sbFly'); if(!f||f.dataset.grp==null) return; if(f.matches(':hover')||document.querySelector('#sbRail .sbGrp:hover')) return; skinFlyClose(); SBG.open=null; }
-function sbgFly(G, anchor){ var f0=document.getElementById('sbFly'); if(f0&&f0.dataset.grp===G.k) return; skinFlyClose(); var f=document.createElement('div'); f.id='sbFly'; f.dataset.grp=G.k; f.dataset.for=G.name; document.body.appendChild(f); SBG.open=G.k;
-  f.innerHTML='<div class="sbFh">'+G.name+'</div>'+G.items.map(function(x){ return '<button class="sbFi sbgFi'+(SBP.key===x[0]?' on':'')+'" data-k="'+x[0]+'" title="'+String(x[3]||'').replace(/"/g,'&quot;')+'">'+skinIcon(x[2])+'<span>'+x[1]+'</span></button>'; }).join('');
+function rgpMaybeClose(){ var f=document.getElementById('sbFly'); if(!f||f.dataset.grp==null) return; if(f.matches(':hover')||document.querySelector('#sbRail .sbGrp:hover')) return; skinFlyClose(); RGP.open=null; }
+function rgpFly(G, anchor){ var f0=document.getElementById('sbFly'); if(f0&&f0.dataset.grp===G.k) return; skinFlyClose(); var f=document.createElement('div'); f.id='sbFly'; f.dataset.grp=G.k; f.dataset.for=G.name; document.body.appendChild(f); RGP.open=G.k;
+  f.innerHTML='<div class="sbFh">'+G.name+'</div>'+G.items.map(function(x){ return '<button class="sbFi rgpFi'+(SBP.key===x[0]?' on':'')+'" data-k="'+x[0]+'" title="'+String(x[3]||'').replace(/"/g,'&quot;')+'">'+skinIcon(x[2])+'<span>'+x[1]+'</span></button>'; }).join('');
   var ar=anchor.getBoundingClientRect(); f.style.left=(ar.right+8)+'px'; f.style.top=Math.max(52, Math.min(window.innerHeight-f.offsetHeight-8, ar.top-6))+'px';
-  f.onmouseenter=function(){ clearTimeout(SBG.t); }; f.onmouseleave=function(){ clearTimeout(SBG.t); SBG.t=setTimeout(sbgMaybeClose, 350); };
-  f.querySelectorAll('[data-k]').forEach(function(x){ x.onclick=function(e){ e.stopPropagation(); skinFlyClose(); SBG.open=null; sbPanel(x.dataset.k); }; }); }
-(function(){ var c=document.createElement('style'); c.textContent='#sbFly .sbgFi{display:flex;align-items:center;gap:8px}#sbFly .sbgFi .sbIc{width:18px;height:18px;flex:0 0 18px}#sbFly .sbgFi span{flex:1;text-align:left}body.sbSkin #sbRail .sbGrp span{max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+  f.onmouseenter=function(){ clearTimeout(RGP.t); }; f.onmouseleave=function(){ clearTimeout(RGP.t); RGP.t=setTimeout(rgpMaybeClose, 350); };
+  f.querySelectorAll('[data-k]').forEach(function(x){ x.onclick=function(e){ e.stopPropagation(); skinFlyClose(); RGP.open=null; sbPanel(x.dataset.k); }; }); }
+(function(){ var c=document.createElement('style'); c.textContent='#sbFly .rgpFi{display:flex;align-items:center;gap:8px}#sbFly .rgpFi .sbIc{width:18px;height:18px;flex:0 0 18px}#sbFly .rgpFi span{flex:1;text-align:left}body.sbSkin #sbRail .sbGrp span{max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
   document.head.appendChild(c); })();
 /* r381: the pop-out menu is solid, not see-through blurred: a blurred panel over the 3D view could leave the 3D view black on some graphics cards once it had been shown */
 (function(){ var c=document.createElement('style'); c.textContent='#sbFly{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#fff!important}html[data-theme=dark] #sbFly{background:#30353c!important}'; document.head.appendChild(c); })();
