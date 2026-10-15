@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r409';
+var SB_BUILD='2026-10-15 r410';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26843,8 +26843,8 @@ SKIN_IC.sky='M12 3v2M5.6 5.6l1.4 1.4M3 12h2M18.4 5.6 17 7M8.5 12a3.5 3.5 0 0 1 6
   SBP_ITEMS.push(['sky','Sky, light & weather','sky','Presets, time and sun, sky, weather, lights, placed effects and the weather film, all in one place']);
   try{ RGP_GROUPS.forEach(function(G){ if(G[0]==='look'){ G[3]=G[3].filter(function(k){ return k!=='light'&&k!=='weather'; }); G[3].push('sky'); } }); }catch(e){} })();
 (function(){ var inner=window.sbPanel; window.sbPanel=function(key, quiet){ if(key==='light'||key==='weather'){ key='sky'; if(SBP.key==='sky') return; } return inner.call(this, key, quiet); }; })();
-sbAround('ltShowUI', function(next){ return next()||(SBP.key==='sky'&&SKP.tab==='lights'&&APP.view==='3d'&&!miniVP&&!!APP.res&&ltOn()); });
-sbAround('fxUI', function(next){ return next()||(SBP.key==='sky'&&(SKP.tab==='placed'||!!FX.mode)&&APP.view==='3d'&&!miniVP&&!!APP.res&&fxOn()); });
+sbAround('ltShowUI', function(next){ return next()||(SBP.key==='sky'&&SKP.open==='lamps'&&APP.view==='3d'&&!miniVP&&!!APP.res&&ltOn()); });
+sbAround('fxUI', function(next){ return next()||(SBP.key==='sky'&&(SKP.open==='objects'||!!FX.mode)&&APP.view==='3d'&&!miniVP&&!!APP.res&&fxOn()); });
 
 /* ---------- rain in sunshine: the sky and the light are worked out as if there were no rain or snow; the rain and snow still fall ---------- */
 function skLinked(){ var S=wxS(); return !S||S.linked!==false; }
@@ -26873,46 +26873,112 @@ function skReset(t){ var S=wxS(), F=fxS(); if(!S) return; pushUndo();
   if(t==='placed'){ F.items=[]; FX.sel=null; F.rays=0.6; }
   afterEdit(); wxPanel(); try{ ltPanel(); }catch(e){} requestRender(false); toast('Reset. Ctrl+Z undoes it.', 2000); }
 
-/* ---------- the panel: a home for the old controls, sorted into tabs ---------- */
+/* ---------- r410: the panel as tiles. Scenes along the top, a time-of-day bar, then a tile for each part of the scene:
+   tap a tile to switch it on, tap again for its settings (they open under the tiles), with Turn off and Reset there. ---------- */
+var SKP_ICON={
+  sun:'<circle cx="16" cy="16" r="6.5" fill="#FDB813" stroke="#E08A00" stroke-width="1.5"/><g stroke="#F39C12" stroke-width="2.4" stroke-linecap="round"><path d="M16 2.5v3.5M16 26v3.5M2.5 16H6M26 16h3.5M6.5 6.5 9 9M23 23l2.5 2.5M6.5 25.5 9 23M23 9l2.5-2.5"/></g>',
+  clouds:'<path d="M9 24h14.5a5.5 5.5 0 0 0 .9-10.93A8 8 0 0 0 9.1 11.6 6.2 6.2 0 0 0 9 24z" fill="#EEF2F7" stroke="#8A97A8" stroke-width="1.6"/><path d="M12 13.5a5 5 0 0 1 8-2" fill="none" stroke="#C5CEDA" stroke-width="1.6" stroke-linecap="round"/>',
+  rain:'<path d="M8.5 18h14a5 5 0 0 0 .8-9.94A7.5 7.5 0 0 0 9 6.8 5.6 5.6 0 0 0 8.5 18z" fill="#DCE3EC" stroke="#7D8A9B" stroke-width="1.5"/><g fill="#2F80ED"><path d="M10 21.5l1.6-0.4-1.4 5.2a1 1 0 0 1-1.9-.5z"/><path d="M15.5 21.5l1.6-.4-1.4 5.2a1 1 0 0 1-1.9-.5z"/><path d="M21 21.5l1.6-.4-1.4 5.2a1 1 0 0 1-1.9-.5z"/></g>',
+  snow:'<path d="M8.5 17h14a5 5 0 0 0 .8-9.94A7.5 7.5 0 0 0 9 5.8 5.6 5.6 0 0 0 8.5 17z" fill="#EEF2F7" stroke="#8A97A8" stroke-width="1.5"/><g stroke="#4AA3DF" stroke-width="1.6" stroke-linecap="round"><path d="M11 20v6M8.4 21.5l5.2 3M8.4 24.5l5.2-3"/><path d="M21 20v6M18.4 21.5l5.2 3M18.4 24.5l5.2-3"/></g>',
+  fog:'<g stroke="#8A97A8" stroke-width="2.4" stroke-linecap="round" fill="none"><path d="M5 11c3-2 5 2 8 0s5 2 8 0 4 1 6 0"/><path d="M5 17c3-2 5 2 8 0s5 2 8 0 4 1 6 0" stroke="#A9B4C2"/><path d="M5 23c3-2 5 2 8 0s5 2 8 0 4 1 6 0" stroke="#C5CEDA"/></g>',
+  lightning:'<path d="M8.5 16h14a5 5 0 0 0 .8-9.94A7.5 7.5 0 0 0 9 4.8 5.6 5.6 0 0 0 8.5 16z" fill="#6B7686" stroke="#4A5464" stroke-width="1.5"/><path d="M17 15l-5 8h4l-2 7 7-10h-4l2-5z" fill="#FFD43B" stroke="#E0A800" stroke-width="1.2" stroke-linejoin="round"/>',
+  wind:'<g fill="none" stroke="#3B82C4" stroke-width="2.4" stroke-linecap="round"><path d="M4 12h15a3.5 3.5 0 1 0-3.5-3.5"/><path d="M4 17h20a3.5 3.5 0 1 1-3.5 3.5" stroke="#5FA3DD"/><path d="M4 22h9" stroke="#8CC0EB"/></g>',
+  night:'<path d="M20 5a10 10 0 1 0 7 15.5A8 8 0 0 1 20 5z" fill="#FFE27A" stroke="#E0B33A" stroke-width="1.5"/><g fill="#FFFFFF" stroke="#9AA9C2" stroke-width="1"><path d="M8 6l.9 1.9L11 8.8l-2.1.9L8 11.6l-.9-1.9L5 8.8l2.1-.9z"/><path d="M26 4l.6 1.3 1.4.6-1.4.6L26 7.8l-.6-1.3L24 5.9l1.4-.6z"/></g>',
+  rainbow:'<g fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M3 24a13 13 0 0 1 26 0" stroke="#E74C3C"/><path d="M6 24a10 10 0 0 1 20 0" stroke="#F5B700"/><path d="M9 24a7 7 0 0 1 14 0" stroke="#2ECC71"/><path d="M12 24a4 4 0 0 1 8 0" stroke="#3498DB"/></g>',
+  birds:'<g fill="none" stroke="#2C3440" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13c2.5-3 5-3 7 0 2-3 4.5-3 7 0"/><path d="M14 22c2-2.4 4-2.4 5.6 0 1.6-2.4 3.6-2.4 5.6 0"/></g>',
+  leaves:'<path d="M7 25C7 13 15 6 26 6c0 11-7 19-19 19z" fill="#F39C34" stroke="#C0661A" stroke-width="1.5"/><path d="M7 25 20 12" stroke="#A0521A" stroke-width="1.6" stroke-linecap="round"/>',
+  lamps:'<path d="M16 4a8 8 0 0 0-5 14.2c1 .9 1.5 2 1.5 3.3h7c0-1.3.5-2.4 1.5-3.3A8 8 0 0 0 16 4z" fill="#FFE27A" stroke="#E0A800" stroke-width="1.5"/><path d="M12.5 25h7M13.5 28h5" stroke="#6B7686" stroke-width="2" stroke-linecap="round"/>',
+  objects:'<path d="M16 29c5 0 8.5-3.4 8.5-8.4 0-4.6-3.4-7-4.6-10.6-1.2 2.4-2.4 3.5-3.6 3.5 0-2.6-1.2-5.2-3.6-7.5 0 5-5.2 8.6-5.2 14.6 0 5 3.5 8.4 8.5 8.4z" fill="#FF8A3D" stroke="#D9531E" stroke-width="1.5"/><path d="M16 29c2.3 0 4-1.6 4-4 0-2.4-2-3.6-2.6-5.4-1 1.6-2.6 2-2.6 2s-2.8 1.4-2.8 3.6c0 2.2 1.7 3.8 4 3.8z" fill="#FFD43B"/>',
+  film:'<rect x="4" y="9" width="24" height="17" rx="2.5" fill="#2C3440"/><path d="M4 9l3-5h4l-3 5M12 9l3-5h4l-3 5M20 9l3-5h4l-3 5" fill="#FFFFFF" stroke="#2C3440" stroke-width="1.4" stroke-linejoin="round"/><path d="M13 14v7l6-3.5z" fill="#FFFFFF"/>'};
+var SKP_TILES=[['sun','Sun'],['clouds','Clouds'],['rain','Rain'],['snow','Snow'],['fog','Fog'],['lightning','Lightning'],['wind','Wind'],['night','Night sky'],['rainbow','Rainbow'],['birds','Birds'],['leaves','Leaves'],['lamps','Lamps'],['objects','Objects'],['film','Film']];
+/* what each tile switches on and off, and what it says */
+function skPc(v){ return Math.round((v||0)*100)+'%'; }
+var SKP_T={
+  sun:{st:function(S){ return typeof ltHM==='function'?ltHM(wxSun().h):''; }},
+  clouds:{on:function(S){ return S.clouds>0.05; }, set:function(S,F,v){ S.clouds=v?0.45:0; }, st:function(S){ return S.clouds>0.8?'overcast':S.clouds>0.05?skPc(S.clouds):'clear'; }},
+  rain:{on:function(S){ return S.rain>0; }, set:function(S,F,v){ S.rain=v?0.5:0; if(v) S.wet=true; }, st:function(S){ return S.rain<=0?'off':S.rain<0.3?'drizzle':S.rain>0.75?'downpour':'rain'; }},
+  snow:{on:function(S){ return S.snow>0||S.snowCover>0; }, set:function(S,F,v){ S.snow=v?0.5:0; S.snowCover=v?0.4:0; }, st:function(S){ return S.snow>0?skPc(S.snow):S.snowCover>0?'lying':'off'; }},
+  fog:{on:function(S){ return S.fog>0||S.mist>0; }, set:function(S,F,v){ S.fog=v?0.35:0; S.mist=v?0.3:0; }, st:function(S){ return (S.fog>0||S.mist>0)?skPc(Math.max(S.fog,S.mist)):'off'; }},
+  lightning:{on:function(S){ return !!S.lightning; }, set:function(S,F,v){ S.lightning=!!v; }, st:function(S){ return S.lightning?'on':'off'; }},
+  wind:{on:function(S){ return S.wind>0.02; }, set:function(S,F,v){ S.wind=v?0.4:0; }, st:function(S){ return S.wind>0.02?skPc(S.wind):'calm'; }},
+  night:{on:function(S,F){ return S.stars!==false||F.meteors>0||F.shower||F.aurora>0||F.moon; }, set:function(S,F,v){ S.stars=!!v; if(!v){ F.meteors=0; F.shower=false; F.aurora=0; F.moon=false; } }, st:function(S,F){ var n=[F.moon?'moon':'',F.shower?'meteors':F.meteors>0?'shooting':'',F.aurora>0?'aurora':''].filter(Boolean); return n.length?n.join(', '):(S.stars!==false?'stars':'off'); }},
+  rainbow:{on:function(S,F){ return !!F.rainbow; }, set:function(S,F,v){ F.rainbow=!!v; }, st:function(S,F){ return F.rainbow?(F.rbDouble?'double':'on'):'off'; }},
+  birds:{on:function(S,F){ return F.birds>0; }, set:function(S,F,v){ F.birds=v?0.6:0; }, st:function(S,F){ return F.birds>0?skPc(F.birds):'off'; }},
+  leaves:{on:function(S,F){ return F.leaves>0; }, set:function(S,F,v){ F.leaves=v?0.6:0; }, st:function(S,F){ return F.leaves>0?skPc(F.leaves):'off'; }},
+  lamps:{on:function(){ return typeof ltList==='function'&&ltList().some(function(l){ return l.on&&l.kind!=='sun'; }); }, st:function(){ var n=typeof ltList==='function'?ltList().filter(function(l){ return l.kind!=='sun'; }).length:0; return n?n+' lamp'+(n>1?'s':''):'none'; }},
+  objects:{on:function(S,F){ return F.items.length>0; }, st:function(S,F){ return F.items.length?F.items.length+' placed':'none'; }},
+  film:{st:function(){ return 'make a video'; }}};
+var SKP_RST={sun:'time', clouds:'sky', night:'sky', rainbow:'sky', birds:'sky', rain:'weather', snow:'weather', fog:'weather', lightning:'weather', wind:'weather', leaves:'weather', lamps:'lights', objects:'placed'};
+SKP.open=null;
+function skTileReset(t){ var S=wxS(), F=fxS(); if(!S) return; pushUndo(); var D=SKP_T[t];
+  if(t==='sun'){ S.time=12; if(S.site) S.site.on=false; S.shaftAmt=0; var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=12; }
+  else if(t==='clouds'){ S.clouds=0.15; S.speed=0.3; } else if(t==='rain'){ Object.assign(S,{rain:0, wet:true, splash:true, puddles:0, linked:true}); } else if(t==='snow'){ Object.assign(S,{snow:0, snowCover:0}); }
+  else if(t==='fog'){ S.fog=0; S.mist=0; } else if(t==='lightning'){ S.lightning=false; } else if(t==='wind'){ S.wind=0; S.windDir=45; } else if(t==='night'){ S.stars=true; Object.assign(F,{meteors:0, shower:false, aurora:0, moon:false}); }
+  else if(t==='rainbow'){ F.rainbow=false; F.rbDouble=false; } else if(t==='birds'){ F.birds=0; } else if(t==='leaves'){ F.leaves=0; }
+  else if(t==='lamps'){ var M=ltM(); if(M){ M.lights=M.lights.filter(function(l){ return l.kind==='sun'; }); M.lightAmb=0.55; M.lightsOn=true; } S.dusk=true; }
+  else if(t==='objects'){ F.items=[]; FX.sel=null; F.rays=0.6; }
+  afterEdit(); wxPanel(); try{ ltPanel(); }catch(e){} requestRender(false); toast('Reset. Ctrl+Z undoes it.', 2000); }
+function skAllReset(){ var S=wxS(), F=fxS(); if(!S) return; pushUndo(); Object.assign(S, {on:true, time:13, clouds:0.15, speed:0.3, wind:0.1, windDir:45, rain:0, snow:0, snowCover:0, fog:0, mist:0, lightning:false, stars:true, strength:1, puddles:0, shaftAmt:0, linked:true, wet:true, splash:true}); Object.assign(F, {meteors:0, shower:false, rainbow:false, rbDouble:false, aurora:0, moon:false, leaves:0, birds:0});
+  var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=13; S._preset=null; afterEdit(); wxPanel(); requestRender(false); toast('Back to a plain clear day. Lamps and placed objects are kept. Ctrl+Z undoes it.', 3000); }
+function skTap(t){ var S=wxS(), F=fxS(), D=SKP_T[t]; if(!S) return;
+  if(D.set&&!D.on(S,F)){ pushUndo(); D.set(S,F,true); S.on=true; afterEdit(); SKP.open=t; wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); return; }
+  SKP.open=SKP.open===t?null:t; skShowTab(); requestRender(false); }
+function skTurnOff(t){ var S=wxS(), F=fxS(), D=SKP_T[t]; if(!D.set) return; pushUndo(); D.set(S,F,false); afterEdit(); SKP.open=null; wxPanel(); requestRender(false); }
+var SKP_SCN={clear:'linear-gradient(180deg,#5aa0e6,#bfe0fb)', misty:'linear-gradient(180deg,#b9c4cf,#e8edf1)', storm:'linear-gradient(180deg,#3a414c,#7b8593)', winter:'linear-gradient(180deg,#c7d3df,#f4f7fa)', night:'linear-gradient(180deg,#050a1c,#1c2a52)', stormpass:'linear-gradient(135deg,#4a5260 45%,#9cc8ef 55%)', bonfire:'linear-gradient(180deg,#0b1024,#5a2a14)', golden:'linear-gradient(180deg,#f5a25b,#ffe0a3)', sunshower:'linear-gradient(180deg,#7fb6ea,#d8ecfb)'};
 function skSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbSkySec'); if(!s){ s=document.createElement('div'); s.id='sbSkySec'; s.className='sec'; s.dataset.sec='sky'; s.innerHTML='<h2>Sky, light &amp; weather</h2><div class="body"></div>'; } if(s.parentNode!==side) side.appendChild(s); return s; }
-function skShell(){ var s=skSec(); if(!s) return null; var b=s.querySelector('.body'); if(b.querySelector('#skTabs')) return b; if(!APP.res){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return null; }
-  b.innerHTML='<div id="skTop"></div><div class="skH">Presets</div><div id="skPLine" class="mini"></div><div id="skPresets" class="skGrid"></div><div id="skMyRow" class="row" style="gap:4px"><input id="skMyName" placeholder="Name for your preset" style="flex:1;min-width:0"><button class="skBtn" id="skMySave">Save as my preset</button></div>'+
-    '<div id="skTabs">'+SKP_TABS.map(function(t){ return '<button data-skt="'+t[0]+'">'+t[1]+'</button>'; }).join('')+'</div>'+
-    SKP_TABS.map(function(t){ return '<div class="skTab" data-tab="'+t[0]+'"><div data-src="lt"></div><div data-src="wx"></div>'+(t[0]!=='film'?'<button class="skBtn skReset" data-rst="'+t[0]+'">Reset '+t[1].toLowerCase()+'</button>':'')+'</div>'; }).join('')+'<div id="skFoot"></div>';
-  b.querySelectorAll('[data-skt]').forEach(function(x){ x.onclick=function(){ SKP.tab=x.dataset.skt; try{ localStorage.setItem('sb_skytab', SKP.tab); }catch(e){} skShowTab(); requestRender(false); }; });
-  b.querySelectorAll('[data-rst]').forEach(function(x){ x.onclick=function(){ skReset(x.dataset.rst); }; });
-  b.querySelector('#skMySave').onclick=function(){ var nm=(b.querySelector('#skMyName').value||'').trim(); if(!nm){ toast('Type a name for the preset first.', 2000); return; } var L=skMine().filter(function(p){ return p.name!==nm; }), o=skPick(); o.name=nm; L.push(o); skMineSave(L); var S=wxS(); S._preset='my:'+nm; S._psig=skSig(); b.querySelector('#skMyName').value=''; wxPanel(); toast('Saved as "'+nm+'".', 2000); };
+function skShell(){ var s=skSec(); if(!s) return null; var b=s.querySelector('.body'); if(b.querySelector('#skTiles')) return b; if(!APP.res){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return null; }
+  b.innerHTML='<div id="skTop"></div>'+
+    '<div class="skH">Scenes</div><div id="skPresets" class="skScn"></div><div id="skPLine" class="mini"></div>'+
+    '<div class="row" style="gap:4px;margin-top:4px"><input id="skMyName" placeholder="Name your mix" style="flex:1;min-width:0"><button class="skBtn" id="skMySave">Save as mine</button><button class="skBtn" id="skAllRst" title="Back to a plain clear day; lamps and placed objects are kept">Reset all</button></div>'+
+    '<div class="skH">Time of day</div><div class="skTime"><input type="range" id="skTimeR" min="0" max="24" step="0.25" aria-label="Time of day"><div class="skTimeL"><span>Midnight</span><span>Dawn</span><span>Noon</span><span>Dusk</span><span id="skTimeV"></span></div></div>'+
+    '<div class="skH">In the scene <span style="font-weight:400;text-transform:none;letter-spacing:0">· tap to switch on, tap again for settings</span></div>'+
+    '<div id="skTiles">'+SKP_TILES.map(function(t){ return '<button class="skTile" data-tile="'+t[0]+'"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">'+SKP_ICON[t[0]]+'</svg><b>'+t[1]+'</b><i></i></button>'; }).join('')+'</div>'+
+    '<div id="skPopWrap">'+SKP_TILES.map(function(t){ return '<div class="skPop" data-tab="'+t[0]+'"><div class="skPopH"><b>'+t[1]+'</b>'+(SKP_T[t[0]].set?'<button class="skBtn" data-off="'+t[0]+'">Turn off</button>':'')+'<button class="skBtn" data-trst="'+t[0]+'">Reset</button><button class="skBtn" data-close="1" aria-label="Close settings">✕</button></div><div data-src="lt"></div><div data-src="wx"></div></div>'; }).join('')+'</div><div id="skFoot"></div>';
+  b.querySelectorAll('[data-tile]').forEach(function(x){ x.onclick=function(){ skTap(x.dataset.tile); }; });
+  b.querySelectorAll('[data-off]').forEach(function(x){ x.onclick=function(){ skTurnOff(x.dataset.off); }; });
+  b.querySelectorAll('[data-trst]').forEach(function(x){ x.onclick=function(){ skTileReset(x.dataset.trst); }; });
+  b.querySelectorAll('[data-close]').forEach(function(x){ x.onclick=function(){ SKP.open=null; skShowTab(); requestRender(false); }; });
+  b.querySelector('#skAllRst').onclick=skAllReset;
+  var tr=b.querySelector('#skTimeR'); tr.onpointerdown=function(){ pushUndo(); }; tr.oninput=function(){ var S=wxS(), v=+this.value; S.time=v; S.on=true; var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=v; skShowTab(); requestRender(false); }; tr.onchange=function(){ afterEdit(); wxPanel(); };
+  b.querySelector('#skMySave').onclick=function(){ var nm=(b.querySelector('#skMyName').value||'').trim(); if(!nm){ toast('Type a name for your mix first.', 2000); return; } var L=skMine().filter(function(p){ return p.name!==nm; }), o=skPick(); o.name=nm; L.push(o); skMineSave(L); var S=wxS(); S._preset='my:'+nm; S._psig=skSig(); b.querySelector('#skMyName').value=''; wxPanel(); toast('Saved as "'+nm+'".', 2000); };
   skShowTab(); return b; }
-function skShowTab(){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; b.querySelectorAll('[data-skt]').forEach(function(x){ x.classList.toggle('on', x.dataset.skt===SKP.tab); }); var F=typeof fxS==='function'?fxS():null, n=F?F.items.length:0, pb=b.querySelector('[data-skt="placed"]'); if(pb) pb.textContent='Placed'+(n?' ('+n+')':''); b.querySelectorAll('.skTab').forEach(function(x){ x.style.display=x.dataset.tab===SKP.tab?'':'none'; }); }
-/* where each weather control goes, by its label */
-var SKP_LBL={'Sky & weather':'top','Strength':'top','Animate':'foot','Time':'time','Clouds':'sky','Cloud speed':'sky','Stars & moon':'sky','Light shafts':'sky','Sound in videos':'film','Volume':'film','Lamps on at dusk':'lights',
-  'Shooting stars':'sky','Meteor shower':'sky','Rainbow':'sky','Double bow':'sky','Northern lights':'sky','Real moon':'sky','Birds':'sky','Sunbeams':'placed','Autumn leaves':'weather'};
-var SKP_HDR={'Presets':'presets','Sky':'sky','Weather':'weather','Lights':'lights','Effects':'sky','Place in the scene':'placed','Christmas':'placed'};
+/* the tiles say what is on; the open tile's settings show under them */
+function skShowTab(){ var b=document.querySelector('#sbSkySec .body'); if(!b||!b.querySelector('#skTiles')) return; var S=wxS(), F=fxS(); if(!S||!F) return;
+  b.querySelectorAll('[data-tile]').forEach(function(x){ var t=x.dataset.tile, D=SKP_T[t], on=D.on?D.on(S,F):false; x.classList.toggle('on', !!on); x.classList.toggle('open', SKP.open===t); x.querySelector('i').textContent=D.st(S,F); });
+  /* the open tile's settings sit right under its row of tiles */ var grid=b.querySelector('#skTiles'), wrap=b.querySelector('#skPopWrap'), tiles=[].slice.call(grid.querySelectorAll('[data-tile]'));
+  b.querySelectorAll('.skPop').forEach(function(x){ var open=x.dataset.tab===SKP.open; x.style.display=open?'':'none'; if(!open&&x.parentNode!==wrap) wrap.appendChild(x); if(open){ var i=tiles.findIndex(function(t){ return t.dataset.tile===SKP.open; }), end=tiles[Math.min(tiles.length-1, Math.floor(i/4)*4+3)]; if(end.nextSibling!==x) grid.insertBefore(x, end.nextSibling); if(SKP._scroll!==SKP.open){ SKP._scroll=SKP.open; setTimeout(function(){ try{ x.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(e){} }, 30); } } }); if(!SKP.open) SKP._scroll=null;
+  var tr=b.querySelector('#skTimeR'), h=wxSun().h; if(tr&&document.activeElement!==tr) tr.value=h; var tv=b.querySelector('#skTimeV'); if(tv) tv.textContent=typeof ltHM==='function'?ltHM(h):''; }
+/* where each old control goes, by its label */
+var SKP_LBL={'Sky & weather':'top','Strength':'top','Animate':'foot','Time':'drop','Clouds':'clouds','Cloud speed':'clouds','Stars & moon':'night','Light shafts':'sun','Sound in videos':'film','Volume':'film','Lamps on at dusk':'lamps',
+  'Shooting stars':'night','Meteor shower':'night','Rainbow':'rainbow','Double bow':'rainbow','Northern lights':'night','Real moon':'night','Birds':'birds','Sunbeams':'objects','Autumn leaves':'leaves',
+  'Rain':'rain','Wet ground':'rain','Splashes':'rain','Puddles':'rain','Reflections':'rain','Snow':'snow','Snow on ground':'snow','Snow depth':'snow','Fog':'fog','Ground mist':'fog','Wind':'wind','Wind towards':'wind','Lightning':'lightning'};
+var SKP_HDR={'Presets':'presets','Sky':'clouds','Weather':'rain','Lights':'lamps','Effects':'night','Place in the scene':'objects','Christmas':'objects'};
 function skLabel(n){ var l=n.querySelector&&n.querySelector(':scope > label'); return l?l.textContent.trim():''; }
-function skFromWx(){ if(SBP.key!=='sky') return; var b=skShell(), src=document.querySelector('#sbWxSec .body'); if(!b||!src) return; var dst=function(t){ return t==='top'?b.querySelector('#skTop'):t==='foot'?b.querySelector('#skFoot'):b.querySelector('.skTab[data-tab="'+t+'"] [data-src="wx"]'); };
-  ['top','foot'].concat(SKP_TABS.map(function(t){ return t[0]; })).forEach(function(t){ var d=dst(t); if(d) d.innerHTML=''; }); b.querySelector('#skPresets').innerHTML='';
+function skFromWx(){ if(SBP.key!=='sky') return; var b=skShell(), src=document.querySelector('#sbWxSec .body'); if(!b||!src) return; var dst=function(t){ return t==='top'?b.querySelector('#skTop'):t==='foot'?b.querySelector('#skFoot'):b.querySelector('.skPop[data-tab="'+t+'"] [data-src="wx"]'); };
+  skClear('wx');
   var list=[]; [].slice.call(src.children).forEach(function(n){ if(n.id==='fxBox'){ [].slice.call(n.children).forEach(function(m){ m._fx=1; list.push(m); }); } else list.push(n); });
-  var cur='top';
+  var cur='top', last='top';
   list.forEach(function(n){ var tx=(n.textContent||'').trim(), t;
-    if(n.classList&&n.classList.contains('wxH')){ var h=SKP_HDR[tx]; if(h) cur=h; if(tx==='Place in the scene'||tx==='Christmas'){ dst(cur).appendChild(n); } return; }
+    if(n.classList&&n.classList.contains('wxH')){ var h=SKP_HDR[tx]; if(h) cur=h; if(tx==='Place in the scene'||tx==='Christmas'){ dst('objects').appendChild(n); last='objects'; } return; }
     if(n.classList&&n.classList.contains('wxGrid')&&cur==='presets'){ [].slice.call(n.children).forEach(function(bt){ b.querySelector('#skPresets').appendChild(bt); }); return; }
-    if(n.id==='wsRow'||n.id==='wxRec'){ dst('film').appendChild(n); return; }
-    if(/^Real sun/.test(tx)){ dst('time').appendChild(n); return; }
-    var lb=skLabel(n); if(n._fx&&(lb==='Wind'||lb==='Wind from')) return;
-    t=SKP_LBL[lb]||(cur==='presets'?'top':cur); if(n.tagName==='P'&&!n._fx&&cur==='lights') t='foot'; dst(t).appendChild(n); });
-  /* the presets row: the Sunshower and your own, then the line saying where you are */
-  var G=b.querySelector('#skPresets'), add=function(k, nm, mine){ var bt=document.createElement('button'); bt.dataset.wp=k; bt.innerHTML=nm+(mine?' <span class="skX" title="Delete this preset">✕</span>':''); bt.onclick=function(e){ if(e.target.classList.contains('skX')){ e.stopPropagation(); skMineSave(skMine().filter(function(p){ return p.name!==nm; })); wxPanel(); return; } wxPreset(k); }; G.appendChild(bt); };
+    if(n.id==='wsRow'||n.id==='wxRec'){ dst('film').appendChild(n); last='film'; return; }
+    if(/^Real sun/.test(tx)){ dst('sun').appendChild(n); last='sun'; return; }
+    var lb=skLabel(n); if(n._fx&&(lb==='Wind'||lb==='Wind from')) return; if(lb==='Time'||(n.tagName==='P'&&/Time follows/.test(tx))) return;
+    t=lb?(SKP_LBL[lb]||(cur==='presets'?'top':cur)):(n.tagName==='P'?last:(cur==='presets'?'top':cur)); if(n.tagName==='P'&&!n._fx&&cur==='lamps') t='foot'; if(t==='drop') return; dst(t).appendChild(n); last=t; });
+  /* scenes: a picture swatch on each, the Sunshower and your own */
+  var G=b.querySelector('#skPresets'), add=function(k, nm, mine){ var bt=document.createElement('button'); bt.dataset.wp=k; bt.innerHTML=nm+(mine?' <span class="skX" title="Delete this mix">✕</span>':''); bt.onclick=function(e){ if(e.target.classList.contains('skX')){ e.stopPropagation(); skMineSave(skMine().filter(function(p){ return p.name!==nm; })); wxPanel(); return; } wxPreset(k); }; G.appendChild(bt); };
   if(!G.querySelector('[data-wp="sunshower"]')) add('sunshower','Sunshower'); skMine().forEach(function(p){ add('my:'+p.name, p.name, true); });
-  var S=wxS(), cur2=S&&S._preset; G.querySelectorAll('[data-wp]').forEach(function(x){ x.classList.toggle('on', x.dataset.wp===cur2&&skSig()===S._psig); });
+  ['clear','sunshower','golden','misty','storm','stormpass','winter','night','bonfire'].reverse().forEach(function(k){ var x=G.querySelector('[data-wp="'+k+'"]'); if(x) G.insertBefore(x, G.firstChild); });
+  var S=wxS(), cur2=S&&S._preset; G.querySelectorAll('[data-wp]').forEach(function(x){ var k=x.dataset.wp; x.classList.toggle('on', k===cur2&&skSig()===S._psig); if(!x.querySelector('.skSw')){ var sw=document.createElement('span'); sw.className='skSw'; sw.style.background=SKP_SCN[k]||'linear-gradient(135deg,#e5e7eb,#9ca3af)'; x.insertBefore(sw, x.firstChild); } });
   b.querySelector('#skPLine').innerHTML=skPresetLine();
-  /* rain in sunshine */ var wt=dst('weather'), lk=document.createElement('div'); lk.className='row'; lk.title='Off: rain, snow and fog fall but the sky stays bright and the sun keeps shining (a sunshower)'; lk.innerHTML='<label>Sky darkens with weather</label><div class="sbLSeg"><button data-lk="1" class="'+(skLinked()?'on':'')+'">On</button><button data-lk="0" class="'+(!skLinked()?'on':'')+'">Off</button></div>';
-  wt.insertBefore(lk, wt.firstChild); lk.querySelectorAll('[data-lk]').forEach(function(x){ x.onclick=function(){ pushUndo(); wxS().linked=x.dataset.lk==='1'; wxS().on=true; afterEdit(); wxPanel(); requestRender(false); }; });
+  /* rain in sunshine */ var wt=dst('rain'), lk=document.createElement('div'); lk.className='row'; lk.title='Off: rain, snow and fog fall but the sky stays bright and the sun keeps shining (a sunshower)'; lk.innerHTML='<label>Sky darkens with weather</label><div class="sbLSeg"><button data-lk="1" class="'+(skLinked()?'on':'')+'">On</button><button data-lk="0" class="'+(!skLinked()?'on':'')+'">Off</button></div>';
+  wt.appendChild(lk); lk.querySelectorAll('[data-lk]').forEach(function(x){ x.onclick=function(){ pushUndo(); wxS().linked=x.dataset.lk==='1'; wxS().on=true; afterEdit(); wxPanel(); requestRender(false); }; });
   skShowTab(); }
-function skFromLt(){ if(SBP.key!=='sky') return; var b=skShell(), src=document.querySelector('#sbLightSec .body'); if(!b||!src) return; var d=b.querySelector('.skTab[data-tab="lights"] [data-src="lt"]'); d.innerHTML=''; [].slice.call(src.children).forEach(function(n){ if(n.classList&&n.classList.contains('ltH')&&n.textContent.trim()==='Presets') n.textContent='Light presets'; d.appendChild(n); }); }
+function skFromLt(){ if(SBP.key!=='sky') return; var b=skShell(), src=document.querySelector('#sbLightSec .body'); if(!b||!src) return; var d=b.querySelector('.skPop[data-tab="lamps"] [data-src="lt"]'); d.innerHTML=''; [].slice.call(src.children).forEach(function(n){ if(n.classList&&n.classList.contains('ltH')&&n.textContent.trim()==='Presets') n.textContent='Light presets'; d.appendChild(n); }); skShowTab(); }
 sbAfter('wxPanel', function(r){ try{ skFromWx(); }catch(e){ console.warn(e); } return r; });
 sbAfter('ltPanel', function(r){ try{ skFromLt(); }catch(e){ console.warn(e); } return r; });
 /* before the old panels build again, take back what was moved, so they build it afresh */
-function skClear(src){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; if(src==='wx'){ ['#skTop','#skFoot','#skPresets'].forEach(function(q){ var d=b.querySelector(q); if(d) d.innerHTML=''; }); } b.querySelectorAll('.skTab [data-src="'+src+'"]').forEach(function(d){ d.innerHTML=''; }); }
+function skClear(src){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; if(src==='wx'){ ['#skTop','#skFoot','#skPresets'].forEach(function(q){ var d=b.querySelector(q); if(d) d.innerHTML=''; }); } b.querySelectorAll('.skPop [data-src="'+src+'"]').forEach(function(d){ d.innerHTML=''; }); }
 sbAround('wxPanel', function(next){ if(SBP.key==='sky') skClear('wx'); return next(); });
 sbAround('ltPanel', function(next){ if(SBP.key==='sky') skClear('lt'); return next(); });
 /* the old panels' looks, for their controls in their new home */
@@ -26922,11 +26988,14 @@ sbAfter('sbPanel', function(r){ try{ if(SBP.key==='sky'){ skCss(); skShell(); lt
 /* the line under the presets keeps up as you change things */
 sbAfter('afterEdit', function(r){ try{ if(SBP.key==='sky'){ var l=document.getElementById('skPLine'); if(l) l.innerHTML=skPresetLine(); skShowTab(); } }catch(e){} return r; });
 document.addEventListener('input', function(e){ if(SBP.key!=='sky'||!e.target.closest||!e.target.closest('#sbSkySec')) return; var l=document.getElementById('skPLine'); if(l) setTimeout(function(){ l.innerHTML=skPresetLine(); }, 0); }, true);
-(function(){ sbAfter('buildSidebar', function(r){ try{ var s=skSec(); if(s&&!s.querySelector('#skTabs')&&SBP.key==='sky'){ skShell(); ltPanel(); wxPanel(); } }catch(e){} return r; }); try{ skSec(); }catch(e){}
+(function(){ sbAfter('buildSidebar', function(r){ try{ var s=skSec(); if(s&&!s.querySelector('#skTiles')&&SBP.key==='sky'){ skShell(); ltPanel(); wxPanel(); } }catch(e){} return r; }); try{ skSec(); }catch(e){}
   var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=sky] #side .sec[data-sec=sky]{display:block}body.sbSkin:not(.sbPanelOn) #sbSkySec,body:not(.hasScan) #sbSkySec{display:none}'+
     '#sbSkySec .skH,#sbSkySec .wxH,#sbSkySec .ltH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:10px 0 4px}'+
     '#sbSkySec .skGrid,#sbSkySec .wxGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0}#sbSkySec .skGrid button,#sbSkySec .wxGrid button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 4px;cursor:pointer;font:inherit;font-size:12px}#sbSkySec .skGrid button.on{border-color:var(--acc,#2563eb);box-shadow:inset 0 0 0 1px var(--acc,#2563eb)}#sbSkySec .skX{opacity:.6;margin-left:4px}'+
-    '#skTabs{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:4px;margin:12px 0 6px;padding:6px 0;background:var(--sbBg,#fff);border-bottom:1px solid var(--sbLn)}#skTabs button{flex:1 1 30%;border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:999px;padding:5px 6px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}#skTabs button.on{background:var(--acc,#2563eb);border-color:var(--acc,#2563eb);color:#fff}'+
+    '#sbSkySec .skScn{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:thin}#sbSkySec .skScn button{flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;gap:4px;width:86px;border:1px solid var(--sbLn);background:var(--sbBg,#fff);color:inherit;border-radius:10px;padding:4px 4px 6px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:600;text-align:center;line-height:1.2}#sbSkySec .skScn button.on{border:2px solid var(--acc,#2563eb);padding:3px 3px 5px}#sbSkySec .skSw{display:block;height:34px;border-radius:7px}'+
+    '#sbSkySec .skTime input{width:100%;-webkit-appearance:none;appearance:none;height:26px;border-radius:8px;background:linear-gradient(90deg,#0b1430 0%,#1e2b52 18%,#f3a76b 27%,#8cc0ef 38%,#7fb6ea 62%,#f3a76b 76%,#1e2b52 86%,#0b1430 100%);margin:2px 0}#sbSkySec .skTime input::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:32px;border-radius:5px;background:#fff;border:2px solid #16202c;cursor:pointer}#sbSkySec .skTime input::-moz-range-thumb{width:10px;height:32px;border-radius:5px;background:#fff;border:2px solid #16202c}#sbSkySec .skTimeL{display:flex;justify-content:space-between;font-size:11px;color:var(--sbTx2)}#sbSkySec #skTimeV{font-weight:700;color:var(--sbTx,#111827)}'+
+    '#skTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 8px}#skTiles .skTile{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--sbLn);background:var(--sbBg,#fff);color:inherit;border-radius:12px;padding:8px 2px 6px;cursor:pointer;font:inherit;min-height:74px}#skTiles .skTile b{font-size:11.5px;font-weight:600}#skTiles .skTile i{font-style:normal;font-size:10.5px;color:var(--sbTx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}#skTiles .skTile svg{opacity:.9}#skTiles .skTile{position:relative}#skTiles .skTile.on{background:#eaf1fe;border-color:#93b6f2}#skTiles .skTile.on:after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:4px;background:#2563eb}#skTiles .skTile.on svg{opacity:1;filter:none}#skTiles .skTile.on i{color:#1d4ed8}#skTiles .skTile.open{border:2px solid var(--acc,#2563eb);padding:7px 1px 5px}html[data-theme=dark] #skTiles .skTile.on{background:#22324d}'+
+    '#skTiles .skPop{grid-column:1/-1}#sbSkySec .skPop{border:2px solid var(--acc,#2563eb);border-radius:12px;padding:8px 10px;margin:2px 0 10px;background:var(--sbBg,#fff);box-shadow:0 6px 18px rgba(16,32,64,.10)}#sbSkySec .skPopH{display:flex;align-items:center;gap:4px;margin-bottom:4px}#sbSkySec .skPopH b{flex:1;font-size:13px}'+
     '#sbSkySec .skBtn{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:7px;padding:5px 9px;cursor:pointer;font:inherit;font-size:12px}#sbSkySec .skReset{display:block;margin:12px 0 4px;width:100%;opacity:.85}#skPLine{margin:2px 0 4px}#skMyRow input{border:1px solid var(--sbLn);border-radius:7px;padding:5px 8px;font:inherit;background:var(--sbBg,#fff);color:inherit}'+
     '#sbSkySec .ltGrid,#sbSkySec .ltGrid3{margin:4px 0}';
   document.head.appendChild(c); })();
@@ -26936,7 +27005,7 @@ document.addEventListener('input', function(e){ if(SBP.key!=='sky'||!e.target.cl
   window.addEventListener('pointerup', function(e){ var d=dn; dn=null; if(!d||e.target!==glCv||Math.hypot(e.clientX-d[0], e.clientY-d[1])>5||FX.mode||!FX.sel) return; if(typeof fxUI==='function'&&fxUI()&&!fxHit(e.clientX, e.clientY)){ FX.sel=null; FX.hov=null; try{ fxPanelList(); }catch(e2){} requestRender(false); } });
   window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&!FX.mode&&FX.sel&&SBP.key==='sky'){ FX.sel=null; try{ fxPanelList(); }catch(e2){} requestRender(false); } }); })();
 /* r406: the panel's title line with its close button stays at the top while you scroll; the tabs sit just under it */
-(function(){ var c=document.createElement('style'); c.textContent='body.sbSkin #sbPanelHead{position:sticky;top:0;z-index:6;background:var(--sbBg,#fff);padding-top:6px}html[data-theme=dark] body.sbSkin #sbPanelHead{background:var(--sbBg,#262a30)}#skTabs{top:40px!important}'; document.head.appendChild(c); })();
+(function(){ var c=document.createElement('style'); c.textContent='body.sbSkin #sbPanelHead{position:sticky;top:0;z-index:6;background:var(--sbBg,#fff);padding-top:6px}html[data-theme=dark] body.sbSkin #sbPanelHead{background:var(--sbBg,#262a30)}'; document.head.appendChild(c); })();
 
 
 </script>
