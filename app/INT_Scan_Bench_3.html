@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r397';
+var SB_BUILD='2026-10-15 r398';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26414,6 +26414,35 @@ function dpmCsv(){ var R=dpmRes(); if(!R) return; var rows=['dip,x_m,y_m,deepest
   R.ponds.forEach(function(p, i){ rows.push([i+1, p.x.toFixed(3), p.y.toFixed(3), Math.round(p.depth*1000), p.area.toFixed(2), Math.round(p.litres), Math.round(p.low*1000), Math.round(p.lip*1000), p.which+'-'+p.which, '"'+R.src+'"'].join(',')); });
   var S=SEC.dipRes||[]; if(S.length){ rows.push('', 'section_dip,section,from_m,to_m,depth_mm,width_m,litres_a_metre,water_level_mm,straightedge_gap_mm'); var lo=SEC.data&&SEC.data.gd?SEC.data.gd.lo:0; S.forEach(function(p, i){ rows.push([i+1, SEC.which+'-'+SEC.which, (p.xa-lo).toFixed(2), (p.xb-lo).toFixed(2), Math.round(p.deep*1000), p.width.toFixed(2), Math.round(p.lpm), Math.round(p.lip*1000), p.gap!=null?Math.round(p.gap*1000):''].join(',')); }); }
   download('EXT_'+dpmBase()+'_dips.csv', new Blob([rows.join('\r\n')], {type:'text/csv'})); toast('CSV saved.', 1800); }
+
+/* ===== Top bar, easier to read (r398): the steps always show their names (Prep, Model, Drawings, Compare), never bare numbers;
+   the view tabs are 3D and Plan, with Ceiling, Top, A-A and B-B in a More views menu. The keys 1 to 6 still work as before. ===== */
+var TB2={names:{'Prep scan':'Prep'}, more:['Ceiling','Top','A-A','B-B'], btn:null};
+function tb2Label(b){ return (b.textContent||'').replace(/\d+$/,'').trim(); }
+function tb2Steps(){ document.querySelectorAll('#steps button').forEach(function(b){ [].slice.call(b.childNodes).forEach(function(n){ if(n.nodeType===3){ var t=n.nodeValue.trim(); if(TB2.names[t]) n.nodeValue=TB2.names[t]; } }); }); }
+function tb2Hidden(){ var vt=document.getElementById('vtabs'); if(!vt) return []; return [].slice.call(vt.querySelectorAll(':scope > button')).filter(function(b){ return TB2.more.indexOf(tb2Label(b))>=0; }); }
+function tb2Sync(){ var L=tb2Hidden(), m=TB2.btn; if(!m) return; var on=L.filter(function(b){ return b.classList.contains('on'); })[0]; m.classList.toggle('on', !!on); m.innerHTML=(on?tb2Label(on):'More views')+' <span style="font-size:10px;opacity:.75">▾</span>'; }
+function tb2Close(){ var f=document.getElementById('tb2Menu'); if(f) f.remove(); }
+function tb2Open(){ if(document.getElementById('tb2Menu')){ tb2Close(); return; } var m=TB2.btn, r=m.getBoundingClientRect(), f=document.createElement('div'); f.id='tb2Menu';
+  f.innerHTML=tb2Hidden().map(function(b, i){ var t=String(b.title||'').replace(/\s*\(\d\)\s*$/,''); return '<button data-i="'+i+'" class="'+(b.classList.contains('on')?'on':'')+'"><b>'+tb2Label(b)+'</b><span>'+t+'</span></button>'; }).join('');
+  document.body.appendChild(f); f.style.top=(r.bottom+6)+'px'; f.style.left=Math.max(8, Math.min(window.innerWidth-f.offsetWidth-8, r.left))+'px';
+  f.querySelectorAll('[data-i]').forEach(function(x){ x.onclick=function(e){ e.stopPropagation(); var b=tb2Hidden()[+x.dataset.i]; tb2Close(); if(b) b.click(); setTimeout(tb2Sync, 30); }; }); }
+function tb2Build(){ var vt=document.getElementById('vtabs'); if(!vt||document.getElementById('tb2More')) return; var L=tb2Hidden(); if(!L.length) return;
+  L.forEach(function(b){ b.classList.add('tb2Hide'); }); var m=document.createElement('button'); m.id='tb2More'; m.title='Ceiling, Top, A-A and B-B views'; m.onclick=function(e){ e.stopPropagation(); tb2Open(); }; vt.appendChild(m); TB2.btn=m; tb2Sync();
+  try{ new MutationObserver(tb2Sync).observe(vt, {subtree:true, attributes:true, attributeFilter:['class']}); }catch(e){} }
+document.addEventListener('pointerdown', function(e){ var f=document.getElementById('tb2Menu'); if(f&&!f.contains(e.target)&&e.target!==TB2.btn) tb2Close(); }, true);
+window.addEventListener('resize', tb2Close);
+(function(){ var c=document.createElement('style'); c.textContent=
+  /* names always shown, the number chips go; tighter padding pays for the words */
+  'body #steps button,body #steps button.on{font-size:13px!important;gap:0!important;padding-left:10px!important;padding-right:10px!important}body #steps button>i,body #steps button.on>i{display:none!important}'+
+  '@media (max-width:1400px){body #steps button,body #steps button.on{font-size:12px!important;padding-left:7px!important;padding-right:7px!important}}'+
+  '#vtabs button.tb2Hide{display:none!important}#tb2More{white-space:nowrap}'+
+  '#tb2Menu{position:fixed;z-index:9999;background:#fff;color:#16202c;border:1px solid #d6dae1;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;min-width:260px;max-width:340px}'+
+  '#tb2Menu button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;border:0;background:none;color:inherit;font:inherit;text-align:left;padding:7px 10px;border-radius:7px;cursor:pointer}'+
+  '#tb2Menu button:hover{background:#eef2f7}#tb2Menu button.on{background:#e3ecfb}#tb2Menu b{font-size:13px}#tb2Menu span{font-size:12px;color:#5b6472;line-height:1.3}'+
+  'html[data-theme=dark] #tb2Menu{background:#30353c;color:#e8eaee;border-color:#454b54}html[data-theme=dark] #tb2Menu button:hover{background:#3b4149}html[data-theme=dark] #tb2Menu button.on{background:#2c3e5c}html[data-theme=dark] #tb2Menu span{color:#aab2bd}';
+  document.head.appendChild(c); tb2Steps(); tb2Build(); setTimeout(function(){ tb2Steps(); tb2Build(); }, 1500);
+  if(typeof sbOnBar==='function') sbOnBar(function(){ tb2Steps(); tb2Build(); tb2Sync(); }); })();
 
 
 </script>
