@@ -66,7 +66,7 @@ details.fold{border-top:1px solid var(--line);margin-top:6px;padding-top:2px}det
 
 #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:40;background:rgba(10,13,17,.94);text-align:center;padding:40px}
 #drop.hide{display:none}
-#drop .big{font-size:26px;font-weight:600}
+#drop .big{font-size:26px;font-weight:600;color:#f3f6fa}#drop>.mini{color:#b4bfcc}
 #drop.over{background:rgba(20,45,75,.96);outline:2px dashed var(--acc);outline-offset:-16px}
 
 #plancv,#glcv{display:block;position:absolute;inset:0;width:100%;height:100%}
@@ -1910,6 +1910,7 @@ function e57ToPly(buf, cap, prog){ var F=e57Reader(buf), scans=e57Scans(F); if(!
   var hb=new TextEncoder().encode(head), out=new Uint8Array(hb.length+n*rec); out.set(hb,0); out.set(new Uint8Array(body,0,n*rec), hb.length);
   return {buf:out.buffer, n:n, total:total, stride:stride, scans:scans.length, off:off||[0,0,0], colour:hasCol?'colour':hasInt?'intensity':'none'}; }
 </script>
+<script>/* r412: is this a brand new install? read before anything saves a setting */ var SB_FRESH=(function(){ try{ for(var i=0;i<localStorage.length;i++){ if(/^sb/i.test(localStorage.key(i)||'')) return false; } return true; }catch(e){ return true; } })();</script>
 <script>
 'use strict';
 /* ---------- Extension points ----------
@@ -2376,15 +2377,9 @@ function wireSidebar(){
   bind('#sAutoTune', function(e){ APP.autoTune=e.target.checked; savePrefs(); }, 'change');
   bind('#sCheckMap', function(e){ APP.checkMap=e.target.checked; buildSidebar(); planDraw(); }, 'change');
   bind('#btnNextWeak', nextWeak, 'click');
-  bind('#btnAI', function(){ if(AI.running){ AI.cancel=true; return; } aiReadWalls(); }, 'click');
-  bind('#btnAIReview', function(){ if(AI.running){ AI.cancel=true; return; } aiReviewPlan(); }, 'click');
   bind('#btnDoorScale', function(){ doorScaleCheck(); }, 'click');
   bind('#btnDoorScaleApply', function(){ doorScaleApply(); }, 'click');
   document.querySelectorAll('input[name=dsRef]').forEach(function(r){ r.addEventListener('change', function(e){ APP.doorRef=+e.target.value; doorScaleCheck(); }); });
-  bind('#aiKey', function(e){ var v=e.target.value.trim(); if(/^\u2022+$/.test(v)) return; lsSet('sb_ai_key', v); buildSidebar(); toast(v?'Key saved in this browser':'Key removed'); }, 'change');
-  bind('#aiWs', function(e){ lsSet('sb_ai_ws', e.target.value.trim()); toast(e.target.value.trim()?'Workspace saved':'Workspace cleared'); }, 'change');
-  bind('#aiModel', function(e){ lsSet('sb_ai_model', e.target.value); buildSidebar(); }, 'change');
-  bind('#aiAfter', function(e){ APP.aiAfter=e.target.checked; savePrefs(); }, 'change');
   bind('#sAutoLoad', function(e){ APP.autoOnLoad=e.target.checked; savePrefs(); }, 'change');
   var mt=$('#moreTools'); if(mt) mt.ontoggle=function(){ APP.moreTools=mt.open; };
   bind('#btnWallH', heightsPreview, 'click');
@@ -5002,7 +4997,7 @@ function splatEnsure(){
     SPL.sw.onmessage=function(e){ SPL.busy=false; if(!SPL.ready) return; gl.bindBuffer(gl.ARRAY_BUFFER,SPL.idx); gl.bufferSubData(gl.ARRAY_BUFFER,0,e.data.o); SPL.obuf=e.data.o.buffer; SPL.drawN=e.data.nv||0; SPL.drawFor=SPL.n; SPL.gotOrder=true; if(SPL.want){ SPL.want=false; splatSort(); } requestRender(false); }; }
   SPL.ready=true; return true;
 }
-/* a photo of part of the scan from the splats, for Claude to look at.
+/* a photo of part of the scan from the splats, as a picture.
    Orthographic, so a metre is the same number of pixels everywhere and a
    grid can be drawn over it. view: {eye, target, up, halfW, halfH, px, py,
    slab:[near,far] along the view, zmax, zmin}. Only the splats in the
@@ -6703,7 +6698,6 @@ async function autoBuild(){
     rep.check=weak.length; rep.rooms=(APP.faces||[]).length; rep.ms=Math.round(performance.now()-t0);
     AUTO.last=rep; setProgress(null); setStatus('Ready'); buildSidebar();
     if(weak.length) sgStart('Auto build: check these', weak);
-    if(APP.aiAfter!==false && aiKey()) setTimeout(function(){ setStatus('Claude is starting on the walls'); aiReadWalls(); }, 300);
     toast('Auto build: '+rep.walls+' walls, '+rep.rooms+' rooms, '+rep.doors+' doors, '+rep.windows+' windows'+(rep.glazed?', '+rep.glazed+' glazed':'')+(rep.cols?', '+rep.cols+' columns':'')+'. '+(weak.length?weak.length+' doubtful items to check below.':'Nothing doubtful.')+' Ctrl+Z undoes the lot.', 7000);
   } catch(err){
     setProgress(null); setStatus('Ready');
@@ -7158,209 +7152,14 @@ function pathDoorItems(){
   return items;
 }
 
-/* ===================== CLAUDE READS THE WALLS =====================
-   Each wall is drawn face-on as a picture with a metre grid, sent to Claude
-   through the Messages API, and the openings Claude marks are snapped to the
-   edges in the scan. Needs the person's own API key, kept in localStorage. */
-var AI={running:false, cancel:false, done:0, total:0, last:null};
-var AI_MODELS=[['claude-sonnet-5','Sonnet 5 (best value)'],['claude-opus-5-5','Opus 5.5 (sharper, about 2x cost)'],['claude-haiku-4-5-20251001','Haiku 4.5 (cheapest)']];
-var AI_PRICE={'claude-sonnet-5':[2,10],'claude-opus-5-5':[4,20],'claude-haiku-4-5-20251001':[1,5],'claude-fable-5-1':[10,50]};
-function aiKey(){ return lsGet('sb_ai_key')||''; }
-/* the model sometimes sends a list as JSON text: turn it back into a list */
-function aiFix(o){ o=o||{}; ['openings','problems'].forEach(function(k){ var v=o[k]; if(typeof v==='string'){ try{ v=JSON.parse(v); }catch(e){ var m=v.match(/\[[\s\S]*\]/); try{ v=m?JSON.parse(m[0]):[]; }catch(e2){ v=[]; } } }
-  if(v && !Array.isArray(v) && typeof v==='object') v=[v]; if(v!=null) o[k]=Array.isArray(v)?v.filter(function(q){ return q && typeof q==='object'; }):[];
-  (o[k]||[]).forEach(function(q){ ['x0','x1','sill','head','confidence','x1','y1','x2','y2'].forEach(function(f){ if(typeof q[f]==='string') q[f]=parseFloat(q[f]); }); if(typeof q.wall_ids==='string'){ try{ q.wall_ids=JSON.parse(q.wall_ids); }catch(e){ q.wall_ids=[]; } } }); });
-  return o; }
-function aiWs(){ return lsGet('sb_ai_ws')||''; }
-function aiHeaders(){ var h={'content-type':'application/json','x-api-key':aiKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'}; if(aiWs()) h['anthropic-workspace-id']=aiWs(); return h; }
-function aiErr(status, t){
-  if(/workspace/i.test(t)) return {msg:'This API key is not linked to a workspace. Make a new key and pick a workspace (for example Default) when you create it, or paste the workspace ID into the Workspace box.', fatal:true};
-  if(/credit|billing|balance/i.test(t)) return {msg:'Your Anthropic account has no credit. Add some under Settings, Billing.', fatal:true};
-  if(/model/i.test(t) && status===404) return {msg:'This model is not available on your account, pick another in the Model box.', fatal:true};
-  return {msg:'API error '+status+(t?': '+t:''), fatal:status===400};
-}
-function aiModel(){ return lsGet('sb_ai_model')||AI_MODELS[0][0]; }
-function aiWallList(){ var M=APP.model, V=M.verts, out=[]; M.walls.forEach(function(w,i){ if(w.curve!=null) return; var a=V[w.a], b=V[w.b]; if(!a||!b) return; if(Math.hypot(b.x-a.x,b.y-a.y)>=0.8) out.push(i); }); return out; }
-
-/* the wall as a photo from the splats, taken from both sides; the sharper
-   side wins (usually the room side). Flipped so 0 m is always end a. */
-function aiWallPhoto(a,b,L,th,zLo,zHi,gw,gh){
-  var ux=(b.x-a.x)/L, uy=(b.y-a.y)/L, nx=-uy, ny=ux, mx=(a.x+b.x)/2, my=(a.y+b.y)/2, D=6, best=null, bs=-1;
-  var sMid=(L)/2, cz=(zLo+zHi)/2;
-  [1,-1].forEach(function(sd){
-    var cmx=mx+ux*(0.3-0.3), cmy=my;   // centre of the picture matches the grid, which runs from -0.3 to L+0.3
-    var cv=splatSnapshot({eye:[mx+nx*sd*D, my+ny*sd*D, cz], target:[mx,my,cz], up:[0,0,1], halfW:gw/2/(gw/((L+0.6))), halfH:(zHi-zLo)/2, px:gw, py:gh, slab:[D-th/2-0.35, D+th/2+0.6]});
-    if(!cv) return;
-    var c=cv.getContext('2d'), im=c.getImageData(0,0,gw,gh).data, sh=0, lit=0;
-    for(var y=1;y<gh-1;y+=2) for(var x=1;x<gw-1;x+=2){ var k=(y*gw+x)*4, g0=im[k]+im[k+1]+im[k+2], g1=im[k+4]+im[k+5]+im[k+6], g2=im[k+gw*4]+im[k+gw*4+1]+im[k+gw*4+2]; sh+=Math.abs(g0-g1)+Math.abs(g0-g2); if(g0>60) lit++; }
-    var score=sh*Math.sqrt(lit+1);
-    if(sd>0){ var fl=document.createElement('canvas'); fl.width=gw; fl.height=gh; var fc=fl.getContext('2d'); fc.translate(gw,0); fc.scale(-1,1); fc.drawImage(cv,0,0); cv=fl; }
-    if(score>bs){ bs=score; best=cv; } });
-  return best;
-}
-/* the wall face-on: points within the wall band, grey by density, a metre grid, floor and top marked */
-function aiWallImage(wi){
-  var R=APP.res, M=APP.model, V=M.verts, w=M.walls[wi], a=V[w.a], b=V[w.b];
-  var th=wallThick(w), st=stripPoints(a,b,th/2+0.25,0.3), L=st.L, base=w.base||0;
-  var el=wallElev(wi), fz=el?(el.floorZ||base):base, top=Math.max(fz+2.2, base+wallHeight(w));
-  var zLo=fz-0.3, zHi=Math.max(top, R.ceil)+0.15, H=zHi-zLo, W=L+0.6;
-  var ppm=Math.max(40, Math.min(180, 1300/W, 620/H)), pad=46, cw=Math.round(W*ppm)+pad+10, ch=Math.round(H*ppm)+pad+10;
-  var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch; var c=cv.getContext('2d');
-  c.fillStyle='#000'; c.fillRect(0,0,cw,ch);
-  var gw=Math.round(W*ppm), gh=Math.round(H*ppm), cnt=new Float32Array(gw*gh), mx=0, photo=null;
-  if(APP.canSplat){ photo=aiWallPhoto(a,b,L,th,zLo,zHi,gw,gh); }
-  if(photo){ c.drawImage(photo, pad, 0); st={s:[],z:[]}; }
-  for(var i=0;i<st.s.length;i++){ var x=((st.s[i]+0.3)*ppm)|0, y=gh-1-(((st.z[i]-zLo)*ppm)|0); if(x<0||x>=gw||y<0||y>=gh) continue; var v=++cnt[y*gw+x]; if(v>mx) mx=v; }
-  var img=c.createImageData(gw,gh), lm=Math.log1p(Math.max(1,mx*0.4));
-  for(i=0;i<cnt.length;i++){ var g=cnt[i]?Math.min(255,50+205*Math.log1p(cnt[i])/lm):0; img.data[i*4]=g; img.data[i*4+1]=g; img.data[i*4+2]=g; img.data[i*4+3]=255; }
-  if(!photo) c.putImageData(img, pad, 0);
-  function X(m){ return pad+(m+0.3)*ppm; } function Y(zAbove){ return gh-(zAbove+fz-zLo)*ppm; }
-  c.font='bold 13px sans-serif'; c.lineWidth=1;
-  for(var m=0; m<=Math.floor(L+1e-6); m+=0.5){ var full=Math.abs(m-Math.round(m))<1e-6; c.strokeStyle=full?'rgba(80,160,255,0.55)':'rgba(80,160,255,0.22)'; c.beginPath(); c.moveTo(X(m),0); c.lineTo(X(m),gh); c.stroke(); if(full){ c.fillStyle='#6fb0ff'; c.fillText(m+'m', X(m)-8, gh+16); } }
-  for(var h=0; h<=zHi-fz; h+=0.5){ var f2=Math.abs(h-Math.round(h))<1e-6; c.strokeStyle=f2?'rgba(80,160,255,0.55)':'rgba(80,160,255,0.22)'; c.beginPath(); c.moveTo(pad,Y(h)); c.lineTo(pad+gw,Y(h)); c.stroke(); if(f2){ c.fillStyle='#6fb0ff'; c.fillText(h+'m', 4, Y(h)+5); } }
-  c.strokeStyle='#ffcc00'; c.lineWidth=2; c.beginPath(); c.moveTo(pad,Y(0)); c.lineTo(pad+gw,Y(0)); c.stroke();
-  c.strokeStyle='#ff4040'; c.beginPath(); c.moveTo(X(0),0); c.lineTo(X(0),gh); c.moveTo(X(L),0); c.lineTo(X(L),gh); c.stroke();
-  c.fillStyle='#ccc'; c.font='12px sans-serif'; c.fillText('wall '+fmt(L,2)+' m long. Red lines = wall ends. Yellow = floor. Grid 0.5 m.', pad+4, ch-4);
-  return {url:cv.toDataURL('image/png'), L:L, fz:fz, base:base, el:el, w:w, photo:!!photo};
-}
-var AI_TOOL={name:'report_wall', description:'Report every door, window, glazed screen and open doorway visible in this face-on view of one wall.',
-  input_schema:{type:'object', properties:{
-    openings:{type:'array', items:{type:'object', properties:{
-      kind:{type:'string', enum:['door','window','glazed_screen','opening']},
-      x0:{type:'number', description:'left edge, metres along the wall from the red line at 0 m'},
-      x1:{type:'number', description:'right edge, metres along the wall'},
-      sill:{type:'number', description:'bottom edge in metres above the yellow floor line; 0 for doors and screens to the floor'},
-      head:{type:'number', description:'top edge in metres above the yellow floor line'},
-      door_type:{type:'string', enum:['standard_internal','external','double','shopfront','not_a_door'], description:'for doors: standard_internal means an ordinary single internal door in a frame'},
-      confidence:{type:'number', description:'0 to 1'}, note:{type:'string'} }, required:['kind','x0','x1','sill','head','confidence']}},
-    wall_top:{type:'number', description:'height above the floor line where this wall itself ends, if clearly below the top of the picture'},
-    wall_type:{type:'string', enum:['solid_wall','glass_partition','furniture','column','open_floor','unclear'], description:'what stands between the red lines'},
-    wall_type_confidence:{type:'number', description:'0 to 1'},
-    not_a_wall:{type:'boolean', description:'deprecated, use wall_type'},
-    comment:{type:'string'} }, required:['openings']}};
-var AI_PROMPT='This is a face-on view of one wall of a building, rendered from a 3D scan (a photo-like render when available, otherwise scanned points). Black is where the scan has nothing: an opening (door, window, glazed screen, open doorway), glass (glass returns almost nothing), the view through an opening, or an unscanned patch. Frames, mullions, handles, door leaves and reveals show as thin bright lines. Furniture standing against the wall, radiators and desks are not openings. Mark every door, window, glazed screen and open doorway you can see, with edges in metres read off the grid (x from the left red line, heights above the yellow floor line). A door leaf that is shut still counts as a door if you can see its frame. Measure windows and doors to the outside of their frames. Leave out anything you are unsure is an opening, or give it a low confidence. Then say what stands between the red lines with wall_type: solid_wall (a wall, even with kitchen units, cupboards, radiators, pictures, doors or shelving fixed in front of it: if cabinets reach high or run the full length, there is almost always a wall behind them), glass_partition (glazed screen or glass wall: thin frames or mullions with dark or see-through panels between), furniture (free-standing desk screens, pods, booths, planters, lockers or storage with open floor or other rooms visible beside or above them), column (a single pillar), open_floor (nothing standing there), unclear (blurry or not enough to tell). A door with a frame, sign or handle means solid_wall. Only use furniture, column or open_floor when you are confident; otherwise say unclear. Answer only with the tool.';
-async function aiAsk(pic){
-  var body={model:aiModel(), max_tokens:900, tools:[AI_TOOL], tool_choice:{type:'tool', name:'report_wall'},
-    messages:[{role:'user', content:[{type:'image', source:{type:'base64', media_type:'image/png', data:pic.url.split(',')[1]}},{type:'text', text:AI_PROMPT+' The wall is '+fmt(pic.L,2)+' m long.'}]}]};
-  var tries=0;
-  while(true){
-    var r;
-    try{ r=await fetch('https://api.anthropic.com/v1/messages', {method:'POST', headers:aiHeaders(), body:JSON.stringify(body)}); }
-    catch(e){ throw {msg:'Could not reach Anthropic. Check the internet connection.', fatal:true}; }
-    if(r.status===401||r.status===403) throw {msg:'The API key was not accepted.', fatal:true};
-    if((r.status===429||r.status===529||r.status>=500) && tries<4){ tries++; await new Promise(function(res){ setTimeout(res, 1500*tries*tries); }); continue; }
-    if(!r.ok){ var t=''; try{ t=(await r.json()).error.message; }catch(e){} throw aiErr(r.status,t); }
-    var j=await r.json(), tu=(j.content||[]).filter(function(q){ return q.type==='tool_use'; })[0];
-    AI.inTok+=(j.usage&&j.usage.input_tokens)||0; AI.outTok+=(j.usage&&j.usage.output_tokens)||0;
-    if(!tu) throw {msg:'No answer for this wall'};
-    return aiFix(tu.input);
-  }
-}
-/* Claude's box, then each edge moved to the nearest place the scan changes from wall to hole */
-function aiSnap(el, o, L){
-  var q={x0:Math.max(0,Math.min(L,o.x0)), x1:Math.max(0,Math.min(L,o.x1)), sill:Math.max(0,o.sill||0), head:Math.max(0.3,o.head)};
-  if(q.x1<q.x0){ var t=q.x0; q.x0=q.x1; q.x1=t; }
-  if(!el) return q;
-  var EC=el.ec, fz=el.floorZ||0, nx=el.nx, nz=el.nz;
-  function holeFrac(c0,c1,r0,r1){ var e=0,n=0; for(var z=Math.max(0,r0);z<=Math.min(nz-1,r1);z++) for(var c=Math.max(0,c0);c<=Math.min(nx-1,c1);c++){ n++; if(el.E2[z*nx+c]<el.thr2) e++; } return n?e/n:0; }
-  var r0=Math.round((fz+q.sill)/EC)+1, r1=Math.round((fz+q.head)/EC)-2, rad=Math.max(2,Math.round(0.15/EC));
-  function edgeX(x, dir){ var c0=Math.round(x/EC), best=c0, bs=-1;
-    for(var c=c0-rad;c<=c0+rad;c++){ if(c<1||c>=nx-1) continue; var inside=holeFrac(dir>0?c:c-2, dir>0?c+2:c, r0, r1), outside=holeFrac(dir>0?c-3:c+1, dir>0?c-1:c+3, r0, r1), sc=inside-outside; if(sc>bs){ bs=sc; best=c; } }
-    return bs>0.3 ? (dir>0?best*EC:(best+1)*EC) : x; }
-  if(r1>r0){ q.x0=edgeX(q.x0,1); q.x1=edgeX(q.x1,-1); }
-  var c0=Math.round(q.x0/EC)+1, c1=Math.round(q.x1/EC)-2;
-  function edgeZ(zm, dir){ var r=Math.round((fz+zm)/EC), best=r, bs=-1;
-    for(var k=r-rad;k<=r+rad;k++){ if(k<1||k>=nz-1) continue; var inside=holeFrac(c0,c1,dir>0?k:k-2,dir>0?k+2:k), outside=holeFrac(c0,c1,dir>0?k-3:k+1,dir>0?k-1:k+3), sc=inside-outside; if(sc>bs){ bs=sc; best=k; } }
-    return bs>0.3 ? (dir>0?best*EC:(best+1)*EC)-fz : zm; }
-  if(c1>c0){ q.head=edgeZ(q.head,-1); if(q.sill>0.1) q.sill=edgeZ(q.sill,1); }
-  return q;
-}
-/* ------------- plan review: Claude looks at the traced plan over the scan, tile by tile ------------- */
-var AI_REVIEW_TOOL={name:'report_plan_problems', description:'Report problems with the traced walls in this plan view.',
-  input_schema:{type:'object', properties:{ problems:{type:'array', items:{type:'object', properties:{
-      type:{type:'string', enum:['missing_wall','fake_wall','outside_building','duplicate_wall','room_not_closed','other']},
-      wall_ids:{type:'array', items:{type:'integer'}, description:'ids of the traced walls involved (the numbers printed on them)'},
-      x1:{type:'number'}, y1:{type:'number'}, x2:{type:'number'}, y2:{type:'number'},
-      note:{type:'string'}, confidence:{type:'number'} }, required:['type','confidence']}}, comment:{type:'string'} }, required:['problems']}};
-var AI_REVIEW_PROMPT='This is part of a floor plan traced from a 3D scan of a building. The background is a view straight down on the scan with the ceiling removed (a photo-like render when available, otherwise a grey slice at wall height): you can see floors, desks, chairs, furniture, the tops of walls and partitions. Black is outside the building or not scanned. The coloured lines are the walls traced so far, each labelled with its id number; dashed cyan lines are glass. The blue grid is in metres, x labelled along the bottom, y up the left side, y increasing upwards. Find problems with the traced walls: a clear wall in the scan with no traced line (missing_wall: give x1,y1,x2,y2 in grid metres along its centre), a traced line with no wall under it, along or through furniture such as desk screens, desk rows, pods, booths, storage units or planters, or across a corridor or walkway (fake_wall), a traced line outside the building (outside_building), two traced lines on one wall (duplicate_wall), a room left open where the scan shows it closed (room_not_closed: give the gap as x1,y1,x2,y2). Walls cut by the tile edge are not problems. Only report clear problems; if the tracing looks right, report none. Answer only with the tool.';
-function aiPlanTile(x0,y0,T){
-  var R=APP.res, g=R.grid, ic=R.imgCell||g.cell, M=APP.model, V=M.verts, px=1100, ppm=px/T, pad=40;
-  var cv=document.createElement('canvas'); cv.width=px+pad; cv.height=px+pad; var c=cv.getContext('2d');
-  c.fillStyle='#000'; c.fillRect(0,0,cv.width,cv.height);
-  function X(x){ return pad+(x-x0)*ppm; } function Y(y){ return px-(y-y0)*ppm; }
-  var ph=APP.canSplat ? splatSnapshot({eye:[x0+T/2,y0+T/2,R.ceil+40], target:[x0+T/2,y0+T/2,0], up:[0,1,0], halfW:T/2, halfH:T/2, px:px, py:px, slab:[0,R.ceil+60], zmax:R.ceil-0.25}) : null;
-  if(ph){ c.drawImage(ph, pad, 0); }
-  else if(planBmp){ var sx=(x0-g.x0)/ic, sy=R.imgH-(y0+T-g.y0)/ic, sw=T/ic; c.imageSmoothingEnabled=true; c.drawImage(planBmp, sx, sy, sw, sw, pad, 0, px, px); c.fillStyle='rgba(0,0,0,0.25)'; c.fillRect(pad,0,px,px); }
-  c.lineWidth=1; c.font='bold 13px sans-serif';
-  var step=T>24?2:1;
-  for(var gx=Math.ceil(x0/step)*step; gx<=x0+T; gx+=step){ c.strokeStyle='rgba(80,150,255,0.35)'; c.beginPath(); c.moveTo(X(gx),0); c.lineTo(X(gx),px); c.stroke(); c.fillStyle='#6fb0ff'; c.fillText(String(Math.round(gx)), X(gx)-6, px+16); }
-  for(var gy=Math.ceil(y0/step)*step; gy<=y0+T; gy+=step){ c.strokeStyle='rgba(80,150,255,0.35)'; c.beginPath(); c.moveTo(pad,Y(gy)); c.lineTo(pad+px,Y(gy)); c.stroke(); c.fillStyle='#6fb0ff'; c.fillText(String(Math.round(gy)), 2, Y(gy)+5); }
-  var shown=[];
-  M.walls.forEach(function(w,i){ var a=V[w.a], b=V[w.b]; if(!a||!b) return; if(Math.max(a.x,b.x)<x0||Math.min(a.x,b.x)>x0+T||Math.max(a.y,b.y)<y0||Math.min(a.y,b.y)>y0+T) return;
-    shown.push(i); c.strokeStyle=w.glass?'#3fe0ff':'#ff8a2a'; c.lineWidth=3; c.setLineDash(w.glass?[8,5]:[]); c.beginPath(); c.moveTo(X(a.x),Y(a.y)); c.lineTo(X(b.x),Y(b.y)); c.stroke(); c.setLineDash([]); });
-  c.font='bold 12px sans-serif';
-  shown.forEach(function(i){ var w=M.walls[i], a=V[w.a], b=V[w.b], mx=X((a.x+b.x)/2), my=Y((a.y+b.y)/2); if(mx<pad||mx>pad+px||my<0||my>px) return; var t=String(i), tw=c.measureText(t).width;
-    c.fillStyle='rgba(0,0,0,0.8)'; c.fillRect(mx-tw/2-3,my-8,tw+6,15); c.fillStyle='#ffe08a'; c.fillText(t,mx-tw/2,my+4); });
-  return {url:cv.toDataURL('image/png'), shown:shown};
-}
-async function aiAskTool(url, tool, prompt, maxTok){
-  var body={model:aiModel(), max_tokens:maxTok||1500, tools:[tool], tool_choice:{type:'tool', name:tool.name},
-    messages:[{role:'user', content:[{type:'image', source:{type:'base64', media_type:'image/png', data:url.split(',')[1]}},{type:'text', text:prompt}]}]};
-  var tries=0;
-  while(true){
-    var r;
-    try{ r=await fetch('https://api.anthropic.com/v1/messages', {method:'POST', headers:aiHeaders(), body:JSON.stringify(body)}); }
-    catch(e){ throw {msg:'Could not reach Anthropic. Check the internet connection.', fatal:true}; }
-    if(r.status===401||r.status===403) throw {msg:'The API key was not accepted.', fatal:true};
-    if((r.status===429||r.status===529||r.status>=500) && tries<4){ tries++; await new Promise(function(res){ setTimeout(res, 1500*tries*tries); }); continue; }
-    if(!r.ok){ var t=''; try{ t=(await r.json()).error.message; }catch(e){} throw aiErr(r.status,t); }
-    var j=await r.json(), tu=(j.content||[]).filter(function(q){ return q.type==='tool_use'; })[0];
-    AI.inTok+=(j.usage&&j.usage.input_tokens)||0; AI.outTok+=(j.usage&&j.usage.output_tokens)||0;
-    if(!tu) throw {msg:'No answer'};
-    return aiFix(tu.input);
-  }
-}
-async function aiReviewPlan(){
-  if(!APP.res||!APP.model.walls.length){ toast('Build or trace the walls first'); return; }
-  if(!aiKey()){ openSecs.claude=true; buildSidebar(); toast('Paste your Anthropic API key in the Claude section first', 5000); return; }
-  if(AUTO.running||AI.running) return;
-  var M=APP.model, V=M.verts, bx=[1e9,-1e9], by=[1e9,-1e9];
-  M.walls.forEach(function(w){ [V[w.a],V[w.b]].forEach(function(p){ if(!p) return; bx[0]=Math.min(bx[0],p.x); bx[1]=Math.max(bx[1],p.x); by[0]=Math.min(by[0],p.y); by[1]=Math.max(by[1],p.y); }); });
-  bx[0]-=1.5; by[0]-=1.5; bx[1]+=1.5; by[1]+=1.5;
-  var T=Math.min(20, Math.max(8, Math.max(bx[1]-bx[0], by[1]-by[0]))), ov=2, tiles=[];
-  for(var ty=by[0]; ty<by[1]-ov; ty+=T-ov) for(var tx=bx[0]; tx<bx[1]-ov; tx+=T-ov) tiles.push([tx,ty]);
-  AI.running=true; AI.mode='review'; AI.cancel=false; AI.done=0; AI.total=tiles.length; AI.inTok=0; AI.outTok=0; buildSidebar();
-  var items=[], fatal=null, failed=0, idx=0, seenDel={};
-  function snapPt(x,y){ var best=null, bd=0.4; V.forEach(function(v,i){ if(!v) return; var d=Math.hypot(v.x-x,v.y-y); if(d<bd && wallsAt(i).length){ bd=d; best=v; } }); return best?{x:best.x,y:best.y}:{x:x,y:y}; }
-  async function worker(){ while(idx<tiles.length && !AI.cancel && !fatal){ var tl=tiles[idx++], pic=aiPlanTile(tl[0],tl[1],T), ans=null;
-      try{ ans=await aiAskTool(pic.url, AI_REVIEW_TOOL, AI_REVIEW_PROMPT, 1500); }catch(e){ if(e&&e.fatal) fatal=e.msg; else failed++; }
-      if(ans) (ans.problems||[]).forEach(function(p){ var cf=Math.max(0.05,Math.min(1,p.confidence||0.5)), ids=(p.wall_ids||[]).filter(function(i){ return pic.shown.indexOf(i)>=0; });
-        var hasLine=[p.x1,p.y1,p.x2,p.y2].every(function(v){ return typeof v==='number' && isFinite(v); });
-        if((p.type==='missing_wall'||p.type==='room_not_closed') && hasLine){ var a=snapPt(p.x1,p.y1), b=snapPt(p.x2,p.y2); if(Math.hypot(b.x-a.x,b.y-a.y)<0.4) return;
-          if(segCovered && segCovered(a,b)) return;
-          var ev=segEvidence(a,b,true); items.push({kind:'wall', a:a, b:b, conf:Math.min(cf, 0.35+0.6*ev.support), reason:'Claude: '+(p.note||p.type.replace('_',' '))+', '+Math.round(ev.support*100)+'% backed by scan', label:(p.type==='room_not_closed'?'close the room ':'missing wall ')+fmt(Math.hypot(b.x-a.x,b.y-a.y),2)+' m'}); }
-        else if(p.type==='fake_wall'||p.type==='outside_building'||p.type==='duplicate_wall'){ ids.forEach(function(i){ var w=M.walls[i]; if(!w||seenDel[i]) return; seenDel[i]=1;
-            items.push({kind:'del', w:w, conf:cf, reason:'Claude: '+(p.note||p.type.replace('_',' ')), label:'remove wall '+i+' ('+p.type.replace('_',' ')+')'}); }); }
-        else { var cx=null, cy=null; if(hasLine){ cx=(p.x1+p.x2)/2; cy=(p.y1+p.y2)/2; } else if(ids.length){ var w2=M.walls[ids[0]], a2=V[w2.a], b2=V[w2.b]; if(a2&&b2){ cx=(a2.x+b2.x)/2; cy=(a2.y+b2.y)/2; } }
-          if(cx!=null) items.push({kind:'note', p:{x:cx,y:cy}, conf:Math.min(cf,0.6), reason:'Claude: '+(p.note||'check here'), label:'look here: '+(p.note||p.type).slice(0,60)}); } });
-      AI.done++; setStatus('Claude is reviewing part '+AI.done+' of '+AI.total); setProgress(AI.done/AI.total); } }
-  try{ await Promise.all([worker(),worker(),worker()]); } finally { AI.running=false; AI.mode=null; setProgress(null); setStatus('Ready'); }
-  var cost=(function(){ var p=AI_PRICE[aiModel()]||[2,10]; return (AI.inTok*p[0]+AI.outTok*p[1])/1e6; })();
-  buildSidebar(); planDraw();
-  if(fatal && !items.length){ toast(fatal, 7000); return; }
-  if(!items.length){ toast('Claude reviewed the plan and found nothing to fix'+(failed?' ('+failed+' parts failed)':'')+'. Cost about $'+cost.toFixed(2), 6000); return; }
-  items.sort(function(p,q){ return q.conf-p.conf; });
-  sgStart('Claude plan review', items);
-  toast('Claude found '+items.length+' things to look at. Accept or reject each in the review bar. Cost about $'+cost.toFixed(2)+(fatal?'. '+fatal:''), 8000);
-}
 /* ------------- scale check from ordinary doors ------------- */
 function doorScaleCheck(){
   var M=APP.model, V=M.verts, ref=APP.doorRef||2.04, all=[], std=[];
   M.walls.forEach(function(w){ var a=V[w.a], b=V[w.b]; if(!a||!b) return; var L=Math.hypot(b.x-a.x,b.y-a.y);
     (w.openings||[]).forEach(function(o){ if(o.kind!=='door'||o.glazed) return; var wd=(o.t1-o.t0)*L, h=o.head-(o.sill||0); var d={w:wd,h:h,std:!!o.std};
       if(d.std) std.push(d); else if(h>1.6 && h<2.6 && wd>0.55 && wd<1.15 && (o.conf==null||o.conf>=0.75)) all.push(d); }); });
-  var use=std.length>=3?std:std.concat(all), src=std.length>=3?'doors Claude marked as ordinary internal doors':'single doors found in the scan';
-  if(use.length<3){ APP.doorScale={ok:false, msg:'Need at least 3 ordinary doors, found '+use.length+'. Run "Read doors and windows with Claude" first.'}; buildSidebar(); return; }
+  var use=std.length>=3?std:std.concat(all), src=std.length>=3?'doors marked as standard size':'single doors found in the scan';
+  if(use.length<3){ APP.doorScale={ok:false, msg:'Need at least 3 ordinary doors, found '+use.length+'. Add or find more doors first.'}; buildSidebar(); return; }
   var hs=use.map(function(d){ return d.h; }).sort(function(p,q){ return p-q; }), med=hs[hs.length>>1];
   var mad=hs.map(function(h){ return Math.abs(h-med); }).sort(function(p,q){ return p-q; })[hs.length>>1];
   var factor=ref/med, spread=mad/med, unit=APP.scaleSet?'m':'units';
@@ -7377,45 +7176,6 @@ function doorScaleApply(){
   scaleModel(d.factor); APP.doorScale=null; process();
   toast('Scale set from the doors: floor to ceiling '+fmt(v,2)+' m', 5000);
 }
-async function aiReadWalls(){
-  if(!APP.res||!APP.model.walls.length){ toast('Load a scan and build the walls first'); return; }
-  if(!aiKey()){ openSecs.claude=true; buildSidebar(); toast('Paste your Anthropic API key in the Claude section first', 5000); var k=$('#aiKey'); if(k) k.focus(); return; }
-  if(AUTO.running||AI.running) return;
-  var list=aiWallList(); if(!list.length){ toast('No walls long enough to read'); return; }
-  AI.running=true; AI.mode='read'; AI.cancel=false; AI.done=0; AI.total=list.length; AI.inTok=0; AI.outTok=0; buildSidebar();
-  pushUndo(); var M=APP.model, res={}, failed=0, fatal=null, idx=0;
-  async function worker(){ while(idx<list.length && !AI.cancel && !fatal){ var wi=list[idx++], pic=aiWallImage(wi);
-      try{ res[wi]={pic:pic, ans:await aiAsk(pic)}; }catch(e){ if(e&&e.fatal){ fatal=e.msg; } else failed++; }
-      AI.done++; setStatus('Claude is reading wall '+AI.done+' of '+AI.total); setProgress(AI.done/AI.total); if(AI.done%5===0) buildSidebar(); } }
-  try{ await Promise.all([worker(),worker(),worker(),worker()]); } finally { AI.running=false; setProgress(null); setStatus('Ready'); }
-  if(fatal && !Object.keys(res).length){ APP.undo.pop(); buildSidebar(); toast(fatal, 7000); return; }
-  var doors=0, windows=0, screens=0, weak=[], nw=0, kept=0;
-  Object.keys(res).forEach(function(k){ var wi=+k, R2=res[k], w=M.walls[wi], L=R2.pic.L, bo=(R2.pic.fz||0)-(w.base||0), a=R2.ans||{}; nw++;
-    var prev=(w.openings||[]).slice(), keep=prev.filter(function(o){ return o.walked; });    // doorways walked through stay
-    (a.openings||[]).forEach(function(o){ if(!(o.x1-o.x0>=0.3) || !(o.head>0.3)) return; var q=aiSnap(R2.pic.el, o, L);
-      var kind=(o.kind==='window'||o.kind==='glazed_screen')?'window':'door', glazed=o.kind==='glazed_screen';
-      if(keep.some(function(e){ return e.t1*L>q.x0 && e.t0*L<q.x1; })) return;
-      if(kind==='door' || q.sill<0.12) q.sill=0;
-      var op={t0:q.x0/L, t1:q.x1/L, kind:kind, head:Math.round((q.head+bo)*1000)/1000, sill:Math.round((q.sill+(q.sill>0?bo:0))*1000)/1000, src:'claude', conf:Math.round((o.confidence||0.5)*100)/100};
-      if(kind==='door') op.sill=0; else if(q.sill===0) op.sill=Math.round(bo*1000)/1000;
-      if(glazed) op.glazed=true;
-      if(kind==='door' && o.door_type==='standard_internal') op.std=true;
-      if((o.confidence||0)>=0.6){ keep.push(op); if(kind==='door') doors++; else if(glazed) screens++; else windows++; }
-      else weak.push({kind:'open', w:w, op:op, conf:o.confidence||0.4, reason:'Claude is unsure'+(o.note?': '+o.note:''), label:(o.kind==='glazed_screen'?'glazed screen ':o.kind==='opening'?'opening ':kind+' ')+fmt(q.x1-q.x0,2)+' x '+fmt(q.head-q.sill,2)}); });
-    // strong finds from auto build that Claude did not mark are kept: Claude reads the picture, the scan reads the geometry, together they miss less
-    prev.forEach(function(e){ if(e.walked || e.src==='claude') return; if(e.conf!=null && e.conf<0.75) return; if(keep.some(function(k){ return k.t1>e.t0 && k.t0<e.t1; })) return; e.src='scan'; keep.push(e); kept++; });
-    w.openings=keep;
-    var wt=a.wall_type || (a.not_a_wall?'furniture':''), wc=typeof a.wall_type_confidence==='number'?a.wall_type_confidence:0.6;
-    if((wt==='furniture'||wt==='column'||wt==='open_floor') && wc>=0.6){ if(w.auto) w.conf=Math.min(w.conf!=null?w.conf:0.5, 0.3);
-      weak.push({kind:'del', w:w, conf:Math.min(0.9, wc*(R2.pic.photo?1:0.8)), reason:'Claude: '+wt.replace('_',' ')+(a.comment?', '+a.comment:''), label:'remove wall '+wi+' ('+wt.replace('_',' ')+')'}); }
-    else if(wt==='glass_partition' && wc>=0.6 && !w.glass){ weak.push({kind:'glassify', w:w, conf:Math.min(0.9,wc), reason:'Claude: glass partition'+(a.comment?', '+a.comment:''), label:'make wall '+wi+' glass'}); }
-  });
-  afterEdit();
-  AI.last={walls:nw, doors:doors, windows:windows, screens:screens, failed:failed, cost:(function(){ var p=AI_PRICE[aiModel()]||[2,10]; return (AI.inTok*p[0]+AI.outTok*p[1])/1e6; })()};
-  buildSidebar(); if(weak.length) sgStart('Claude is unsure about these', weak);
-  toast((AI.cancel?'Stopped. ':'')+'Claude read '+nw+' walls: '+doors+' doors, '+windows+' windows'+(screens?', '+screens+' glazed screens':'')+(kept?', kept '+kept+' the scan found':'')+(weak.length?', '+weak.length+' to check':'')+(failed?', '+failed+' failed':'')+'. Cost about $'+AI.last.cost.toFixed(2)+(fatal?'. '+fatal:''), 8000);
-}
-
 /* ================================ COLUMNS ================================
    A column is a free-standing block: centre, width, depth, round or square.
    Placed by hand with the Column tool, or found from the scan as small
@@ -8431,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r411';
+var SB_BUILD='2026-10-15 r412';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -11825,7 +11585,18 @@ function rotDrag(h, D, e, px, ctx){ var pc=ctx.proj(h.c0); if(!pc) return; var d
   MDL.dragTip=(h.axis==='z'?'turned ':wallSlope?'sloped ':'tilted ')+(deg>0?'+':'')+(Math.round(deg*10)/10)+'°'+(e.altKey?'':'  ·  1° steps, holds at 15°. Alt: free'); rebuildSolid(); mdlOv(); }
 /* ---- wall sizes in 3D: length along each wall, height at each end (display only, nothing in the model changes) ---- */
 function mdlWallDims3D(c, P, k){ if(!MDL.wallDims) return; var M=mdlM(), V=M.verts, ctx=mdl3Ctx(), rr=ctx.rect, eye=ctx.ray(rr.width/2, rr.height/2).o;
-  function lab(x, y, t, col){ c.font='600 '+(11.5*k)+'px system-ui,sans-serif'; var w=c.measureText(t).width+10*k, h=17*k; c.fillStyle='rgba(255,255,255,.92)'; c.strokeStyle=col; c.lineWidth=1.2*k; c.fillRect(x-w/2, y-h/2, w, h); c.strokeRect(x-w/2, y-h/2, w, h); c.fillStyle='#10233f'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(t, x, y+0.5*k); }
+  /* r412: labels are collected first, then placed so none overlap: lengths keep their spot, a label that would land on another moves to the nearest free spot with a short leader line */
+  var LB=[]; c.font='600 '+(11.5*k)+'px system-ui,sans-serif';
+  function lab(x, y, t, col){ LB.push({x:x, y:y, t:t, col:col, w:c.measureText(t).width+10*k, h:17*k, pr:col==='#2f6fd6'?0:1}); }
+  function labDraw(){ var put=[], g=3*k; LB.sort(function(p,q){ return p.pr-q.pr; });
+    function hits(x,y,L){ for(var i=0;i<put.length;i++){ var o=put[i]; if(Math.abs(x-o.x)<(L.w+o.w)/2+g && Math.abs(y-o.y)<(L.h+o.h)/2+g) return true; } return false; }
+    LB.forEach(function(L){ var bx=L.x, by=L.y, moved=false;
+      if(hits(bx,by,L)){ var found=false; for(var r=1;r<=10&&!found;r++){ var cands=[[0,-1],[0,1],[1,0],[-1,0],[1,-1],[-1,-1],[1,1],[-1,1]];
+          for(var j=0;j<cands.length;j++){ var nx=L.x+cands[j][0]*r*(L.w*0.55+g), ny=L.y+cands[j][1]*r*(L.h+g); if(!hits(nx,ny,L)){ bx=nx; by=ny; found=moved=true; break; } } } }
+      put.push({x:bx, y:by, w:L.w, h:L.h});
+      c.font='600 '+(11.5*k)+'px system-ui,sans-serif';
+      if(moved){ c.strokeStyle=L.col; c.lineWidth=1*k; c.beginPath(); c.moveTo(L.x, L.y); c.lineTo(bx, by); c.stroke(); c.fillStyle=L.col; c.beginPath(); c.arc(L.x, L.y, 2.2*k, 0, 6.2832); c.fill(); }
+      c.fillStyle='rgba(255,255,255,.92)'; c.strokeStyle=L.col; c.lineWidth=1.2*k; c.fillRect(bx-L.w/2, by-L.h/2, L.w, L.h); c.strokeRect(bx-L.w/2, by-L.h/2, L.w, L.h); c.fillStyle='#10233f'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(L.t, bx, by+0.5*k); }); }
   M.walls.forEach(function(w,wi){ if(!w.mdl||w.curve!=null) return; var a=V[w.a], b=V[w.b]; if(!a||!b) return; var F=mdlFace(w); if(!F) return; var L=wallLevels(w), th=wallThick(w);
     var nl=mdlNorm([a.x,a.y],[b.x,b.y]), sd=(w.side||1), n=[nl[0]*sd, nl[1]*sd], mx=(F[0][0]+F[1][0])/2, my=(F[0][1]+F[1][1])/2;
     if((eye[0]-mx)*n[0]+(eye[1]-my)*n[1]<0){ F=[[F[0][0]-n[0]*th, F[0][1]-n[1]*th],[F[1][0]-n[0]*th, F[1][1]-n[1]*th]]; n=[-n[0],-n[1]]; }   /* label the face you can see */
@@ -11834,7 +11605,7 @@ function mdlWallDims3D(c, P, k){ if(!MDL.wallDims) return; var M=mdlM(), V=M.ver
     var zt=(L.a1+L.b1)/2, top=P([(F[0][0]+F[1][0])/2+n[0]*off, (F[0][1]+F[1][1])/2+n[1]*off, zt-Math.min(0.25,(zt-(L.a0+L.b0)/2)*0.12)]);
     if(top) lab(top[0], top[1], mm(len), '#2f6fd6');
     var ins=Math.min(0.35, len*0.12), hA=P([F[0][0]+u[0]*ins+n[0]*off, F[0][1]+u[1]*ins+n[1]*off, (L.a0+L.a1)/2]), hB=P([F[1][0]-u[0]*ins+n[0]*off, F[1][1]-u[1]*ins+n[1]*off, (L.b0+L.b1)/2]);
-    if(hA) lab(hA[0], hA[1], 'h '+mm(L.a1-L.a0), '#d6458b'); if(hB&&(!hA||Math.abs((L.b1-L.b0)-(L.a1-L.a0))>0.0005||Math.hypot(hB[0]-hA[0],hB[1]-hA[1])>140*k)) lab(hB[0], hB[1], 'h '+mm(L.b1-L.b0), '#d6458b'); }); }
+    if(hA) lab(hA[0], hA[1], 'h '+mm(L.a1-L.a0), '#d6458b'); if(hB&&(!hA||Math.abs((L.b1-L.b0)-(L.a1-L.a0))>0.0005||Math.hypot(hB[0]-hA[0],hB[1]-hA[1])>140*k)) lab(hB[0], hB[1], 'h '+mm(L.b1-L.b0), '#d6458b'); }); labDraw(); }
 /* ---- texture from scan: the scan's colours baked onto a wall's faces, as a fine grid of coloured cells just off the face ---- */
 var WTEX_CACHE={};
 
@@ -22508,7 +22279,10 @@ sbAfter('skinCmds', function(L){ L.push({t:'Save PNG with no background', where:
 /* ===== Ready for other people: a computer check on the start screen, a short first-run tour, Help > Report a problem (instead of the
    chat-only tools), and a file-name prefix setting (INT_ for you, nothing for everyone else). ===== */
 /* ---------- file names: one setting decides the prefix on everything the app saves ---------- */
-var SBPUB={prefix:'INT_'}; try{ var _p=localStorage.getItem('sb_prefix'); if(_p!=null) SBPUB.prefix=_p; }catch(e){}
+var SBPUB={prefix:''}; try{ var _p=localStorage.getItem('sb_prefix');
+  if(_p==null){ // r412: new installs start with no prefix; an install already in use (any saved Scan Bench setting) keeps INT_
+    _p=(typeof SB_FRESH!=='undefined'&&SB_FRESH)?'':'INT_'; localStorage.setItem('sb_prefix', _p); }
+  SBPUB.prefix=_p; }catch(e){ SBPUB.prefix=''; }
 (function(){ var dl=download; download=function(name, blob){ try{ if(/^INT_/i.test(name)&&SBPUB.prefix!=='INT_') name=SBPUB.prefix+String(name).replace(/^(INT_)+/i,''); }catch(e){} return dl.call(this, name, blob); }; })();
 function sbPrefixSet(v){ SBPUB.prefix=v; try{ localStorage.setItem('sb_prefix', v); }catch(e){} toast(v?('Saved files start with '+v):'Saved files have no prefix.', 2500); }
 /* ---------- will this computer cope? ---------- */
