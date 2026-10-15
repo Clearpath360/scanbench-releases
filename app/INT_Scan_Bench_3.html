@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r388';
+var SB_BUILD='2026-10-15 r389';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26130,6 +26130,24 @@ function rnDrawGully(c, P, G, Zf, ang, dpr){ var z=Zf(G[0],G[1]), ca=Math.cos(an
 /* the plan: drawn true size once they are big enough to see, over the simple symbols */
 sbAfter('planDraw', function(r){ try{ if(typeof levShowing!=='function'||!levShowing()) return r; if(window.LAY_ONLY&&window.LAY_ONLY!=='lev') return r; var V=levM(); if(!V) return r; var z=planView.z; if(RN_W*z<4) return r; var c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), dpr=planView.dpr||1, P=function(p){ return w2s(p[0],p[1]); }, Zf=function(){ return 0; };
     c.save(); (V.drains||[]).forEach(function(D){ rnDrawDrain(c, P, D, Zf, dpr); }); V.gullies.forEach(function(G){ rnDrawGully(c, P, G, Zf, rnGullyAng(G, V.drains), dpr); }); c.restore(); }catch(e){ console.warn(e); } return r; });
+
+/* ===== Section against a mean line (r389): in the Section view, "Mean line" draws the straight best-fit line through the ground
+   along the section, shades where the ground dips below it (blue) or rises above it (orange), and gives each spot's difference in mm
+   under the ground line, with the lowest dip and highest hump. The levels above the line stay as they were. ===== */
+function smFit(Gd, x0, x1){ var n=0, sx=0, sz=0, sxx=0, sxz=0; for(var b=0;b<Gd.z.length;b++){ var z=Gd.z[b]; if(!(z===z)) continue; var X=Gd.lo+b*Gd.bw; if(X<x0||X>x1) continue; n++; sx+=X; sz+=z; sxx+=X*X; sxz+=X*z; } if(n<3) return null; var d=n*sxx-sx*sx; if(Math.abs(d)<1e-12) return null; var m=(n*sxz-sx*sz)/d; return {m:m, c:(sz-m*sx)/n, n:n}; }
+sbAfter('secDrawSection', function(r, c, W, H, k){ try{ if(!SEC.mean) return r; var D=SEC.data, Gd=D&&D.gd, V=SEC.vs; if(!Gd||!V) return r; var EY=V.ey||1, S=function(X,Z){ return [W/2+(X-V.cx)*V.ppm, H/2-(Z-V.cy)*V.ppm*EY]; }, x0=Math.max(Gd.lo, V.cx-W/2/V.ppm), x1=Math.min(Gd.hi, V.cx+W/2/V.ppm), F=smFit(Gd, x0, x1); if(!F) return r;
+    var L=function(X){ return F.m*X+F.c; }, lo={d:1e9}, hi={d:-1e9};
+    /* shading between the ground and the mean line */ c.save(); for(var b=0;b+1<Gd.z.length;b++){ var z0=Gd.z[b], z1=Gd.z[b+1]; if(!(z0===z0)||!(z1===z1)) continue; var X0=Gd.lo+b*Gd.bw, X1=X0+Gd.bw; if(X1<x0||X0>x1) continue; var d0=z0-L(X0); if(d0<lo.d) lo={d:d0, X:X0}; if(d0>hi.d) hi={d:d0, X:X0};
+      var a=S(X0,z0), bb=S(X1,z1), la=S(X0,L(X0)), lb=S(X1,L(X1)); c.fillStyle=(d0+z1-L(X1))<0?'rgba(37,99,235,.35)':'rgba(234,88,12,.32)'; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(bb[0],bb[1]); c.lineTo(lb[0],lb[1]); c.lineTo(la[0],la[1]); c.closePath(); c.fill(); }
+    var p0=S(x0,L(x0)), p1=S(x1,L(x1)); c.strokeStyle='#7c3aed'; c.lineWidth=2*k; c.setLineDash([9*k,5*k]); c.beginPath(); c.moveTo(p0[0],p0[1]); c.lineTo(p1[0],p1[1]); c.stroke(); c.setLineDash([]);
+    /* the difference at each spot, in mm, under the ground */ var span=W/V.ppm, sp=SEC.spot>0?SEC.spot:secNiceStep(span, 7), lastR=-1e9; c.font='700 '+(12*k)+'px system-ui'; c.textAlign='center';
+    for(var X=Math.ceil(x0/sp)*sp; X<=x1; X+=sp){ var z=secGroundAt(Gd, X); if(!(z===z)) continue; var dv=Math.round((z-L(X))*1000), s=S(X,z), t=(dv>0?'+':dv<0?'−':'')+Math.abs(dv)+' mm', tw=c.measureText(t).width+8*k; if(s[0]-tw/2<=lastR) continue; c.fillStyle=dv<0?'#1d4ed8':dv>0?'#c2410c':'#4b5563'; c.fillRect(s[0]-tw/2, s[1]+10*k, tw, 17*k); c.fillStyle='#fff'; c.fillText(t, s[0], s[1]+23*k); lastR=s[0]+tw/2; }
+    /* the lowest dip and highest hump */ [[lo,'lowest'],[hi,'highest']].forEach(function(e){ var E=e[0]; if(!(E.X>=x0)) return; var zz=secGroundAt(Gd, E.X), s2=S(E.X, zz); c.strokeStyle=E.d<0?'#1d4ed8':'#c2410c'; c.lineWidth=2*k; c.beginPath(); c.arc(s2[0], s2[1], 7*k, 0, 7); c.stroke(); });
+    c.textAlign='left'; var pct=F.m*100, oneIn=Math.abs(F.m)>1e-5?Math.round(1/Math.abs(F.m)):0, txt='Mean line: '+(Math.abs(pct)<0.005?'level':(pct<0?'falls ':'rises ')+Math.abs(pct).toFixed(2)+'%'+(oneIn&&oneIn<100000?' (1 in '+oneIn+')':''))+'  ·  dips to '+Math.round(lo.d*1000)+' mm  ·  humps to +'+Math.round(hi.d*1000)+' mm';
+    c.font='700 '+(12*k)+'px system-ui'; var w=c.measureText(txt).width+14*k; c.fillStyle='rgba(124,58,237,.95)'; c.fillRect(8*k, 28*k, w, 20*k); c.fillStyle='#fff'; c.fillText(txt, 15*k, 42*k); c.restore(); SEC.meanTxt=txt; }catch(e){ console.warn(e); } return r; });
+sbAfter('secBar', function(r){ try{ var b=document.getElementById('secBar'); if(!b||b.querySelector('#secMean')) return r; var fit=b.querySelector('#secFit'), m=document.createElement('button'); m.id='secMean'; m.className=SEC.mean?'on':''; m.textContent='Mean line'; m.title='Show the ground against a straight best-fit line: dips and humps in mm'; if(SEC.mean) m.style.cssText='background:#7c3aed;color:#fff;border-color:#7c3aed';
+    if(fit) b.insertBefore(m, fit); else b.appendChild(m); m.onclick=function(){ SEC.mean=!SEC.mean; try{ localStorage.setItem('sb_secmean', SEC.mean?'1':''); }catch(e){} secBar(); secDraw(); }; }catch(e){ console.warn(e); } return r; });
+(function(){ try{ if(localStorage.getItem('sb_secmean')==='1') SEC.mean=true; }catch(e){} })();
 
 
 </script>

@@ -1,1 +1,0 @@
-- Sections > Mean line (button in the section bar): straight best-fit line through the ground, dips shaded blue, humps orange, each spot's difference in mm under the line, lowest and highest ringed, fall of the line shown.
