@@ -1,3 +1,5 @@
-# r420: objects behind the scan while moving
+# r421: use the fast graphics card
 
-- Placed objects (fires, smoke, tree and the rest) stay hidden behind the scan while you zoom out or turn the view, and no longer show in front until you let go.
+- The 3D view now asks Windows for the high-performance graphics card.
+- Start screen and Help > Graphics card show which card is drawing, with how to switch if it is the built-in chip.
+- Problem reports include the graphics card.
