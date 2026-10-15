@@ -1,2 +1,5 @@
-r400: Block is In place only
-- Sections panel > Dips in 3D > Block: always In place; the Lifted and Water lifted buttons are gone.
+r401: Block tidy-up
+- No more spikes on the block sides.
+- Smoother ground colours on the block top.
+- Dip tags no longer sit on top of each other.
+- Fainter contour lines.
