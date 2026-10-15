@@ -1,8 +1,7 @@
-# r413: sky panel and effects fixes
+# r414: Report a problem is now a form
 
-- Clouds: moving Speed no longer makes them jump, and full speed is about 6x faster.
-- Autumn leaves: proper pointed leaf shapes, they stay put when you pan or zoom, and the slider now goes from a few leaves to about 1,500.
-- A-A and B-B lines are hidden by default. They show while the Sections panel or the Section tool (L) is open. To keep them on: View > Always show the A-A and B-B lines, or the tick box in Sections.
-- Scenes: arrows either side scroll the row (the mouse wheel works too).
-- Time of day bar: new colours (night, pink dawn, gold morning, blue noon, gold afternoon, red sunset, violet dusk).
-- Every tile with an on/off has a small switch in its corner, and the same switch replaces Turn off in the tile's settings.
+- Help > Report a problem opens a form: tick what you were doing and what went wrong, how often, and write what happened.
+- Tips to try first appear as you tick (slow, crash, file, sizes, looks wrong, button did nothing, error), each with a link into the manual.
+- "What will be sent" shows the screen picture and the details, each with a tick box to leave it out, plus the full text to read.
+- Save the files puts the report (.txt) and picture (.png) in Downloads; Save and open email also opens an email to support with the report filled in. Nothing is sent by the app.
+- Works at phone width too; Esc closes it.

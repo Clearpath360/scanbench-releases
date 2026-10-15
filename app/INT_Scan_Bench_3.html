@@ -8191,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r413';
+var SB_BUILD='2026-10-15 r414';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26823,6 +26823,85 @@ window.addEventListener('resize', function(){ try{ skuxArrows(); }catch(e){} });
   /* the time bar: deep night, blue hour, pink dawn, gold morning light, bright noon blue, gold afternoon, red sunset, violet dusk, night */
   '#sbSkySec .skTime input#skTimeR{background:linear-gradient(90deg,#070b1f 0%,#0d1636 16%,#2b2f6b 22%,#c96f8a 25.5%,#f7a65a 28%,#ffd58a 31%,#9fd0f7 37%,#5aa6ee 46%,#4a9ae8 54%,#5aa6ee 62%,#ffd27a 72%,#f7924a 77%,#d9544f 80%,#7b3f86 83.5%,#2a2a63 87%,#0d1636 92%,#070b1f 100%)}'+
   '#sbSkySec .skTimeL span:nth-child(1):before{content:"\\263E  ";color:#5b6b9a}#sbSkySec .skTimeL span:nth-child(3):before{content:"\\2600  ";color:#d99a1b}';
+  document.head.appendChild(c); })();
+
+/* ===== r414: Help > Report a problem is a form. Tick what you were doing and what went wrong, write what happened,
+   see exactly what will be sent (the picture of the screen and the details), get tips that might fix it straight away,
+   then save the files and open an email with the report filled in. Nothing is sent by the app itself. ===== */
+var RP2_DOING=[['open','Opening a scan'],['prep','Cleaning, scale or levelling'],['measure','Measuring'],['model','Drawing walls, roofs or objects'],['draw','Sections or drawings'],['sky','Sky, light, weather or effects'],['film','Pictures, videos or the walk-through'],['export','Saving or exporting'],['other','Something else']];
+var RP2_WRONG=[['err','An error message came up'],['slow','It froze or got very slow'],['crash','It closed or went blank'],['look','Something looks wrong on screen'],['btn','A button or tool did nothing'],['meas','A measurement or size is wrong'],['file','A file would not open or save'],['other','Something else']];
+var RP2_TIPS={
+  slow:['Very slow or frozen','Turn Points shown down in the Scan panel, close other programs, or open a smaller version of the scan (LCC and PortalCam exports have lighter levels).','faq'],
+  crash:['Closed or went blank','Big scans can use up the graphics memory. Open the scan again with fewer points shown, and save your job often (File > Save job).','faq'],
+  file:['Will not open or save','Scan Bench opens PLY, E57, SPZ, SPLAT, SOG and XGRIDS LCC folders. If saving fails, check there is space in Downloads.','saving'],
+  meas:['Sizes look wrong','Check the scale first: Prep > Scale. PortalCam and LCC scans read in metres; other scans may need a known height or length.','prep'],
+  look:['Looks wrong','Press Fit to bring the whole scan back, and check the height slider on the right is not cutting the model.','moving'],
+  btn:['Nothing happened','Many tools need a scan open and the right step (Prep, Model, Drawings). The line at the bottom of the window says what the tool is waiting for.','screen'],
+  err:['Error message','The error is attached for you below. Saving your job and opening the app again often clears it.','help']};
+var RP2={pic:null, picOn:true, infoOn:true, errOn:true};
+function rp2Info(){ var info=['Scan Bench '+SB_BUILD, 'Date: '+new Date().toString(), 'Browser: '+navigator.userAgent, 'Screen: '+screen.width+'x'+screen.height+' at '+(window.devicePixelRatio||1)+'x, window '+innerWidth+'x'+innerHeight, 'Memory: '+(navigator.deviceMemory||'?')+' GB', 'Scan: '+(APP.res?(APP.res.n.toLocaleString()+' splats, '+(APP.info&&APP.info.name||'')):'none open'), 'View: '+APP.view+(typeof CEI!=='undefined'?' / '+CEI.view:'')+', step '+(document.body.dataset.step||'')+', panel '+(typeof SBP!=='undefined'?SBP.key||'none':'')];
+  try{ info.push('Checks: '+sbCheck().map(function(c){ return c.t; }).join(' | ')); }catch(e){} return info.join('\n'); }
+function rp2Errs(){ var e=(window.__sbErrs||[]).slice(-15); return e.length?e.join('\n'):''; }
+function rp2Pic(){ try{ if(APP.view==='3d'&&APP.res){ gl_render(); return glCv.toDataURL('image/png'); } if(planCv&&planCv.width) return planCv.toDataURL('image/png'); }catch(e){} return null; }
+function rp2Val(d){ var g=function(n){ return [].slice.call(d.querySelectorAll('input[name='+n+']:checked')).map(function(x){ return x.parentNode.textContent.trim(); }); };
+  return {doing:g('rpDo'), wrong:g('rpWr'), often:(d.querySelector('input[name=rpOf]:checked')||{}).value||'', what:d.querySelector('#rpWhat').value.trim(), expect:d.querySelector('#rpExp').value.trim(), email:d.querySelector('#rpMail').value.trim()}; }
+function rp2Text(d){ var v=rp2Val(d), L=['SCAN BENCH PROBLEM REPORT', ''];
+  L.push('Doing: '+(v.doing.join(', ')||'(not ticked)')); L.push('What went wrong: '+(v.wrong.join(', ')||'(not ticked)')); if(v.often) L.push('How often: '+v.often);
+  L.push('', 'What happened:', v.what||'(not filled in)', '', 'What I expected:', v.expect||'(not filled in)'); if(v.email) L.push('', 'Reply to: '+v.email);
+  if(RP2.infoOn) L.push('', '--- Computer and app ---', rp2Info()); if(RP2.errOn&&rp2Errs()) L.push('', '--- Recent errors ---', rp2Errs()); return L.join('\n'); }
+function rp2Tips(d){ var box=d.querySelector('#rpTips'), on=[].slice.call(d.querySelectorAll('input[name=rpWr]:checked')).map(function(x){ return x.value; }).filter(function(k){ return RP2_TIPS[k]; });
+  if(!on.length){ box.innerHTML=''; box.style.display='none'; return; } box.style.display='';
+  box.innerHTML='<div class="rpH2">Worth trying first</div>'+on.map(function(k){ var T=RP2_TIPS[k]; return '<div class="rpTip"><b>'+T[0]+'</b><span>'+T[1]+'</span><button type="button" class="rpLnk" data-man="'+T[2]+'">Read more in the manual</button></div>'; }).join('');
+  box.querySelectorAll('[data-man]').forEach(function(b){ b.onclick=function(){ if(typeof sbManual==='function') sbManual(b.dataset.man); }; }); }
+function rp2Refresh(d){ rp2Tips(d); var t=d.querySelector('#rpPrev'); if(t) t.textContent=rp2Text(d); var n=rp2Val(d), ok=n.what.length>0||n.wrong.length>0; d.querySelectorAll('.rpGo').forEach(function(b){ b.disabled=!ok; }); d.querySelector('#rpNeed').style.display=ok?'none':''; }
+function sbReport(){ var old=document.getElementById('sbRep2'); if(old) old.remove(); RP2.pic=rp2Pic(); var errs=rp2Errs();
+  var ck=function(n, L, type){ return L.map(function(x){ return '<label class="rpCk"><input type="'+(type||'checkbox')+'" name="'+n+'" value="'+x[0]+'"> '+x[1]+'</label>'; }).join(''); };
+  var d=document.createElement('div'); d.id='sbRep2';
+  d.innerHTML='<div class="rpBox" role="dialog" aria-label="Report a problem"><div class="rpTop"><b>Report a problem</b><button type="button" class="rpX" aria-label="Close">&#10005;</button></div><div class="rpBody">'+
+    '<div class="rpH2">What were you doing?</div><div class="rpGrid">'+ck('rpDo', RP2_DOING)+'</div>'+
+    '<div class="rpH2">What went wrong?</div><div class="rpGrid">'+ck('rpWr', RP2_WRONG)+'</div>'+
+    '<div id="rpTips"></div>'+
+    '<div class="rpH2">How often?</div><div class="rpRow">'+ck('rpOf', [['Every time','Every time'],['Sometimes','Sometimes'],['Just once','Just once']], 'radio')+'</div>'+
+    '<div class="rpH2">What happened?</div><textarea id="rpWhat" rows="3" placeholder="For example: I clicked Export > PDF and nothing downloaded"></textarea>'+
+    '<div class="rpH2">What did you expect to happen? <i>(optional)</i></div><textarea id="rpExp" rows="2"></textarea>'+
+    '<div class="rpH2">Your email for a reply <i>(optional)</i></div><input id="rpMail" type="email" placeholder="name@company.co.uk">'+
+    '<div class="rpH2">What will be sent</div><div class="rpAtt">'+
+      '<label class="rpCk"><input type="checkbox" id="rpPicOn" checked'+(RP2.pic?'':' disabled')+'> A picture of the screen</label>'+(RP2.pic?'<img class="rpPic" alt="The picture that will be sent" src="'+RP2.pic+'">':'<div class="rpMini">No picture: open a scan to include one.</div>')+
+      '<label class="rpCk"><input type="checkbox" id="rpInfoOn" checked> Details of the computer and the app (no scan data)</label>'+
+      '<label class="rpCk"><input type="checkbox" id="rpErrOn" checked'+(errs?'':' disabled')+'> Recent error messages'+(errs?' ('+errs.split('\n').length+')':' (none)')+'</label>'+
+      '<details><summary>Show the full text that will be sent</summary><pre id="rpPrev"></pre></details></div>'+
+    '<div class="rpMini">Nothing is sent by Scan Bench. The report is saved to your Downloads and your email opens with it filled in, ready for you to attach the files and send to <b>'+SB_SUPPORT+'</b>.</div>'+
+    '</div><div class="rpFoot"><span id="rpNeed" class="rpMini">Tick what went wrong or write what happened first.</span><span class="rpSp"></span><button type="button" class="rpB" id="rpCopy">Copy the text</button><button type="button" class="rpB rpGo" id="rpSave">Save the files</button><button type="button" class="rpB rpGo p" id="rpMailB">Save and open email</button></div></div>';
+  document.body.appendChild(d);
+  var close=function(){ d.remove(); document.removeEventListener('keydown', esc, true); }, esc=function(e){ if(e.key==='Escape'&&document.getElementById('sbRep2')&&!document.getElementById('sbManual')){ e.stopPropagation(); e.preventDefault(); close(); } };
+  document.addEventListener('keydown', esc, true); d.querySelector('.rpX').onclick=close; d.onclick=function(e){ if(e.target===d) close(); };
+  d.querySelector('#rpPicOn').onchange=function(){ RP2.picOn=this.checked; var im=d.querySelector('.rpPic'); if(im) im.style.opacity=this.checked?1:0.25; };
+  d.querySelector('#rpInfoOn').onchange=function(){ RP2.infoOn=this.checked; rp2Refresh(d); }; d.querySelector('#rpErrOn').onchange=function(){ RP2.errOn=this.checked; rp2Refresh(d); };
+  RP2.picOn=!!RP2.pic; RP2.infoOn=true; RP2.errOn=!!errs;
+  d.querySelectorAll('input,textarea').forEach(function(x){ x.addEventListener('input', function(){ rp2Refresh(d); }); x.addEventListener('change', function(){ rp2Refresh(d); }); });
+  d.querySelectorAll('input,textarea').forEach(function(x){ x.addEventListener('keydown', function(e){ e.stopPropagation(); }); });
+  var _n=new Date(), _p=function(x){ return (x<10?'0':'')+x; }, nm=SBPUB.prefix+'ScanBench_problem_'+_n.getFullYear()+'-'+_p(_n.getMonth()+1)+'-'+_p(_n.getDate())+'-'+_p(_n.getHours())+'-'+_p(_n.getMinutes());
+  var save=function(){ download(nm+'.txt', new Blob([rp2Text(d)+'\n'], {type:'text/plain'})); if(RP2.picOn&&RP2.pic){ fetch(RP2.pic).then(function(r){ return r.blob(); }).then(function(b){ download(nm+'.png', b); }).catch(function(){}); } };
+  d.querySelector('#rpSave').onclick=function(){ save(); toast('Saved to Downloads: '+nm+'.txt'+(RP2.picOn&&RP2.pic?' and .png':''), 4000); };
+  d.querySelector('#rpCopy').onclick=function(){ try{ navigator.clipboard.writeText(rp2Text(d)).then(function(){ toast('Report text copied.', 1500); }); }catch(e){} };
+  d.querySelector('#rpMailB').onclick=function(){ save(); var v=rp2Val(d), sub='Scan Bench problem: '+(v.wrong[0]||'report')+' ('+SB_BUILD+')';
+    var body=rp2Text(d); if(body.length>1600) body=body.slice(0,1600)+'\n... (the full report is in the attached .txt file)'; body='Please attach the files just saved to your Downloads: '+nm+'.txt'+(RP2.picOn&&RP2.pic?' and '+nm+'.png':'')+'\n\n'+body;
+    var a=document.createElement('a'); a.href='mailto:'+SB_SUPPORT+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body); document.body.appendChild(a); a.click(); a.remove(); toast('Your email should open now. Attach the saved files, then send.', 5000); };
+  rp2Refresh(d); setTimeout(function(){ var f=d.querySelector('input[name=rpWr]'); if(f) f.focus(); }, 30); }
+window.addEventListener('unhandledrejection', function(e){ try{ var r=e.reason; window.__sbErrs.push('Promise: '+((r&&r.message)||String(r))); if(window.__sbErrs.length>50) window.__sbErrs.shift(); }catch(er){} });
+(function(){ var c=document.createElement('style'); c.textContent=
+  '#sbRep2{position:fixed;inset:0;z-index:99000;background:rgba(15,20,30,.45);display:flex;align-items:center;justify-content:center;padding:16px}'+
+  '#sbRep2 .rpBox{width:min(640px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:#fbfaf7;color:#1c2430;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.3);font:13px/1.45 system-ui,Segoe UI,sans-serif;overflow:hidden}'+
+  '#sbRep2 .rpTop{display:flex;align-items:center;padding:12px 16px;background:#24453c;color:#fff}#sbRep2 .rpTop b{flex:1;font-size:15px}#sbRep2 .rpX{background:none;border:0;color:#fff;font-size:16px;cursor:pointer}'+
+  '#sbRep2 .rpBody{overflow-y:auto;padding:6px 16px 12px}#sbRep2 .rpH2{font-weight:700;font-size:12.5px;margin:12px 0 5px;color:#24453c}#sbRep2 .rpH2 i{font-weight:400;color:#6b7280;font-style:normal}'+
+  '#sbRep2 .rpGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 10px}#sbRep2 .rpRow{display:flex;flex-wrap:wrap;gap:4px 16px}#sbRep2 .rpCk{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:7px;cursor:pointer}#sbRep2 .rpCk:hover{background:#eef2ee}#sbRep2 .rpCk input{width:16px;height:16px;accent-color:#2f7a63;margin:0}'+
+  '#sbRep2 textarea,#sbRep2 input[type=email]{width:100%;box-sizing:border-box;border:1px solid #cfd5cf;border-radius:8px;padding:7px 9px;font:inherit;background:#fff;color:inherit;resize:vertical}'+
+  '#sbRep2 #rpTips{background:#fff6e0;border:1px solid #f1d58a;border-radius:10px;padding:2px 12px 10px;margin-top:10px}#sbRep2 .rpTip{display:flex;flex-direction:column;gap:2px;margin-top:6px}#sbRep2 .rpTip b{font-size:12.5px}#sbRep2 .rpLnk{align-self:flex-start;background:none;border:0;padding:0;color:#1f5fbf;text-decoration:underline;cursor:pointer;font:inherit;font-size:12px}'+
+  '#sbRep2 .rpAtt{border:1px solid #d9ded9;border-radius:10px;padding:6px 10px;background:#fff}#sbRep2 .rpPic{display:block;max-width:100%;max-height:170px;margin:2px 0 6px 29px;border-radius:6px;border:1px solid #d9ded9}#sbRep2 details{margin:4px 0 2px 6px}#sbRep2 summary{cursor:pointer;color:#1f5fbf}#sbRep2 pre{white-space:pre-wrap;word-break:break-word;font:11.5px/1.4 ui-monospace,Consolas,monospace;background:#f3f4f1;border-radius:8px;padding:8px;max-height:220px;overflow:auto}'+
+  '#sbRep2 .rpMini{color:#5b6470;font-size:12px;margin-top:10px}#sbRep2 .rpFoot{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 16px;border-top:1px solid #e3e6e1;background:#f4f3ef}#sbRep2 .rpFoot .rpMini{margin:0}#sbRep2 .rpSp{flex:1}'+
+  '#sbRep2 .rpB{border:1px solid #cfd5cf;background:#fff;color:#1c2430;border-radius:8px;padding:7px 12px;font:600 12.5px system-ui,Segoe UI,sans-serif;cursor:pointer}#sbRep2 .rpB.p{background:#2f7a63;border-color:#2f7a63;color:#fff}#sbRep2 .rpB:disabled{opacity:.45;cursor:default}'+
+  'html[data-theme=dark] #sbRep2 .rpBox{background:#1f2522;color:#e7ece8}html[data-theme=dark] #sbRep2 .rpH2{color:#8fd1b8}html[data-theme=dark] #sbRep2 textarea,html[data-theme=dark] #sbRep2 input[type=email],html[data-theme=dark] #sbRep2 .rpAtt,html[data-theme=dark] #sbRep2 .rpB{background:#2a312d;border-color:#3d4741;color:inherit}html[data-theme=dark] #sbRep2 pre{background:#161b18}html[data-theme=dark] #sbRep2 #rpTips{background:#3a3220;border-color:#6b5a2a}html[data-theme=dark] #sbRep2 .rpFoot{background:#1a1f1c;border-color:#333b36}html[data-theme=dark] #sbRep2 .rpCk:hover{background:#2c3430}html[data-theme=dark] #sbRep2 .rpMini{color:#a5aea8}'+
+  '@media (max-width:520px){#sbRep2{padding:0}#sbRep2 .rpBox{max-height:100vh;height:100%;border-radius:0}#sbRep2 .rpFoot .rpB{flex:1}#sbRep2 .rpSp{display:none}}';
   document.head.appendChild(c); })();
 
 /* ===== r413: the A-A and B-B section lines are hidden by default. They show while the Sections panel or the Section tool (L) is in use,
