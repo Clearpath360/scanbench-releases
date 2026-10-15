@@ -1,7 +1,9 @@
-r390: Dips in the Section view
-- Sections bar > Dips list: Water line, Rim to rim, Should be / is, or All dip views.
-- Water line: blue water, high side, returns lip, lowest point, depth, width and litres a metre.
-- Rim to rim: purple straightedge from lip to lip, with the gap in mm.
-- Should be / is: green line it should follow (type 1 in N and pick the fall direction, or leave blank for straight end to end), orange where it sits below.
-- Strip button: row of levels along the bottom with the mm difference under each.
-- Pick two fall points to limit the dip check to that stretch.
+r391: Dips in 3D and the dip report
+- Sections panel > Dips in 3D: Curtain, Water and Pins buttons.
+- Curtain: upright panel on the cut line with the section, water and should-be line, heights stretched (slope taken out on a slope).
+- Water: blue water on the scan along the cut, flat at the spill level.
+- Pins: numbered pin at each lowest point; click a pin to move the section through it.
+- Sections panel > Find the dips: checks the Floor levels area (with gullies and drains) or the whole scan; list of dips, click one to move the section there.
+- Show colours: dips coloured by depth on the plan and in 3D.
+- Dip survey PDF: plan with numbered dips, schedule, then a page per dip with a 3D picture and section.
+- This section PDF and CSV buttons; tick box for 3D pictures in the PDF.
