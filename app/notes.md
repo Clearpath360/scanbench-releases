@@ -1,6 +1,6 @@
-# r418: a better Christmas tree
+# r419: realistic Christmas tree
 
-- Sky, light & weather > Objects > + Christmas tree: now a real-looking fir with drooping branches and needles, shaded by the sun or night sky.
-- Snow on the branches when there is snow on the ground; shiny baubles, tinsel, twinkling fairy lights, a gold star and presents.
-- Pick the tree for its settings: height, light brightness, warm or coloured lights, bauble colours, and tinsel, star and presents on or off.
-- The back of the tree and lights behind it are now hidden properly.
+- + Christmas tree now uses a real tree model (Graphetta, CC BY 4.0, credit in the tree settings and the manual), drawn as 220,000 points, lit by the sun or the night and hidden behind the scan.
+- Fairy lights, baubles, tinsel and the star sit on the outside of the real branches; presents underneath.
+- Tree settings: Style (Realistic or Simple), height, turn, fullness, lights, light colour, baubles, and tinsel, star and presents on or off.
+- The app file is about 3 MB bigger with the tree inside.
