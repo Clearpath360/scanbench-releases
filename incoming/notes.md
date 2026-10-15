@@ -1,0 +1,2 @@
+- Floor levels > + Drain (draw): click along the drain on the plan, round any bends; click the last point again, press Enter or Finish drain to end.
+- Drains show their length on the plan; Backspace takes off the last point while drawing.
