@@ -1,2 +1,2 @@
-r395: Block styles
-- Sections panel > Dips in 3D > Block, then Lifted, In place or Water lifted.
+r396: Block width
+- Sections panel > Dips in 3D > Block > Block width: Auto, 0.5 to 8 m.
