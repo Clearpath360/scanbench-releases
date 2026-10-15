@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r386';
+var SB_BUILD='2026-10-15 r387';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26067,7 +26067,7 @@ function rainImg(){ var R=RAIN.res; if(!R) return null; if(R._imgF===RAIN.f&&R._
 sbAfter('planDraw', function(r){ try{ if(typeof levShowing!=='function'||!levShowing()) return r; if(window.LAY_ONLY&&window.LAY_ONLY!=='lev') return r; var V=levM(), c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), dpr=planView.dpr||1; c.save();
     if(RAIN.res&&!window.LAY_ONLY){ var R=RAIN.res, im=rainImg(), tl=w2s(R.x0, R.y0+R.ny*R.s); c.imageSmoothingEnabled=true; c.drawImage(im, tl[0], tl[1], R.nx*R.s*planView.z, R.ny*R.s*planView.z); }
     var dPath=function(D){ c.beginPath(); D.forEach(function(q,k){ var s2=w2s(q[0],q[1]); if(k) c.lineTo(s2[0],s2[1]); else c.moveTo(s2[0],s2[1]); }); };
-    (V.drains||[]).forEach(function(D){ c.lineCap='round'; c.lineJoin='round'; c.strokeStyle='#111827'; c.lineWidth=9*dpr; dPath(D); c.stroke(); c.strokeStyle='#e5e7eb'; c.lineWidth=5*dpr; c.setLineDash([3*dpr,3*dpr]); c.stroke(); c.setLineDash([]); var m=D[Math.floor((D.length-1)/2)], m2=D[Math.floor((D.length-1)/2)+1]||m, sm=w2s((m[0]+m2[0])/2,(m[1]+m2[1])/2); levLabel(c, sm[0], sm[1]-10*dpr, 'Drain '+fmt(levDrainLen(D),1)+' m', dpr, '#111827', true); });
+    (V.drains||[]).forEach(function(D){ if(RN_W*planView.z<4){ c.lineCap='round'; c.lineJoin='round'; c.strokeStyle='#111827'; c.lineWidth=9*dpr; dPath(D); c.stroke(); c.strokeStyle='#e5e7eb'; c.lineWidth=5*dpr; c.setLineDash([3*dpr,3*dpr]); c.stroke(); c.setLineDash([]); } var m=D[Math.floor((D.length-1)/2)], m2=D[Math.floor((D.length-1)/2)+1]||m, sm=w2s((m[0]+m2[0])/2,(m[1]+m2[1])/2); levLabel(c, sm[0], sm[1]-10*dpr, 'Drain '+fmt(levDrainLen(D),1)+' m', dpr, '#111827', true); });
     if(LEV.tool==='drain'&&(LEV.dpts||[]).length){ var DP=LEV.dpts.concat(LEV.hov?[LEV.hov]:[]); c.strokeStyle='#111827'; c.lineWidth=5*dpr; c.setLineDash([6*dpr,4*dpr]); dPath(DP); c.stroke(); c.setLineDash([]); LEV.dpts.forEach(function(q,k){ var s3=w2s(q[0],q[1]); c.fillStyle=k===LEV.dpts.length-1?'#f59e0b':'#fff'; c.strokeStyle='#111827'; c.lineWidth=1.5*dpr; c.beginPath(); c.arc(s3[0],s3[1],5*dpr,0,7); c.fill(); c.stroke(); }); }
     if(RAIN.res&&!window.LAY_ONLY){ var S=RAIN.res.stats[RAIN.f], t=rainTxt(S); c.font='600 '+(13*dpr)+'px system-ui'; var w=c.measureText(t).width+24*dpr; c.fillStyle='rgba(17,24,39,.88)'; c.fillRect(planView.w/2-w/2, 14*dpr, w, 30*dpr); c.fillStyle='#bfdbfe'; c.textAlign='center'; c.fillText(t, planView.w/2, 34*dpr); c.textAlign='left'; }
     c.restore(); }catch(e){ console.warn(e); } return r; });
@@ -26077,8 +26077,7 @@ sbAfter('lv3Draw', function(r){ try{ if(typeof lv3Open!=='function'||!lv3Open()|
       ['rgba(147,197,253,.55)','rgba(59,130,246,.65)','rgba(29,78,216,.78)'].forEach(function(col, bi){ c.fillStyle=col; c.beginPath(); B[bi].forEach(function(q){ if(++n>60000) return; var x=R.x0+((q%R.nx)+0.5)*R.s, y=R.y0+(Math.floor(q/R.nx)+0.5)*R.s, z=R.Z[q]+fr[q]/10000+0.01, a=S([x-hs,y-hs,z]), b=S([x+hs,y-hs,z]), e=S([x+hs,y+hs,z]), f=S([x-hs,y+hs,z]); if(!a||!b||!e||!f) return; c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.lineTo(e[0],e[1]); c.lineTo(f[0],f[1]); c.closePath(); }); c.fill(); });
       var St=R.stats[RAIN.f], t=rainTxt(St); c.font='600 '+(13*dpr)+'px system-ui'; var w=c.measureText(t).width+24*dpr; c.fillStyle='rgba(17,24,39,.88)'; c.fillRect(cv.width/2-w/2, 14*dpr, w, 30*dpr); c.fillStyle='#bfdbfe'; c.textAlign='center'; c.fillText(t, cv.width/2, 34*dpr); c.textAlign='left'; }
     var zA=function(x,y){ var v=levAt(O.Z,x,y); return v===v?v:null; };
-    levDrainSegs(V.drains).forEach(function(D){ var za=zA(D[0][0],D[0][1]), zb=zA(D[1][0],D[1][1]); if(za==null||zb==null) return; var a=S([D[0][0],D[0][1],za+0.03]), b=S([D[1][0],D[1][1],zb+0.03]); if(!a||!b) return; c.lineCap='round'; c.strokeStyle='#111827'; c.lineWidth=8*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.stroke(); c.strokeStyle='#e5e7eb'; c.lineWidth=4*dpr; c.setLineDash([3*dpr,3*dpr]); c.stroke(); c.setLineDash([]); });
-    V.gullies.forEach(function(G){ var z=zA(G[0],G[1]); if(z==null) return; var p=S([G[0],G[1],z+0.03]); if(!p) return; c.fillStyle='#111827'; c.fillRect(p[0]-7*dpr,p[1]-5*dpr,14*dpr,10*dpr); c.strokeStyle='#fff'; c.lineWidth=1.5*dpr; c.strokeRect(p[0]-7*dpr,p[1]-5*dpr,14*dpr,10*dpr); }); }catch(e){ console.warn(e); } return r; });
+    var Zf=function(x,y){ var v=zA(x,y); return (v==null?O.lo:v)+0.012; }; (V.drains||[]).forEach(function(D){ rnDrawDrain(c, S, D, Zf, dpr); }); V.gullies.forEach(function(G){ rnDrawGully(c, S, G, Zf, rnGullyAng(G, V.drains), dpr); }); }catch(e){ console.warn(e); } return r; });
 /* ---------- the panel ---------- */
 sbAfter('levPanel', function(r){ try{ var s=document.getElementById('sbLevSec'), b=s&&s.querySelector('.body'), V=levM(); if(!b||!V||!V.area||!LEV.out||b.querySelector('#rnBox')) return r;
     if(RAIN.res&&RAIN.key!==rainKey()){ RAIN.res=null; rainPlay(false); }
@@ -26111,6 +26110,26 @@ sbAround('levArrows', function(next){ if(levMapHidden()&&!window.LAY_ONLY) retur
 sbAround('lv3Groups', function(next){ if(levMapHidden()) return {}; return next(); });
 sbAfter('levPanel', function(r){ try{ var b=document.querySelector('#sbLevSec .body'), rd=b&&b.querySelector('#lvRedraw'); if(!rd||b.querySelector('#lvMapT')) return r; var hid=levMapHidden(), bt=document.createElement('button'); bt.id='lvMapT'; bt.className='lBtn'+(hid?' on':''); bt.textContent=hid?'Show colours':'Hide colours'; bt.title='Hide the colour map to see the scan underneath, for placing gullies and drains or watching the rain';
     var row=document.createElement('div'); row.className='lRow'; row.appendChild(bt); rd.closest('.lRow').after(row); bt.onclick=function(){ LEV.hideMap=!levMapHidden(); levPanel(); planDrawSoon(); requestRender(false); }; }catch(e){ console.warn(e); } return r; });
+/* r387: drains and gullies drawn like the real thing: a channel drain is a grey strip with slots, a gully a square grate with bars,
+   true size on the plan and laid on the surface in 3D */
+var RN_W=0.15, RN_G=0.45;
+function rnSegs(D){ var out=[]; for(var i=0;i+1<D.length;i++){ var a=D[i], b=D[i+1], L=Math.hypot(b[0]-a[0], b[1]-a[1]); if(L>1e-4) out.push({a:a, b:b, L:L, u:[(b[0]-a[0])/L, (b[1]-a[1])/L]}); } return out; }
+function rnQuad(c, P, pts){ var s=pts.map(P); if(s.some(function(v){ return !v; })) return false; c.beginPath(); s.forEach(function(v,i){ if(i) c.lineTo(v[0],v[1]); else c.moveTo(v[0],v[1]); }); c.closePath(); return true; }
+/* P: [x,y,z] to the screen; Zf: ground height at x,y */
+function rnDrawDrain(c, P, D, Zf, dpr){ var W=RN_W/2; rnSegs(D).forEach(function(S){ var n=[-S.u[1], S.u[0]], z0=Zf(S.a[0],S.a[1]), z1=Zf(S.b[0],S.b[1]), q=function(t, o){ return [S.a[0]+S.u[0]*t+n[0]*o, S.a[1]+S.u[1]*t+n[1]*o, z0+(z1-z0)*t/S.L]; };
+    if(rnQuad(c, P, [q(0,-W*1.25), q(S.L,-W*1.25), q(S.L,W*1.25), q(0,W*1.25)])){ c.fillStyle='#8a9097'; c.fill(); }
+    if(rnQuad(c, P, [q(0,-W), q(S.L,-W), q(S.L,W), q(0,W)])){ c.fillStyle='#d5d9de'; c.fill(); c.strokeStyle='#6b7280'; c.lineWidth=1*dpr; c.stroke(); }
+    var p0=P(q(0,0)), p1=P(q(S.L,0)); if(!p0||!p1) return; var pxm=Math.hypot(p1[0]-p0[0], p1[1]-p0[1])/S.L; if(pxm*0.09<2.5) return; c.fillStyle='#2b2f35';
+    for(var t=0.05; t<S.L-0.03; t+=0.09){ if(rnQuad(c, P, [q(t-0.022,-W*0.7), q(t+0.022,-W*0.7), q(t+0.022,W*0.7), q(t-0.022,W*0.7)])) c.fill(); } }); }
+function rnGullyAng(G, drains){ var best=null, bd=1.2; levDrainSegs(drains).forEach(function(S){ var a=S[0], b=S[1], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1, t=Math.max(0, Math.min(1, ((G[0]-a[0])*dx+(G[1]-a[1])*dy)/L2)), d=Math.hypot(a[0]+dx*t-G[0], a[1]+dy*t-G[1]); if(d<bd){ bd=d; best=Math.atan2(dy, dx); } }); return best||0; }
+function rnDrawGully(c, P, G, Zf, ang, dpr){ var z=Zf(G[0],G[1]), ca=Math.cos(ang), sa=Math.sin(ang), q=function(u, v){ return [G[0]+ca*u-sa*v, G[1]+sa*u+ca*v, z]; }, h=RN_G/2, hi=h*0.8;
+  if(rnQuad(c, P, [q(-h,-h), q(h,-h), q(h,h), q(-h,h)])){ c.fillStyle='#9ca3af'; c.fill(); c.strokeStyle='#f3f4f6'; c.lineWidth=2*dpr; c.stroke(); }
+  if(rnQuad(c, P, [q(-hi,-hi), q(hi,-hi), q(hi,hi), q(-hi,hi)])){ c.fillStyle='#1f2328'; c.fill(); }
+  c.fillStyle='#8b9199'; for(var k=-2;k<=2;k++){ var v=k*hi/2.6; if(rnQuad(c, P, [q(-hi*0.92, v-0.018), q(hi*0.92, v-0.018), q(hi*0.92, v+0.018), q(-hi*0.92, v+0.018)])) c.fill(); }
+  if(rnQuad(c, P, [q(-0.02,-hi), q(0.02,-hi), q(0.02,hi), q(-0.02,hi)])){ c.fillStyle='#8b9199'; c.fill(); } }
+/* the plan: drawn true size once they are big enough to see, over the simple symbols */
+sbAfter('planDraw', function(r){ try{ if(typeof levShowing!=='function'||!levShowing()) return r; if(window.LAY_ONLY&&window.LAY_ONLY!=='lev') return r; var V=levM(); if(!V) return r; var z=planView.z; if(RN_W*z<4) return r; var c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), dpr=planView.dpr||1, P=function(p){ return w2s(p[0],p[1]); }, Zf=function(){ return 0; };
+    c.save(); (V.drains||[]).forEach(function(D){ rnDrawDrain(c, P, D, Zf, dpr); }); V.gullies.forEach(function(G){ rnDrawGully(c, P, G, Zf, rnGullyAng(G, V.drains), dpr); }); c.restore(); }catch(e){ console.warn(e); } return r; });
 
 
 </script>

@@ -1,2 +1,2 @@
-- Floor levels > + Drain (draw): click along the drain on the plan, round any bends; click the last point again, press Enter or Finish drain to end.
-- Drains show their length on the plan; Backspace takes off the last point while drawing.
+- Floor levels: drains now look like channel drains (grey strip with slots) and gullies like square grates, true size on the plan and laid on the surface in 3D.
+- A gully next to a drain turns to line up with it.

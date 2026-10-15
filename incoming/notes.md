@@ -1,2 +1,0 @@
-- Floor levels: drains now look like channel drains (grey strip with slots) and gullies like square grates, true size on the plan and laid on the surface in 3D.
-- A gully next to a drain turns to line up with it.
