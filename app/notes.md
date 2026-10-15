@@ -1,4 +1,3 @@
-r407: Removing placed effects
-- Picking another preset removes what Bonfire Night placed.
-- Delete or Backspace removes the picked effect (Placed tab).
-- The Placed tab shows how many effects are placed, e.g. Placed (2); the ✕ in its list removes one.
+r408: Meteor shower you can see
+- Meteor shower: shooting stars every second or two in the part of the sky you are looking at, with longer, brighter trails.
+- Stars no longer fade in and out; a gentle twinkle only.
