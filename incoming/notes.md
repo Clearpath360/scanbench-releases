@@ -1,2 +1,0 @@
-- Floor levels > Heights of: new Roof choice, reads the top surface of a flat roof or deck from a drone scan (Ground and Everything unchanged).
-- Floor levels: a hint suggests Roof when Ground leaves out a lot of the area.
