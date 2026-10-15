@@ -8191,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r412';
+var SB_BUILD='2026-10-15 r413';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -12424,7 +12424,7 @@ function mdlOv(){
       c.lineCap='round'; c.strokeStyle='rgba(0,0,0,.55)'; c.lineWidth=(H[1]?4.2:3.2)*k; c.beginPath(); c.moveTo(o0[0],o0[1]); c.lineTo(e[0],e[1]); c.stroke(); c.strokeStyle=col; c.lineWidth=(H[1]?2.6:1.8)*k; c.beginPath(); c.moveTo(o0[0],o0[1]); c.lineTo(e[0],e[1]); c.stroke();
       if(sgn>0){ c.beginPath(); c.arc(e[0],e[1],2.4*k,0,7); c.fillStyle=col; c.fill(); } }); }); })(); }
   // the section lines on the floor, so you can see where A-A and B-B cut
-  (function(){ var rb=APP.res.robust, a=CEI.axis, nn=ceiN(), ex=[]; [[rb.x[0],rb.y[0]],[rb.x[1],rb.y[0]],[rb.x[0],rb.y[1]],[rb.x[1],rb.y[1]]].forEach(function(q){ ex.push([q[0]*a[0]+q[1]*a[1], q[0]*nn[0]+q[1]*nn[1]]); });
+  (function(){ if(typeof sbSecLinesOn==='function'&&!sbSecLinesOn()) return; var rb=APP.res.robust, a=CEI.axis, nn=ceiN(), ex=[]; [[rb.x[0],rb.y[0]],[rb.x[1],rb.y[0]],[rb.x[0],rb.y[1]],[rb.x[1],rb.y[1]]].forEach(function(q){ ex.push([q[0]*a[0]+q[1]*a[1], q[0]*nn[0]+q[1]*nn[1]]); });
     var s0=Math.min.apply(null,ex.map(function(e){ return e[0]; })), s1=Math.max.apply(null,ex.map(function(e){ return e[0]; })), t0=Math.min.apply(null,ex.map(function(e){ return e[1]; })), t1=Math.max.apply(null,ex.map(function(e){ return e[1]; }));
     function W2(sv,tv){ return [a[0]*sv+nn[0]*tv, a[1]*sv+nn[1]*tv, f+0.01]; }
     [[W2(s0,CEI.lc),W2(s1,CEI.lc),'#ffb64d','A'],[W2(CEI.st,t0),W2(CEI.st,t1),'#7dff9a','B']].forEach(function(L){ line([L[0],L[1]], L[2], 1.5, true); var q=P(L[0]); if(q){ c.fillStyle=L[2]; c.fillRect(q[0]-8*k,q[1]-8*k,16*k,16*k); c.fillStyle='#111'; c.font='700 '+(11*k)+'px system-ui'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(L[3],q[0],q[1]+0.5); c.textAlign='left'; c.font='600 '+(11*k)+'px system-ui'; var tx=L[3]==='A'?'A-A long section':'B-B cross-section', tw=c.measureText(tx).width+8*k; c.fillStyle='rgba(8,10,14,.75)'; c.fillRect(q[0]+11*k,q[1]-9*k,tw,18*k); c.fillStyle=L[2]; c.fillText(tx,q[0]+15*k,q[1]+0.5); } }); })();
@@ -22665,7 +22665,10 @@ function wxSkyDraw(mvp){ var gl=GL, pr=wxSkyProg(); if(!pr) return; var X=wxStat
   if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(U('uInv'), false, wxInv(mvp||camMVP())); gl.uniform1f(U('uShaft'), typeof wxShaftAmt==='function'?wxShaftAmt():0); gl.uniform1f(U('uMoonOld'), (typeof fxS==='function'&&fxS()&&fxS().moon)?0:1);
   gl.uniform3fv(U('uZen'), X.C.zen); gl.uniform3fv(U('uHor'), X.C.hor); gl.uniform3fv(U('uSun'), X.sun.dir); gl.uniform3fv(U('uSunCol'), X.sunCol); gl.uniform1f(U('uCov'), Math.min(1, X.cov*(0.6+0.4*X.k))); gl.uniform1f(U('uStorm'), X.storm);
   gl.uniform1f(U('uT'), X.t); gl.uniform1f(U('uNight'), X.night); gl.uniform1f(U('uStars'), S.stars?1:0); gl.uniform1f(U('uFlash'), X.flash); gl.uniform1f(U('uFog'), wxClamp(Math.min(1,S.fog+0.3*S.rain+0.2*S.snow)*X.k,0,1)); gl.uniform3fv(U('uFogCol'), X.fogCol);
-  var sp=(S.speed==null?0.3:S.speed)*0.02*(0.6+1.6*(S.wind||0)), wd=(S.windDir||0)*Math.PI/180; gl.uniform2f(U('uWind'), Math.cos(wd)*sp, Math.sin(wd)*sp);
+  /* r413: clouds move by distance travelled, so moving the Speed slider changes how fast they go without jumping; top speed is about 6x faster than before */
+  var spd=(S.speed==null?0.3:S.speed), sp=(0.02*spd+0.1*spd*spd*spd)*(0.6+1.6*(S.wind||0)), wd=(S.windDir||0)*Math.PI/180;
+  if(WX.cT==null||!isFinite(WX.cT)){ WX.cT=X.t; WX.cOff=[0,0]; } var dT=X.t-WX.cT; WX.cOff[0]+=Math.cos(wd)*sp*dT; WX.cOff[1]+=Math.sin(wd)*sp*dT; WX.cT=X.t;
+  var tU=Math.abs(X.t)>1e-3?X.t:1e-3; gl.uniform2f(U('uWind'), WX.cOff[0]/tU, WX.cOff[1]/tU);
   gl.bindBuffer(gl.ARRAY_BUFFER, WX.tri); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0); for(var i=1;i<4;i++) gl.disableVertexAttribArray(i);
   gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
 (function hookClear(){ if(typeof GL==='undefined'||!GL){ setTimeout(hookClear, 300); return; } var gl=GL, oc=gl.clear.bind(gl);
@@ -26585,11 +26588,18 @@ function fx2Build(P, Tr, X, F, t, sc, wx, wy, sky){ var S=X.S, sun=X.sun, wl=Mat
         var cc2=FX_CONF[q%7], rot=age*(4+6*r2)+q, ca=Math.cos(rot), sa=Math.sin(rot), s2=0.025*sc, fade=Math.min(1, (6.5-age)/1.2); quad([x,y,z], [ca*s2, sa*s2, 0], [-sa*s2*0.5*Math.cos(rot*1.3), ca*s2*0.5, s2*0.6*Math.sin(rot*1.3)], cc2[0],cc2[1],cc2[2], 0.95*fade, false); } } });
   FX.vis=1; FX.oc=null;
   /* autumn leaves: falling round what you are looking at, then skating across the ground with the wind */
-  if(F.leaves>0){ var nL=Math.round(40+260*F.leaves), Hh=Math.min(28, Math.max(8, cam.dist*0.8))*sc, cx=cam.tx, cy=cam.ty, life=10;
-    for(var i=0;i<nL;i++){ var h1=fxH(i*1.91+3), h2=fxH(i*3.37+5), h3=fxH(i*0.71+9), age2=((t/life+h3)%1+1)%1, x0=wxWrap(cx+(h1*2-1)*Hh+wx*t*0.6*sc, cx, Hh), y0=wxWrap(cy+(h2*2-1)*Hh+wy*t*0.6*sc, cy, Hh), gz3=ground(x0,y0), drop=(4+5*h2)*sc, fallT=0.55;
+  if(F.leaves>0){ /* r413: leaves stay put in the world when you pan or zoom (a fixed 30 m patch that wraps round the view), the slider sets how many (30 to 1,500), and each leaf is a pointed leaf shape, not a square */
+    var nL=Math.round(30+1470*Math.pow(F.leaves,1.4)), Hh=15*sc, cx=cam.tx, cy=cam.ty, life=10;
+    var LS=[[1,0],[0.35,0.5],[-0.45,0.4],[-1,0],[-0.45,-0.4],[0.35,-0.5]];
+    for(var i=0;i<nL;i++){ var h1=fxH(i*1.91+3), h2=fxH(i*3.37+5), h3=fxH(i*0.71+9), cyc=Math.floor(t/life+h3), age2=((t/life+h3)%1+1)%1;
+      var j1=fxH(i*5.1+cyc*1.7), j2=fxH(i*6.3+cyc*2.9);   /* each fall starts somewhere new */
+      var x0=wxWrap((j1*2-1)*Hh+wx*t*0.6*sc, cx, Hh), y0=wxWrap((j2*2-1)*Hh+wy*t*0.6*sc, cy, Hh), gz3=ground(x0,y0), drop=(4+5*h2)*sc, fallT=0.55;
       var x3, y3, z3, gr; if(age2<fallT){ var u2=age2/fallT; x3=x0+Math.sin(t*1.3+i)*0.4*sc+wx*u2*3*sc; y3=y0+Math.cos(t*1.1+i*1.3)*0.4*sc+wy*u2*3*sc; z3=gz3+drop*(1-u2); gr=false; } else { var u3=(age2-fallT)/(1-fallT); x3=x0+wx*(3+u3*life*(0.4+1.5*wl))*sc; y3=y0+wy*(3+u3*life*(0.4+1.5*wl))*sc; z3=ground(x3,y3)+0.01*sc; gr=true; }
-      var lc=FX_LEAF[i%5], rot2=t*(gr?(0.5+3*wl):2.5)*(0.6+h1)+i, cr=Math.cos(rot2), sr=Math.sin(rot2), ls=(0.035+0.03*h1)*sc, tilt=gr?0:Math.sin(t*2+i)*0.8, fade2=Math.min(1, (1-age2)*8)*Math.min(1, age2*20);
-      quad([x3,y3,z3], [cr*ls, sr*ls, 0], [-sr*ls*0.6*Math.cos(tilt), cr*ls*0.6*Math.cos(tilt), ls*0.6*Math.sin(tilt)], lc[0]*sky[0]*1.6, lc[1]*sky[1]*1.6, lc[2]*sky[2]*1.6, 0.95*fade2, false); } }
+      var lc=FX_LEAF[i%5], sh=0.8+0.4*h2, rot2=t*(gr?(0.5+3*wl):2.5)*(0.6+h1)+i, cr=Math.cos(rot2), sr=Math.sin(rot2), ls=(0.04+0.035*h1)*sc, tilt=gr?0:Math.sin(t*2+i)*0.9, ct=Math.cos(tilt), st=Math.sin(tilt), fade2=Math.min(1, (1-age2)*8)*Math.min(1, age2*20);
+      var U3=[cr*ls, sr*ls, 0], V3=[-sr*ls*0.62*ct, cr*ls*0.62*ct, ls*0.62*st], C3=[x3,y3,z3], pt=function(q){ return [C3[0]+U3[0]*q[0]+V3[0]*q[1], C3[1]+U3[1]*q[0]+V3[1]*q[1], C3[2]+U3[2]*q[0]+V3[2]*q[1]]; };
+      var r0=Math.min(1,lc[0]*sky[0]*1.6*sh), g0=Math.min(1,lc[1]*sky[1]*1.6*sh), b0=Math.min(1,lc[2]*sky[2]*1.6*sh);
+      for(var e2=0;e2<6;e2++) Tr(C3, pt(LS[e2]), pt(LS[(e2+1)%6]), r0*(e2<3?1:0.82), g0*(e2<3?1:0.82), b0*(e2<3?1:0.82), 0.95*fade2, false);
+      Tr(pt([-1,0.05]), pt([-1,-0.05]), pt([-1.45,0]), r0*0.55, g0*0.45, b0*0.4, 0.9*fade2, false); } }
   /* a flock crossing the sky every now and then, wings beating */
   if(F.birds>0&&X.night<0.7){ var per=Math.max(10, 32-20*F.birds), kc=Math.floor(t/per), ag3=(t-kc*per)/per, dirA=fxH(kc*3.7)*6.283, fd=[Math.cos(dirA), Math.sin(dirA), 0], rd=[-fd[1], fd[0], 0], span=90*sc, hB=(22+12*fxH(kc*1.9))*sc+(typeof mdlFloor==='function'?mdlFloor():0), nb=Math.round(6+24*F.birds), lead=[cam.tx+fd[0]*(ag3*2-1)*span, cam.ty+fd[1]*(ag3*2-1)*span, hB];
     for(var bI=0;bI<nb;bI++){ var row=Math.floor((bI+1)/2), side=bI%2?1:-1, jx=(fxH(bI*2.2+kc)-0.5)*1.5*sc, jy=(fxH(bI*3.1+kc)-0.5)*1.5*sc, p=[lead[0]-fd[0]*row*1.4*sc+rd[0]*side*row*1.2*sc+jx, lead[1]-fd[1]*row*1.4*sc+rd[1]*side*row*1.2*sc+jy, lead[2]+Math.sin(t*0.7+bI)*0.6*sc];
@@ -26781,6 +26791,52 @@ document.addEventListener('input', function(e){ if(SBP.key!=='sky'||!e.target.cl
   window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&!FX.mode&&FX.sel&&SBP.key==='sky'){ FX.sel=null; try{ fxPanelList(); }catch(e2){} requestRender(false); } }); })();
 /* r406: the panel's title line with its close button stays at the top while you scroll; the tabs sit just under it */
 (function(){ var c=document.createElement('style'); c.textContent='body.sbSkin #sbPanelHead{position:sticky;top:0;z-index:6;background:var(--sbBg,#fff);padding-top:6px}html[data-theme=dark] body.sbSkin #sbPanelHead{background:var(--sbBg,#262a30)}'; document.head.appendChild(c); })();
+
+/* ===== r413: Sky, light & weather panel touches: an on/off switch on each tile and in its settings, arrows to scroll the Scenes row,
+   and a time-of-day bar coloured like the real sky through the day ===== */
+function skuxToggle(t){ var S=wxS(), F=fxS(), D=SKP_T[t]; if(!S||!D||!D.set) return; var on=!!D.on(S,F); pushUndo(); D.set(S,F,!on); if(!on) S.on=true; afterEdit(); wxPanel(); requestRender(false); try{ if(!on&&wxAnimNeed()) wxLoop(); }catch(e){} }
+function skuxSw(t, on, big){ return '<span class="skuxSw'+(on?' on':'')+(big?' big':'')+'" role="switch" aria-checked="'+(on?'true':'false')+'" tabindex="0" data-skux="'+t+'" title="'+(on?'Turn off':'Turn on')+'"><span></span></span>'; }
+function skuxPaint(){ var b=document.querySelector('#sbSkySec .body'); if(!b||!b.querySelector('#skTiles')) return; var S=wxS(), F=fxS(); if(!S||!F) return;
+  b.querySelectorAll('#skTiles [data-tile]').forEach(function(x){ var t=x.dataset.tile, D=SKP_T[t]; if(!D||!D.set) return; var on=!!D.on(S,F), sw=x.querySelector('.skuxSw');
+    if(!sw){ x.insertAdjacentHTML('beforeend', skuxSw(t,on)); sw=x.querySelector('.skuxSw'); x.classList.add('skuxHas'); }
+    sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on?'true':'false'); sw.title=on?'Turn off':'Turn on'; });
+  b.querySelectorAll('.skPop').forEach(function(p){ var t=p.dataset.tab, D=SKP_T[t]; if(!D||!D.set) return; var on=!!D.on(S,F), off=p.querySelector('[data-off]'); if(off) off.remove();
+    var sw=p.querySelector('.skuxSw'); if(!sw){ var h=p.querySelector('.skPopH b'); if(!h) return; h.insertAdjacentHTML('afterend', '<span class="skuxLbl"></span>'+skuxSw(t,on,true)); sw=p.querySelector('.skuxSw'); }
+    sw.classList.toggle('on', on); sw.setAttribute('aria-checked', on?'true':'false'); var l=p.querySelector('.skuxLbl'); if(l) l.textContent=on?'On':'Off'; });
+  /* Scenes: arrows either side of the row */
+  var G=b.querySelector('#skPresets'); if(G&&!(G.parentNode&&G.parentNode.classList.contains('skuxScn'))){ var w=document.createElement('div'); w.className='skuxScn'; G.parentNode.insertBefore(w, G);
+    w.innerHTML='<button class="skuxAr" data-dir="-1" aria-label="Scroll scenes left">&#8249;</button><button class="skuxAr" data-dir="1" aria-label="Scroll scenes right">&#8250;</button>'; w.insertBefore(G, w.lastChild);
+    w.querySelectorAll('.skuxAr').forEach(function(a){ a.onclick=function(e){ e.stopPropagation(); G.scrollBy({left:(+a.dataset.dir)*Math.max(120, G.clientWidth*0.8), behavior:'smooth'}); }; });
+    G.addEventListener('scroll', skuxArrows, {passive:true}); G.addEventListener('wheel', function(e){ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)&&G.scrollWidth>G.clientWidth){ e.preventDefault(); G.scrollBy({left:e.deltaY}); } }, {passive:false}); }
+  skuxArrows(); }
+function skuxArrows(){ var G=document.getElementById('skPresets'); if(!G||!G.parentNode) return; var W=G.parentNode, max=G.scrollWidth-G.clientWidth-2;
+  var L=W.querySelector('[data-dir="-1"]'), R=W.querySelector('[data-dir="1"]'); if(L) L.disabled=G.scrollLeft<=2; if(R) R.disabled=G.scrollLeft>=max; W.classList.toggle('noScroll', max<=0); }
+document.addEventListener('click', function(e){ var s=e.target.closest&&e.target.closest('.skuxSw'); if(!s) return; e.stopPropagation(); e.preventDefault(); skuxToggle(s.dataset.skux); }, true);
+document.addEventListener('keydown', function(e){ var s=e.target.closest&&e.target.closest('.skuxSw'); if(!s||(e.key!==' '&&e.key!=='Enter')) return; e.preventDefault(); e.stopPropagation(); skuxToggle(s.dataset.skux); }, true);
+try{ sbAfter('skShowTab', function(r){ try{ skuxPaint(); }catch(e){ console.warn(e); } return r; }); }catch(e){}
+window.addEventListener('resize', function(){ try{ skuxArrows(); }catch(e){} });
+(function(){ var c=document.createElement('style'); c.textContent=
+  '#skTiles .skTile.skuxHas.on:after{display:none}#sbSkySec #skTiles .skTile{padding-top:22px}#sbSkySec #skTiles .skTile.open{padding-top:21px}'+
+  '.skuxSw{display:inline-flex;align-items:center;width:26px;height:15px;border-radius:8px;background:#c4cad4;padding:2px;box-sizing:border-box;cursor:pointer;transition:background .15s;flex:0 0 auto}.skuxSw>span{width:11px;height:11px;border-radius:6px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}.skuxSw.on{background:#2563eb}.skuxSw.on>span{transform:translateX(11px)}.skuxSw:focus-visible{outline:2px solid #2563eb;outline-offset:2px}'+
+  '#skTiles .skTile .skuxSw{position:absolute;top:5px;right:5px}.skuxSw.big{width:38px;height:22px;border-radius:11px;padding:3px;margin-right:6px}.skuxSw.big>span{width:16px;height:16px;border-radius:8px}.skuxSw.big.on>span{transform:translateX(16px)}.skuxLbl{font-size:12px;color:var(--sbTx2);margin-right:2px}'+
+  '.skuxScn{display:flex;align-items:center;gap:4px}.skuxScn #skPresets{flex:1;min-width:0;scroll-behavior:smooth}.skuxAr{flex:0 0 26px;height:46px;border:1px solid var(--sbLn);background:var(--sbBg,#fff);color:inherit;border-radius:8px;font-size:20px;line-height:1;cursor:pointer;padding:0}.skuxAr:disabled{opacity:.3;cursor:default}.skuxScn.noScroll .skuxAr{display:none}'+
+  /* the time bar: deep night, blue hour, pink dawn, gold morning light, bright noon blue, gold afternoon, red sunset, violet dusk, night */
+  '#sbSkySec .skTime input#skTimeR{background:linear-gradient(90deg,#070b1f 0%,#0d1636 16%,#2b2f6b 22%,#c96f8a 25.5%,#f7a65a 28%,#ffd58a 31%,#9fd0f7 37%,#5aa6ee 46%,#4a9ae8 54%,#5aa6ee 62%,#ffd27a 72%,#f7924a 77%,#d9544f 80%,#7b3f86 83.5%,#2a2a63 87%,#0d1636 92%,#070b1f 100%)}'+
+  '#sbSkySec .skTimeL span:nth-child(1):before{content:"\\263E  ";color:#5b6b9a}#sbSkySec .skTimeL span:nth-child(3):before{content:"\\2600  ";color:#d99a1b}';
+  document.head.appendChild(c); })();
+
+/* ===== r413: the A-A and B-B section lines are hidden by default. They show while the Sections panel or the Section tool (L) is in use,
+   on a long or cross section view, or always when "Always show the A-A and B-B lines" is on (View menu or the Sections panel). ===== */
+var SECL={always:false}; try{ SECL.always=localStorage.getItem('sb_seclines')==='1'; }catch(e){}
+function sbSecLinesOn(){ try{ if(SECL.always) return true; if(typeof SBP!=='undefined'&&SBP.key==='sections') return true;
+  if(typeof CEI!=='undefined'&&(CEI.tool==='sec'||CEI.view==='long'||CEI.view==='cross')) return true; }catch(e){} return false; }
+function sbSecLinesSet(v){ SECL.always=!!v; try{ localStorage.setItem('sb_seclines', v?'1':'0'); }catch(e){}
+  toast(v?'A-A and B-B lines always shown':'A-A and B-B lines show only while you work on sections', 2500); try{ planDraw(); }catch(e){} try{ ceiDraw(); }catch(e){} try{ if(typeof mdlOv==='function') mdlOv(); }catch(e){} try{ secPanel(); }catch(e){} }
+['planDraw','ceiOverlay'].forEach(function(nm){ try{ sbAround(nm, function(next){ var ks=window.VC_NOSEC; try{ if(!sbSecLinesOn()) window.VC_NOSEC=true; return next(); } finally{ window.VC_NOSEC=ks; } }); }catch(e){} });
+try{ sbAfter('ceiHit', function(h){ return (h&&(h.t==='A'||h.t==='B')&&!sbSecLinesOn())?null:h; }); }catch(e){}
+try{ sbAfter('sbMenus', function(M){ try{ var V=M.filter(function(m){ return m.id==='view'; })[0]; if(V&&!V.items.some(function(x){ return x&&x.secl; })) V.items.push({sep:1}, {t:(SECL.always?'✓ ':'')+'Always show the A-A and B-B lines', secl:1, fn:function(){ sbSecLinesSet(!SECL.always); }}); }catch(e){} return M; }); }catch(e){}
+try{ sbAfter('secPanel', function(r){ try{ var s=secSec(); if(!s||s.querySelector('#seclAlw')) return r; var b=s.querySelector('.body'); if(!b) return r; var d=document.createElement('label'); d.className='mini'; d.style.cssText='display:flex;gap:6px;align-items:center;margin:2px 0 8px';
+  d.innerHTML='<input type="checkbox" id="seclAlw"'+(SECL.always?' checked':'')+'> Always show the A-A and B-B lines'; d.title='Off: the lines only show while this panel or the Section tool is open'; b.insertBefore(d, b.firstChild); d.querySelector('input').onchange=function(){ sbSecLinesSet(this.checked); }; }catch(e){} return r; }); }catch(e){}
 
 /* ===== User manual: Help > User manual, F1, Ctrl+K and the start screen open it over the app ===== */
 var SBMAN={html:null};

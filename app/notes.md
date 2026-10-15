@@ -1,6 +1,8 @@
-# r412: four fixes from the manual write-up
+# r413: sky panel and effects fixes
 
-- 3D wall sizes: labels no longer sit on top of each other. A label that would overlap moves to the nearest free spot with a short leader line back to its point. See it in 3D with wall sizes on.
-- File names: a brand new install saves files with no prefix. An install already in use keeps INT_. Change it in Help > Saved file names start with.
-- Start screen: "Drop a scan here" and the formats line are now bright and easy to read.
-- Removed the old Claude wall reading and plan review code (unreachable since 25 Sep). Nothing visible changes; the file is about 25 KB smaller.
+- Clouds: moving Speed no longer makes them jump, and full speed is about 6x faster.
+- Autumn leaves: proper pointed leaf shapes, they stay put when you pan or zoom, and the slider now goes from a few leaves to about 1,500.
+- A-A and B-B lines are hidden by default. They show while the Sections panel or the Section tool (L) is open. To keep them on: View > Always show the A-A and B-B lines, or the tick box in Sections.
+- Scenes: arrows either side scroll the row (the mouse wheel works too).
+- Time of day bar: new colours (night, pink dawn, gold morning, blue noon, gold afternoon, red sunset, violet dusk).
+- Every tile with an on/off has a small switch in its corner, and the same switch replaces Turn off in the tile's settings.
