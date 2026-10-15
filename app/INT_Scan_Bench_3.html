@@ -8191,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r414';
+var SB_BUILD='2026-10-15 r415';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26511,8 +26511,8 @@ sbAfter('wxPanel', function(r){ try{ var b=document.querySelector('#sbWxSec .bod
         sl('fxWind','Wind',S.wind||0,'Rain, snow, smoke, fireworks and leaves all go with it')+sl('fxWDir','Wind from',S.windDir||0,'Which way the wind blows',360,5,Math.round(S.windDir||0)+'°'); })()+
       '<div class="wxH">Place in the scene</div><div class="wxGrid">'+Object.keys(FX_FIRE).map(function(k){ return '<button data-fp="fire" data-sub="'+k+'">+ '+FX_FIRE[k].name+'</button>'; }).join('')+'<button data-fp="fw">+ Fireworks</button><button data-fp="smoke">+ Smoke</button><button data-fp="rays" title="Click on a window, doorway or gap the sun comes through">+ Sunbeam window</button><button data-fp="pigeon" title="Click on a roof or ledge">+ Pigeons</button><button data-fp="confetti">+ Confetti</button></div>'+
       '<div class="wxH">Christmas</div><div class="wxGrid"><button id="fxXsnow">Christmas snow</button><button data-fp="tree">+ Christmas tree</button><button data-fp="string">+ String lights</button><button data-fp="string" data-sub="multi">+ Coloured lights</button></div>'+
-      '<div class="row" title="Colour of the fireworks"><label>Firework colour</label><select id="fxFwC">'+['mixed','gold','red','green','blue','silver'].map(function(k){ return '<option value="'+k+'"'+((F.fwCol||'mixed')===k?' selected':'')+'>'+k.charAt(0).toUpperCase()+k.slice(1)+'</option>'; }).join('')+'</select></div>'+
-      '<div class="row" title="How many rockets a minute from each launch point"><label>Fireworks a minute</label><input type="range" id="fxFwR" min="2" max="40" step="1" value="'+(F.fwRate||12)+'"><span class="mini" id="fxFwRV">'+(F.fwRate||12)+'</span></div>'+
+      '<div id="fxFwRows"><div class="row" title="Colour of the fireworks"><label>Firework colour</label><select id="fxFwC">'+['mixed','gold','red','green','blue','silver'].map(function(k){ return '<option value="'+k+'"'+((F.fwCol||'mixed')===k?' selected':'')+'>'+k.charAt(0).toUpperCase()+k.slice(1)+'</option>'; }).join('')+'</select></div>'+
+      '<div class="row" title="How many rockets a minute from each launch point"><label>Fireworks a minute</label><input type="range" id="fxFwR" min="2" max="40" step="1" value="'+(F.fwRate||12)+'"><span class="mini" id="fxFwRV">'+(F.fwRate||12)+'</span></div></div>'+
       '<div id="fxList"></div><p class="mini">Click a button, then click on the scan where it goes. Pick one to move it with the red, green and blue arrows; Delete removes it, or use the ✕ in the list. Fires flicker and light the scan round them. Smoke is a visual effect only, not a fire or smoke model.</p>';
     var tip=b.querySelector('.wxH:last-of-type'), anchor=[].slice.call(b.querySelectorAll('.wxH')).filter(function(h){ return /Lights/.test(h.textContent); })[0]; if(anchor) b.insertBefore(d, anchor); else b.appendChild(d);
     fxPanelList(); var live=function(){ requestRender(false); if(wxAnimNeed()) wxLoop(); };
@@ -26916,6 +26916,16 @@ try{ sbAfter('ceiHit', function(h){ return (h&&(h.t==='A'||h.t==='B')&&!sbSecLin
 try{ sbAfter('sbMenus', function(M){ try{ var V=M.filter(function(m){ return m.id==='view'; })[0]; if(V&&!V.items.some(function(x){ return x&&x.secl; })) V.items.push({sep:1}, {t:(SECL.always?'✓ ':'')+'Always show the A-A and B-B lines', secl:1, fn:function(){ sbSecLinesSet(!SECL.always); }}); }catch(e){} return M; }); }catch(e){}
 try{ sbAfter('secPanel', function(r){ try{ var s=secSec(); if(!s||s.querySelector('#seclAlw')) return r; var b=s.querySelector('.body'); if(!b) return r; var d=document.createElement('label'); d.className='mini'; d.style.cssText='display:flex;gap:6px;align-items:center;margin:2px 0 8px';
   d.innerHTML='<input type="checkbox" id="seclAlw"'+(SECL.always?' checked':'')+'> Always show the A-A and B-B lines'; d.title='Off: the lines only show while this panel or the Section tool is open'; b.insertBefore(d, b.firstChild); d.querySelector('input').onchange=function(){ sbSecLinesSet(this.checked); }; }catch(e){} return r; }); }catch(e){}
+
+/* ===== r415: the side panel keeps its scroll place when a change rebuilds it (it used to jump back to the top),
+   and the firework colour and rate only show once fireworks are in the scene ===== */
+var KSC={d:0};
+['afterEdit','buildSidebar','wxPanel','ltPanel','fxPanelList','skShowTab'].forEach(function(nm){ try{ if(typeof window[nm]!=='function') return; sbAround(nm, function(next){
+  var side=document.getElementById('side'), outer=KSC.d===0, top=side?side.scrollTop:0, key=(typeof SBP!=='undefined')?SBP.key:null; KSC.d++;
+  try{ return next(); } finally{ KSC.d--; if(outer&&side&&top>0&&(typeof SBP==='undefined'||SBP.key===key)){ var put=function(){ if(Math.abs(side.scrollTop-top)>1) side.scrollTop=Math.min(top, side.scrollHeight-side.clientHeight); }; put(); requestAnimationFrame(put); } } }); }catch(e){} });
+function ksFwRows(){ var r=document.getElementById('fxFwRows'); if(!r) return; var F=typeof fxS==='function'?fxS():null, on=!!(F&&(F.items.some(function(q){ return q.kind==='fw'; })||(typeof FX!=='undefined'&&FX.mode&&FX.mode.kind==='fw'))); r.style.display=on?'':'none'; }
+try{ sbAfter('fxPanelList', function(r){ try{ ksFwRows(); }catch(e){} return r; }); }catch(e){}
+try{ sbAfter('wxPanel', function(r){ try{ ksFwRows(); }catch(e){} return r; }); }catch(e){}
 
 /* ===== User manual: Help > User manual, F1, Ctrl+K and the start screen open it over the app ===== */
 var SBMAN={html:null};
