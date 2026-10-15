@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r379';
+var SB_BUILD='2026-10-15 r380';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22221,14 +22221,16 @@ function ltHitMarker(x, y){
 function ltPlaneAt(R, z){ if(Math.abs(R.d[2])<1e-6) return null; var t=(z-R.o[2])/R.d[2]; if(t<0) return null; return [R.o[0]+R.d[0]*t, R.o[1]+R.d[1]*t, z]; }
 function ltScanPt(x, y){ var R=pickRay(x, y), h=null; try{ h=typeof stScanHit==='function'?stScanHit(R):null; }catch(e){} if(h&&h.p) return h.p.slice(); return ltPlaneAt(R, ltGround(cam.tx, cam.ty)); }
 window.addEventListener('pointerdown', function(e){ if(e.target!==glCv||e.button!==0||!ltShowUI()) return;
-  if(LT.mode){ var l0=ltById(LT.sel), q=ltScanPt(e.clientX, e.clientY); e.preventDefault(); e.stopImmediatePropagation(); if((!l0&&!/^row/.test(LT.mode))||!q){ toast('Click on the scan itself.', 2000); return; } pushUndo();
-    if(typeof lt2Mode==='function'&&lt2Mode(l0, q)){ afterEdit(); ltPanel(); requestRender(false); return; }
-    if(LT.mode==='place') ltSetPos(l0, [q[0], q[1], q[2]+(l0.kind==='beam'?1.0:1.8)*ltSc()]); else { var W=ltWorld(l0); ltSetDir(l0, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
-    LT.mode=null; glCv.style.cursor=''; afterEdit(); ltPanel(); requestRender(false); return; }
+  if(LT.mode){ LT.modeDn={x:e.clientX, y:e.clientY}; return; }
   var h=ltHit(e.clientX, e.clientY); if(!h) return; e.preventDefault(); e.stopImmediatePropagation(); var l=ltById(h.id); if(!l) return; LT.sel=l.id; if(h.part==='aim') LT.aimSel=l.id; else if(h.part==='pos') LT.aimSel=null; pushUndo();
   var W2=ltWorld(l), at=ltPlaneAt(pickRay(e.clientX, e.clientY), W2.pos[2])||W2.pos; LT.drag={id:l.id, part:h.part, z:W2.pos[2], dx:W2.pos[0]-at[0], dy:W2.pos[1]-at[1], y0:e.clientY, moved:false}; if(h.part==='ax'){ var hx=ltAxes(l).filter(function(q){ return q.k===h.k; })[0]; LT.drag.k=h.k; LT.drag.ax=hx; LT.drag.p0=(hx&&hx.aim?ltHandles(l).aim:W2.pos).slice(); var t0=hx?ltAxisT(hx, pickRay(e.clientX, e.clientY)):null; LT.drag.t0=t0==null?0:t0; } ltPanel(); ltOv(); }, true);
+function ltModeClick(e){ var l0=ltById(LT.sel), q=ltScanPt(e.clientX, e.clientY); if((!l0&&!/^row/.test(LT.mode))||!q){ toast('Click on the scan itself.', 2000); return; } pushUndo();
+    if(typeof lt2Mode==='function'&&lt2Mode(l0, q)){ afterEdit(); ltPanel(); requestRender(false); return; }
+    if(LT.mode==='place') ltSetPos(l0, [q[0], q[1], q[2]+(l0.kind==='beam'?1.0:1.8)*ltSc()]); else { var W=ltWorld(l0); ltSetDir(l0, [q[0]-W.pos[0], q[1]-W.pos[1], q[2]-W.pos[2]]); }
+    LT.mode=null; glCv.style.cursor=''; afterEdit(); ltPanel(); requestRender(false); }
+window.addEventListener('pointerup', function(e){ var d=LT.modeDn; LT.modeDn=null; if(!LT.mode||!d||e.target!==glCv||!ltShowUI()) return; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; e.preventDefault(); e.stopImmediatePropagation(); ltModeClick(e); }, true);
 /* a press that started on a light must not reach the orbit or object code underneath */
-['mousedown'].forEach(function(t){ window.addEventListener(t, function(e){ if(LT.drag||(LT.mode&&e.target===glCv&&ltShowUI())){ e.stopImmediatePropagation(); e.preventDefault(); } }, true); });
+['mousedown'].forEach(function(t){ window.addEventListener(t, function(e){ if(LT.drag){ e.stopImmediatePropagation(); e.preventDefault(); } }, true); });
 window.addEventListener('pointermove', function(e){ var D=LT.drag;
   if(!D){ if(e.target===glCv&&ltShowUI()&&!(e.buttons&1)){ var h=ltHit(e.clientX, e.clientY), k=h?h.id+h.part:''; if(k!==(LT.hov?LT.hov.id+LT.hov.part:'')){ LT.hov=h; ltOv(); } if(h){ glCv.style.cursor=h.part==='aim'?'crosshair':(h.part==='ax'?'grab':'move'); e.stopImmediatePropagation(); } else if(LT.mode) glCv.style.cursor='crosshair'; } return; }
   if(!(e.buttons&1)){ ltDragEnd(); return; } var l=ltById(D.id); if(!l) return; e.stopImmediatePropagation(); e.preventDefault(); var W=ltWorld(l);
@@ -22268,7 +22270,7 @@ function ltEsc(t){ return String(t==null?'':t).replace(/[&<>"]/g, function(c){ r
 function ltPanel(){ var s=sbLSec(); if(!s) return; var b=s.querySelector('.body'), L=ltList(), l=ltById(LT.sel), on=ltOn(), tsun=ltTodSun();
   var sl=function(id, lab, min, max, step, v, unit, tip, show){ return '<div class="row" title="'+tip+'"><label>'+lab+'</label><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"><span class="mini" id="'+id+'V">'+(show!=null?show:v+(unit||''))+'</span></div>'; };
   var h='<div class="row"><label>Lights</label><div class="sbLSeg"><button data-mon="1" class="'+(on?'on':'')+'">On</button><button data-mon="0" class="'+(!on?'on':'')+'">Off</button></div></div>'+
-    (tsun?'<p class="mini">Scene brightness follows the sun\'s clock.</p>':sl('ltAmb','Scene',0,1.2,0.05,ltAmb(),'','How bright everything else is: lower it for an evening look'))+
+    (tsun?'<p class="mini">Overall brightness follows the sun\'s clock.</p>':sl('ltAmb','Overall brightness',0,1.2,0.05,ltAmb(),'','How bright the scan is before the lights are added: lower it for dusk or night so the lights stand out'))+
     '<div class="ltH">Presets</div><div class="ltGrid"><button data-pre="night">Night street</button><button data-pre="warm">Warm interior</button><button data-pre="golden">Golden hour</button><button data-pre="head" title="Pick an object first">Headlights</button></div>'+
     '<div class="ltH">Add</div><div class="ltGrid3"><button data-add="lamp">+ Lamp</button><button data-add="beam">+ Beam</button><button data-add="sun">+ Sun</button></div>'+
     '<div class="ltList">'+(L.length?L.map(function(q){ return '<div class="ltIt'+(q.id===LT.sel?' on':'')+'" data-id="'+q.id+'"><span class="ltDot" style="background:'+q.col+'"></span><span class="ltNm">'+ltEsc(q.name)+'</span><span class="ltK">'+q.kind+(q.att?' → obj':'')+(q.tod?' ⏲':'')+'</span><button class="ltEye" data-eye="'+q.id+'" title="Switch this light on or off">'+(q.on?'◉':'○')+'</button><button class="ltX" data-del="'+q.id+'" title="Delete">✕</button></div>'; }).join(''):'<p class="mini">No lights yet: add one, or start from a preset.</p>')+'</div>';
@@ -25949,11 +25951,11 @@ window.addEventListener('pointermove', function(e){ if(LT.mode!=='row2'||e.targe
 /* ---------- the panel ---------- */
 function lt2Sl(id, lab, min, max, step, v, unit, tip){ return '<div class="row" title="'+(tip||'')+'"><label>'+lab+'</label><input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'"><span class="mini" id="'+id+'V">'+v+(unit||'')+'</span></div>'; }
 sbAfter('ltPanel', function(r){ try{ var s=document.getElementById('sbLightSec'), b=s&&s.querySelector('.body'); if(!b) return r; var add=b.querySelector('.ltGrid3'); if(!add||b.querySelector('#lt2Add')) return r;
-    var g=document.createElement('div'); g.id='lt2Add'; g.innerHTML='<div class="ltGrid"><button data-a2="street">+ Street light</button><button data-r2="street" title="Click where the road starts and ends">+ Row of street lights</button><button data-a2="strip">+ Strip light</button><button data-r2="strip" title="Click where the row starts and ends">+ Row of strip lights</button><button data-a2="sign" style="grid-column:1/-1" title="Click on a sign in the scan: its letters and logo light up">+ Glowing sign</button></div>';
+    add.insertAdjacentHTML('beforeend', '<button data-a2="street" title="A street light on a pole: click where it stands">+ Street</button><button data-r2="street" title="A row of street lights: click where the road starts and ends">+ Street row</button><button data-a2="sign" title="Click on a sign in the scan: its letters and logo light up">+ Sign</button><button data-a2="strip" title="A strip light (tube or LED batten): click under where it goes">+ Strip</button><button data-r2="strip" title="A row of strip lights: click where the row starts and ends">+ Strip row</button>'); var g=document.createElement('div'); g.id='lt2Add'; g.innerHTML='';
     if(LT.mode==='row1'||LT.mode==='row2'){ var R=LT2.row, st=R.kind==='street'; g.innerHTML+='<div class="ltBox">'+(st?lt2Sl('lt2Sp','Spacing',5,50,1,R.sp,' m','Distance between street lights (UK residential roads: often 25 to 35 m)')+lt2Sl('lt2H','Height',3,12,0.5,R.h||6,' m','Lantern height (UK: 5 to 6 m on residential roads, 8 to 12 m on main roads)')+'<div class="row"><label>Sides</label><div class="sbLSeg"><button data-sd="one" class="'+(R.side!=='both'?'on':'')+'">One side</button><button data-sd="both" class="'+(R.side==='both'?'on':'')+'">Both sides</button></div></div>'+lt2Sl('lt2Rd','Road width',4,20,0.5,R.road||7,' m','Distance between the two sides')
       :lt2Sl('lt2Sp','Spacing',0.6,6,0.1,R.ssp||2.4,' m','Distance between strip lights')+lt2Sl('lt2H','Height',2,6,0.1,R.sh||2.7,' m','Height above the floor'))+'<p class="mini">'+(LT.mode==='row1'?'Click in the 3D view where the row starts.':'Now click where the row ends.')+' Esc cancels.</p></div>'; }
     add.parentNode.insertBefore(g, add.nextSibling);
-    g.querySelectorAll('[data-a2]').forEach(function(x){ x.onclick=function(){ lt2Add(x.dataset.a2); }; }); g.querySelectorAll('[data-r2]').forEach(function(x){ x.onclick=function(){ lt2Row(x.dataset.r2); }; });
+    add.querySelectorAll('[data-a2]').forEach(function(x){ x.onclick=function(){ lt2Add(x.dataset.a2); }; }); add.querySelectorAll('[data-r2]').forEach(function(x){ x.onclick=function(){ lt2Row(x.dataset.r2); }; });
     var R2=LT2.row, sv=function(id, fn){ var e=g.querySelector('#'+id); if(e) e.oninput=function(){ fn(+this.value); var v=g.querySelector('#'+id+'V'); if(v) v.textContent=this.value+' m'; }; };
     sv('lt2Sp', function(v){ if(R2.kind==='street') R2.sp=v; else R2.ssp=v; }); sv('lt2H', function(v){ if(R2.kind==='street') R2.h=v; else R2.sh=v; }); sv('lt2Rd', function(v){ R2.road=v; }); g.querySelectorAll('[data-sd]').forEach(function(x){ x.onclick=function(){ R2.side=x.dataset.sd; ltPanel(); }; });
     /* settings for the selected new light */
@@ -25974,6 +25976,28 @@ sbAfter('ltPanel', function(r){ try{ var s=document.getElementById('sbLightSec')
   }catch(e){ console.warn(e); } return r; });
 /* the Night street preset now uses proper street lights */
 sbInstead('ltPreset', function(k){ if(k!=='night') return SB_GO; var M=ltM(); if(!M) return; pushUndo(); M.lightAmb=0.2; var a=lt2Make('street'), b=lt2Make('street'), sc=ltSc(); a.col=b.col='#ffb15c'; a.x-=12*sc; b.x+=12*sc; [a,b].forEach(function(l){ l.arm=0; var g=ltGround(l.x,l.y); l.z=g+6*sc; }); M.lights=[a,b]; M.lightsOn=true; LT.sel=a.id; afterEdit(); ltPanel(); requestRender(false); toast('Night street: two sodium street lights where you are looking, the rest dimmed.', 4500); });
+
+/* ===== Rail groups (r380): the panels on the left rail are gathered into four groups so the rail fits the screen:
+   Prepare, Look, Measure and Survey. Point at a group (or tap it) and its panels open in a small menu beside it.
+   The group holding the open panel is lit, and shows that panel's name under its icon. ===== */
+var SBG_GROUPS=[['prep','Prepare','scan',['load','scale','level','crop','cleanup','slice','clean']],['look','Look','sun',['grade','light','weather']],['meas','Measure','meas',['volume','sections','levels','qty']],['survey','Survey','checks',['checks','dwg','cover']]];
+var SBG={t:0, open:null};
+function sbgItems(){ var have=function(x){ return x[0]==='cleanup'||!!document.querySelector('#side .sec[data-sec="'+x[0]+'"]'); }, used={}, out=[];
+  SBG_GROUPS.forEach(function(G){ var its=G[3].map(function(k){ return SBP_ITEMS.filter(function(x){ return x[0]===k; })[0]; }).filter(function(x){ return x&&have(x); }); its.forEach(function(x){ used[x[0]]=1; }); if(its.length) out.push({k:G[0], name:G[1], ic:G[2], items:its}); });
+  var rest=SBP_ITEMS.filter(function(x){ return !used[x[0]]&&have(x); }); if(rest.length) out.push({k:'more', name:'More', ic:'more', items:rest}); return out; }
+window.sbPanelItems=function(r){ if(!APP.res) return; sbgItems().forEach(function(G){ var cur=G.items.filter(function(x){ return x[0]===SBP.key; })[0], b=document.createElement('button');
+    b.className='sbIt sbGrp'+(cur?' on':''); b.dataset.grp=G.k; b.innerHTML=skinIcon(cur?cur[2]:G.ic)+'<span>'+(cur?cur[1]:G.name)+'</span>'; b.title=G.name+': '+G.items.map(function(x){ return x[1]; }).join(', ');
+    b.onclick=function(e){ e.stopPropagation(); if(SBG.open===G.k&&document.getElementById('sbFly')){ skinFlyClose(); SBG.open=null; return; } sbgFly(G, b); };
+    b.onmouseenter=function(){ clearTimeout(SBG.t); SBG.t=setTimeout(function(){ sbgFly(G, b); }, 120); }; b.onmouseleave=function(){ clearTimeout(SBG.t); SBG.t=setTimeout(sbgMaybeClose, 350); }; r.appendChild(b); });
+  var sp=document.createElement('div'); sp.className='sbSep'; r.appendChild(sp); };
+function sbgMaybeClose(){ var f=document.getElementById('sbFly'); if(!f||f.dataset.grp==null) return; if(f.matches(':hover')||document.querySelector('#sbRail .sbGrp:hover')) return; skinFlyClose(); SBG.open=null; }
+function sbgFly(G, anchor){ var f0=document.getElementById('sbFly'); if(f0&&f0.dataset.grp===G.k) return; skinFlyClose(); var f=document.createElement('div'); f.id='sbFly'; f.dataset.grp=G.k; f.dataset.for=G.name; document.body.appendChild(f); SBG.open=G.k;
+  f.innerHTML='<div class="sbFh">'+G.name+'</div>'+G.items.map(function(x){ return '<button class="sbFi sbgFi'+(SBP.key===x[0]?' on':'')+'" data-k="'+x[0]+'" title="'+String(x[3]||'').replace(/"/g,'&quot;')+'">'+skinIcon(x[2])+'<span>'+x[1]+'</span></button>'; }).join('');
+  var ar=anchor.getBoundingClientRect(); f.style.left=(ar.right+8)+'px'; f.style.top=Math.max(52, Math.min(window.innerHeight-f.offsetHeight-8, ar.top-6))+'px';
+  f.onmouseenter=function(){ clearTimeout(SBG.t); }; f.onmouseleave=function(){ clearTimeout(SBG.t); SBG.t=setTimeout(sbgMaybeClose, 350); };
+  f.querySelectorAll('[data-k]').forEach(function(x){ x.onclick=function(e){ e.stopPropagation(); skinFlyClose(); SBG.open=null; sbPanel(x.dataset.k); }; }); }
+(function(){ var c=document.createElement('style'); c.textContent='#sbFly .sbgFi{display:flex;align-items:center;gap:8px}#sbFly .sbgFi .sbIc{width:18px;height:18px;flex:0 0 18px}#sbFly .sbgFi span{flex:1;text-align:left}body.sbSkin #sbRail .sbGrp span{max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+  document.head.appendChild(c); })();
 
 
 </script>
