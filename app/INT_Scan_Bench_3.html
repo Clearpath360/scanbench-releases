@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r406';
+var SB_BUILD='2026-10-15 r407';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26721,7 +26721,7 @@ sbAfter('wxPanel', function(r){ try{ var b=document.querySelector('#sbWxSec .bod
       '<div class="wxH">Christmas</div><div class="wxGrid"><button id="fxXsnow">Christmas snow</button><button data-fp="tree">+ Christmas tree</button><button data-fp="string">+ String lights</button><button data-fp="string" data-sub="multi">+ Coloured lights</button></div>'+
       '<div class="row" title="Colour of the fireworks"><label>Firework colour</label><select id="fxFwC">'+['mixed','gold','red','green','blue','silver'].map(function(k){ return '<option value="'+k+'"'+((F.fwCol||'mixed')===k?' selected':'')+'>'+k.charAt(0).toUpperCase()+k.slice(1)+'</option>'; }).join('')+'</select></div>'+
       '<div class="row" title="How many rockets a minute from each launch point"><label>Fireworks a minute</label><input type="range" id="fxFwR" min="2" max="40" step="1" value="'+(F.fwRate||12)+'"><span class="mini" id="fxFwRV">'+(F.fwRate||12)+'</span></div>'+
-      '<div id="fxList"></div><p class="mini">Click a button, then click on the scan where it goes. Pick one to move it with the red, green and blue arrows. Fires flicker and light the scan round them. Smoke is a visual effect only, not a fire or smoke model.</p>';
+      '<div id="fxList"></div><p class="mini">Click a button, then click on the scan where it goes. Pick one to move it with the red, green and blue arrows; Delete removes it, or use the ✕ in the list. Fires flicker and light the scan round them. Smoke is a visual effect only, not a fire or smoke model.</p>';
     var tip=b.querySelector('.wxH:last-of-type'), anchor=[].slice.call(b.querySelectorAll('.wxH')).filter(function(h){ return /Lights/.test(h.textContent); })[0]; if(anchor) b.insertBefore(d, anchor); else b.appendChild(d);
     fxPanelList(); var live=function(){ requestRender(false); if(wxAnimNeed()) wxLoop(); };
     d.querySelectorAll('[data-fx]').forEach(function(x){ x.onclick=function(){ pushUndo(); F[x.dataset.fx]=x.dataset.v==='1'; wxS().on=true; afterEdit(); wxPanel(); live(); }; });
@@ -26738,13 +26738,16 @@ sbAfter('wxPanel', function(r){ try{ var b=document.querySelector('#sbWxSec .bod
 function fxSunTime(el, after){ var S=wxS(), ts=typeof ltTodSun==='function'?ltTodSun():null, keep=S.time, keepT=ts?ts.time:null, best=after?18:7, bd=1e9;
   for(var h=after?12:4;h<=(after?22.5:12);h+=0.05){ S.time=h; if(ts) ts.time=h; var e=wxSun().el; if(Math.abs(e-el)<bd&&e>0){ bd=Math.abs(e-el); best=h; } } S.time=keep; if(ts) ts.time=keepT; return Math.round(best*20)/20; }
 function fxGroundAhead(d){ var sc=fxSc(), a=cam.yaw+Math.PI, x=cam.tx+Math.cos(a)*d*sc*0, y=cam.ty; return [cam.tx, cam.ty, typeof ltGround==='function'?ltGround(cam.tx, cam.ty):(APP.res.floorLayer||0)]; }
-sbAround('wxPreset', function(next, k){ if(['stormpass','bonfire','golden'].indexOf(k)<0) return next(k); var S=wxS(); if(!S) return; pushUndo(); var F=fxS(), sc=fxSc();
+sbAround('wxPreset', function(next, k){ /* r407: what a preset placed goes when you pick a different preset */ var F0=fxS(); if(F0&&k!=='bonfire'){ F0.items=F0.items.filter(function(q){ return !q.byPreset; }); if(FX.sel&&!fxById(FX.sel)) FX.sel=null; } if(['stormpass','bonfire','golden'].indexOf(k)<0) return next(k); var S=wxS(); if(!S) return; pushUndo(); var F=fxS(), sc=fxSc();
   if(k==='stormpass'){ Object.assign(S, {time:fxSunTime(14, true), clouds:0.6, speed:0.8, wind:0.4, rain:0.3, snow:0, snowCover:0, fog:0.12, mist:0.05, lightning:false, wet:true, splash:true, stars:false, strength:1.1, puddles:0.45, shaftAmt:0.8}); F.rainbow=true; F.rbDouble=true; }
   if(k==='bonfire'){ Object.assign(S, {time:20.5, clouds:0.1, speed:0.15, wind:0.12, rain:0, snow:0, snowCover:0, fog:0.12, mist:0.55, lightning:false, stars:true, strength:1, puddles:0, shaftAmt:0}); F.rainbow=false;
-    var g=fxGroundAhead(0); if(!F.items.some(function(q){ return q.kind==='fire'&&q.sub==='bonfire'; })) F.items.push({id:fxNewId(), kind:'fire', sub:'bonfire', x:g[0], y:g[1], z:g[2]}); if(!F.items.some(function(q){ return q.kind==='fw'; })) F.items.push({id:fxNewId(), kind:'fw', x:g[0]+12*sc, y:g[1]+8*sc, z:g[2]}); F.fwRate=Math.max(F.fwRate||12, 14); }
+    var g=fxGroundAhead(0); if(!F.items.some(function(q){ return q.kind==='fire'&&q.sub==='bonfire'; })) F.items.push({id:fxNewId(), kind:'fire', sub:'bonfire', x:g[0], y:g[1], z:g[2], byPreset:k}); if(!F.items.some(function(q){ return q.kind==='fw'; })) F.items.push({id:fxNewId(), kind:'fw', x:g[0]+12*sc, y:g[1]+8*sc, z:g[2], byPreset:k}); F.fwRate=Math.max(F.fwRate||12, 14); }
   if(k==='golden'){ Object.assign(S, {time:fxSunTime(6, true), clouds:0.18, speed:0.2, wind:0.05, rain:0, snow:0, snowCover:0, fog:0.06, mist:0.1, lightning:false, stars:false, strength:1.15, puddles:0, shaftAmt:0.5}); F.rainbow=false; }
   Object.assign(S, {on:true}); var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=S.time;
-  afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); toast({stormpass:'Storm passing: rain, the sun breaking through and a rainbow', bonfire:'Bonfire Night: a bonfire and fireworks in front of you, cold mist. Move them with the arrows.', golden:'Golden hour: warm low sun and long shadows'}[k]+'. Ctrl+Z undoes it.', 3500); });
+  afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); toast({stormpass:'Storm passing: rain, the sun breaking through and a rainbow', bonfire:'Bonfire Night: a bonfire and fireworks in front of you, cold mist. Move or remove them in the Placed tab; another preset takes them away.', golden:'Golden hour: warm low sun and long shadows'}[k]+'. Ctrl+Z undoes it.', 3500); });
+
+/* r407: Delete or Backspace removes the picked effect */
+window.addEventListener('keydown', function(e){ if((e.key!=='Delete'&&e.key!=='Backspace')||!FX.sel) return; var t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable)) return; if(typeof fxUI==='function'&&!fxUI()) return; e.preventDefault(); e.stopImmediatePropagation(); pushUndo(); var F=fxS(); F.items=F.items.filter(function(q){ return q.id!==FX.sel; }); FX.sel=null; afterEdit(); fxPanelList(); requestRender(false); toast('Removed. Ctrl+Z brings it back.', 1800); }, true);
 
 /* ===== Sky & weather effects, batch 2 (r404): sunbeams through windows, doors and gaps (with dust in them), northern lights,
    the real moon for the date and place (and the light it gives), wind that rain, snow, smoke, fireworks and leaves follow,
@@ -26866,7 +26869,7 @@ function skShell(){ var s=skSec(); if(!s) return null; var b=s.querySelector('.b
   b.querySelectorAll('[data-rst]').forEach(function(x){ x.onclick=function(){ skReset(x.dataset.rst); }; });
   b.querySelector('#skMySave').onclick=function(){ var nm=(b.querySelector('#skMyName').value||'').trim(); if(!nm){ toast('Type a name for the preset first.', 2000); return; } var L=skMine().filter(function(p){ return p.name!==nm; }), o=skPick(); o.name=nm; L.push(o); skMineSave(L); var S=wxS(); S._preset='my:'+nm; S._psig=skSig(); b.querySelector('#skMyName').value=''; wxPanel(); toast('Saved as "'+nm+'".', 2000); };
   skShowTab(); return b; }
-function skShowTab(){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; b.querySelectorAll('[data-skt]').forEach(function(x){ x.classList.toggle('on', x.dataset.skt===SKP.tab); }); b.querySelectorAll('.skTab').forEach(function(x){ x.style.display=x.dataset.tab===SKP.tab?'':'none'; }); }
+function skShowTab(){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; b.querySelectorAll('[data-skt]').forEach(function(x){ x.classList.toggle('on', x.dataset.skt===SKP.tab); }); var F=typeof fxS==='function'?fxS():null, n=F?F.items.length:0, pb=b.querySelector('[data-skt="placed"]'); if(pb) pb.textContent='Placed'+(n?' ('+n+')':''); b.querySelectorAll('.skTab').forEach(function(x){ x.style.display=x.dataset.tab===SKP.tab?'':'none'; }); }
 /* where each weather control goes, by its label */
 var SKP_LBL={'Sky & weather':'top','Strength':'top','Animate':'foot','Time':'time','Clouds':'sky','Cloud speed':'sky','Stars & moon':'sky','Light shafts':'sky','Sound in videos':'film','Volume':'film','Lamps on at dusk':'lights',
   'Shooting stars':'sky','Meteor shower':'sky','Rainbow':'sky','Double bow':'sky','Northern lights':'sky','Real moon':'sky','Birds':'sky','Sunbeams':'placed','Autumn leaves':'weather'};
@@ -26903,7 +26906,7 @@ function skCss(){ if(document.getElementById('skCss')) return; var out=[]; [].sl
   var c=document.createElement('style'); c.id='skCss'; c.textContent=out.join('\n'); document.head.appendChild(c); }
 sbAfter('sbPanel', function(r){ try{ if(SBP.key==='sky'){ skCss(); skShell(); ltPanel(); wxPanel(); } }catch(e){ console.warn(e); } return r; });
 /* the line under the presets keeps up as you change things */
-sbAfter('afterEdit', function(r){ try{ if(SBP.key==='sky'){ var l=document.getElementById('skPLine'); if(l) l.innerHTML=skPresetLine(); } }catch(e){} return r; });
+sbAfter('afterEdit', function(r){ try{ if(SBP.key==='sky'){ var l=document.getElementById('skPLine'); if(l) l.innerHTML=skPresetLine(); skShowTab(); } }catch(e){} return r; });
 document.addEventListener('input', function(e){ if(SBP.key!=='sky'||!e.target.closest||!e.target.closest('#sbSkySec')) return; var l=document.getElementById('skPLine'); if(l) setTimeout(function(){ l.innerHTML=skPresetLine(); }, 0); }, true);
 (function(){ sbAfter('buildSidebar', function(r){ try{ var s=skSec(); if(s&&!s.querySelector('#skTabs')&&SBP.key==='sky'){ skShell(); ltPanel(); wxPanel(); } }catch(e){} return r; }); try{ skSec(); }catch(e){}
   var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=sky] #side .sec[data-sec=sky]{display:block}body.sbSkin:not(.sbPanelOn) #sbSkySec,body:not(.hasScan) #sbSkySec{display:none}'+

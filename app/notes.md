@@ -1,5 +1,4 @@
-r406: Effects hide behind the scan, tidier markers, panel close always in reach
-- Fires, trees, smoke, pigeons, confetti and string lights are hidden when the scan is in front of them.
-- Effect markers and arrows show only on the Placed tab; light markers only on the Lights tab.
-- Click empty space or press Esc to let go of the picked effect.
-- The panel title and its close button stay at the top while you scroll.
+r407: Removing placed effects
+- Picking another preset removes what Bonfire Night placed.
+- Delete or Backspace removes the picked effect (Placed tab).
+- The Placed tab shows how many effects are placed, e.g. Placed (2); the ✕ in its list removes one.
