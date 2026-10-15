@@ -1,5 +1,0 @@
-- Light > + Glowing sign: click a sign in 3D; its bright letters and coloured logo light up with a halo. Lit letters or Floodlit; size the box, Which parts glow, Glow.
-- Light > + Street light / + Row of street lights: pole, arm and lantern shining down; row spread evenly end to end, one or both sides.
-- Light > + Strip light / + Row of strip lights: tube or batten that lights along its length; Length, Turn, Shines down or all round.
-- Rows: Same for the row, Delete the row.
-- Up to 32 lights (was 8). Night street preset uses two street lights.

@@ -1,7 +1,5 @@
-- New Drawing check on the rail: load a site plan (PDF or picture) and it lays over the scan.
-- Line it up: + Match a point, click it on the drawing then on the scan; two or more points, worst fit shown from three.
-- Optional known distance shows how far the scan scale is out, with Keep the drawing's scale.
-- Red, blue or black lines, see-through slider, Turn 90°, Move by dragging.
-- + Check a point: offset in mm, right/left and up/down on the drawing, pass or fail against your tolerance.
-- Set-out check PDF and CSV.
-- The drawing stays with the scan in this browser.
+- Light > + Glowing sign: click a sign in 3D; its bright letters and coloured logo light up with a halo. Lit letters or Floodlit; size the box, Which parts glow, Glow.
+- Light > + Street light / + Row of street lights: pole, arm and lantern shining down; row spread evenly end to end, one or both sides.
+- Light > + Strip light / + Row of strip lights: tube or batten that lights along its length; Length, Turn, Shines down or all round.
+- Rows: Same for the row, Delete the row.
+- Up to 32 lights (was 8). Night street preset uses two street lights.
