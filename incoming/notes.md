@@ -1,0 +1,4 @@
+- Lights: you can turn the 3D view while a light waits to be placed; a click places it.
+- Light: Scene slider renamed Overall brightness.
+- Light: Add buttons compacted into one grid.
+- Left rail: panels grouped into Prepare, Look, Measure and Survey; point at a group (or tap it) for its menu.
