@@ -1,3 +1,5 @@
-r398: Easier top bar
-- Steps now always show names: Prep, Model, Drawings, Compare.
-- View tabs: 3D, Plan, and More views (Ceiling, Top, A-A, B-B, each with a line saying what it is). Keys 1 to 6 still work.
+r399: Better looking dip block
+- Block top now shows the scan colours of the ground, lit from one side, with contour lines every few mm.
+- In place: rises from the real ground, never sinks under it; dark see-through sides with level tags.
+- Water is one smooth sheet with a firm blue shore line.
+- Dip tags have a pin and leader line.
