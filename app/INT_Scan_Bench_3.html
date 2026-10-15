@@ -8191,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r419';
+var SB_BUILD='2026-10-15 r420';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26404,12 +26404,18 @@ function fxOccFrame(){ var m=camMVP(), r=glCv.getBoundingClientRect(); FX.ocM={m
 function fxScrPt(x,y,z){ var M=FX.ocM, m=M.m, cx=m[0]*x+m[4]*y+m[8]*z+m[12], cy=m[1]*x+m[5]*y+m[9]*z+m[13], cw=m[3]*x+m[7]*y+m[11]*z+m[15]; if(cw<0.02) return null; return [(cx/cw*0.5+0.5)*M.w, (0.5-cy/cw*0.5)*M.h]; }
 function fxOccBox(it){ var sc=fxSc(), r=1, h=1; if(it.kind==='fire'){ var C=fxFireC(it); r=Math.max(0.3, C.r*1.6); h=C.h*1.6+(C.lift||0)+(C.smoke?4:0.5); } else if(it.kind==='tree'){ var kT2=(it.ht==null?2.4:it.ht)/2.4; r=1.2*kT2; h=2.6*kT2; } else if(it.kind==='smoke'){ r=2.5; h=6; } else if(it.kind==='confetti'){ r=3; h=3; } else if(it.kind==='pigeon'){ r=0.6; h=0.4; } else if(it.kind==='string'&&it.x2!=null){ return null; } return {r:r*sc, h:h*sc}; }
 function fxOcc(it){ if(it.kind==='fw'||it.kind==='rays'||typeof stScanHit!=='function') return null; var B=fxOccBox(it); if(!B) return null; var M=FX.ocM, E=M.E, key=E.map(function(v){ return v.toFixed(2); }).join(',')+'|'+M.w+'|'+it.x.toFixed(2)+','+it.y.toFixed(2)+','+it.z.toFixed(2), O=FX.occ[it.id];
-  if(O&&O.key===key) return O; if(O&&(!FX.ocBudget||(typeof glMoving!=='undefined'&&glMoving))){ clearTimeout(FX.ocT); FX.ocT=setTimeout(function(){ requestRender(false); }, 220); return O; } FX.ocBudget=0;
-  var xs=[], ys=[]; [-1,1].forEach(function(a){ [-1,1].forEach(function(b){ [0,1].forEach(function(c){ var q=fxScrPt(it.x+a*B.r, it.y+b*B.r, it.z+c*B.h); if(q){ xs.push(q[0]); ys.push(q[1]); } }); }); }); if(xs.length<8) return O||null;
+  if(O&&O.key===key) return O;
+  /* r420: work out where the item sits on screen now */ var xs=[], ys=[]; [-1,1].forEach(function(a){ [-1,1].forEach(function(b){ [0,1].forEach(function(c){ var q=fxScrPt(it.x+a*B.r, it.y+b*B.r, it.z+c*B.h); if(q){ xs.push(q[0]); ys.push(q[1]); } }); }); }); if(xs.length<8) return O||null;
   var x0=Math.max(0,Math.min.apply(null,xs)), x1=Math.min(M.w,Math.max.apply(null,xs)), y0=Math.max(0,Math.min.apply(null,ys)), y1=Math.min(M.h,Math.max.apply(null,ys)); if(x1-x0<2||y1-y0<2) return O||null;
-  var n=13, D=new Float32Array(n*n), r0=glCv.getBoundingClientRect();
-  for(var j=0;j<n;j++) for(var i=0;i<n;i++){ var sx=x0+(i+0.5)*(x1-x0)/n, sy=y0+(j+0.5)*(y1-y0)/n, R=pickRay(sx+r0.left, sy+r0.top), h2=null; try{ h2=stScanHit(R); }catch(e){} D[j*n+i]=(h2&&h2.p)?Math.hypot(h2.p[0]-E[0], h2.p[1]-E[1], h2.p[2]-E[2]):1e9; }
-  FX.occ[it.id]={key:key, x0:x0, y0:y0, x1:x1, y1:y1, n:n, D:D}; if(O) requestRender(false); return FX.occ[it.id]; }
+  /* while the view moves, the scan points the last rays hit are re-projected for this view (so zooming out or turning no longer hides or shows things wrongly); the full rays run again once it stops */
+  if(O&&O.Hp&&(!FX.ocBudget||(typeof glMoving!=='undefined'&&glMoving))){ clearTimeout(FX.ocT); FX.ocT=setTimeout(function(){ requestRender(false); }, 220); return fxOccReproj(O, x0, y0, x1, y1, E); } FX.ocBudget=0;
+  var n=13, D=new Float32Array(n*n), Hp=new Float32Array(n*n*3), r0=glCv.getBoundingClientRect();
+  for(var j=0;j<n;j++) for(var i=0;i<n;i++){ var sx=x0+(i+0.5)*(x1-x0)/n, sy=y0+(j+0.5)*(y1-y0)/n, R=pickRay(sx+r0.left, sy+r0.top), h2=null; try{ h2=stScanHit(R); }catch(e){} D[j*n+i]=(h2&&h2.p)?Math.hypot(h2.p[0]-E[0], h2.p[1]-E[1], h2.p[2]-E[2]):1e9; var o3=(j*n+i)*3; if(h2&&h2.p){ Hp[o3]=h2.p[0]; Hp[o3+1]=h2.p[1]; Hp[o3+2]=h2.p[2]; } else Hp[o3]=NaN; }
+  FX.occ[it.id]={key:key, x0:x0, y0:y0, x1:x1, y1:y1, n:n, D:D, Hp:Hp}; if(O) requestRender(false); return FX.occ[it.id]; }
+function fxOccReproj(O, x0, y0, x1, y1, E){ var n=O.n, D=new Float32Array(n*n), Hp=O.Hp, w=x1-x0, h=y1-y0; for(var k=0;k<n*n;k++) D[k]=1e9;
+  for(var k2=0;k2<n*n;k2++){ var o=k2*3; if(isNaN(Hp[o])) continue; var q=fxScrPt(Hp[o],Hp[o+1],Hp[o+2]); if(!q) continue; var fx=(q[0]-x0)/w*n, fy=(q[1]-y0)/h*n, i=Math.floor(fx), j=Math.floor(fy), d=Math.hypot(Hp[o]-E[0], Hp[o+1]-E[1], Hp[o+2]-E[2]);
+    for(var dj=-1;dj<=1;dj++) for(var di=-1;di<=1;di++){ var ii=i+di, jj=j+dj; if(ii<0||jj<0||ii>=n||jj>=n) continue; var c=jj*n+ii; if(d<D[c]) D[c]=d; } }
+  return {key:'reproj', x0:x0, y0:y0, x1:x1, y1:y1, n:n, D:D, Hp:Hp}; }
 function fxHidden(x,y,z){ var O=FX.oc, q=fxScrPt(x,y,z); if(!q) return false; var n=O.n, i=Math.floor((q[0]-O.x0)/(O.x1-O.x0)*n), j=Math.floor((q[1]-O.y0)/(O.y1-O.y0)*n); if(i<0||j<0||i>=n||j>=n) return false; var E=FX.ocM.E, L=Math.hypot(x-E[0], y-E[1], z-E[2]); return L>O.D[j*n+i]+0.12*fxSc(); }
 function fxDraw(){ if(!fxOn()||APP.view!=='3d'||miniVP) return; var F=fxS(); if(!(F.items.length||F.leaves>0||F.birds>0)) return; var gl=GL, pr=fxProg(); if(!pr) return; var BU=fxBuild(), V=BU.V, TT=BU.T; if(!V.length&&!TT.length) return;
   /* smoke laid over first, then the glowing things added on top */ var Vs=[], Va=[]; for(var i=0;i<V.length;i+=9){ (V[i+8]>0.5?Va:Vs).push.apply(V[i+8]>0.5?Va:Vs, V.slice(i,i+9)); }
@@ -26715,7 +26721,7 @@ function rtDrawAll(){ try{ if(!fxOn()||APP.view!=='3d'||miniVP) return; var F=fx
   gl.bindBuffer(gl.ARRAY_BUFFER, RT.buf); gl.enableVertexAttribArray(0); gl.enableVertexAttribArray(1); gl.enableVertexAttribArray(2); for(var a=3;a<6;a++) gl.disableVertexAttribArray(a);
   gl.vertexAttribPointer(0, 3, gl.UNSIGNED_SHORT, true, 14, 0); gl.vertexAttribPointer(1, 3, gl.BYTE, true, 14, 6); gl.vertexAttribPointer(2, 3, gl.UNSIGNED_BYTE, true, 14, 10);
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND); fxOccFrame();
-  T.forEach(function(it){ var H=(it.ht==null?2.4:it.ht)*sc, kL=it.lights===false?0:(it.bri==null?1:it.bri), w=0.09*kL*X.night; FX.ocBudget=1; var O=null; try{ O=fxOcc(it); }catch(e){}
+  T.forEach(function(it){ var H=(it.ht==null?2.4:it.ht)*sc, kL=it.lights===false?0:(it.bri==null?1:it.bri), w=0.09*kL*X.night; var O=null; try{ O=fxOcc(it); }catch(e){}
     gl.uniform3f(U('uO'), it.x, it.y, it.z); gl.uniform1f(U('uH'), H); gl.uniform1f(U('uYaw'), (it.yaw||0)*Math.PI/180); gl.uniform1f(U('uSz'), H*0.0074*(it.dense==null?1:it.dense)); gl.uniform3f(U('uWarm'), w, w*0.7, w*0.2);
     if(O&&O.D){ gl.uniform1f(U('uOn'), 1); gl.uniform4f(U('uOB'), O.x0, O.y0, O.x1, O.y1); gl.uniform1fv(U('uOcc[0]'), O.D); } else gl.uniform1f(U('uOn'), 0);
     gl.drawArrays(gl.POINTS, 0, RT.n); });
@@ -27094,12 +27100,13 @@ try{ sbAfter('wxPanel', function(r){ try{ ksFwRows(); }catch(e){} return r; }); 
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'15 October 2026', r:'r379 to r419', t:[
+ {d:'15 October 2026', r:'r379 to r420', t:[
   'Lights: street lights (one or a row), strip lights and glowing signs, up to 32 lights. The left rail is grouped into Prepare, Look, Measure and Survey.',
   'Water: Floor levels can read flat roofs and run a rain test with gullies and channel drains. Sections check for dips along the line (water line, rim to rim, should be / is, a level strip and a mean line). A new Ponding tool in Measure finds the dips in the ground, colours the water by depth, shows a block of ground round each dip and makes a dip survey PDF.',
   'Sky: shooting stars, meteor showers, rainbows, northern lights, the real moon, sunbeams, leaves, birds, fires, fireworks, smoke, pigeons, confetti and a Christmas pack. Light and Sky & weather are now one Sky, light & weather tool with scene cards, a time of day bar and tiles with on/off switches. Placed effects hide behind the scan, and Delete removes the picked one.',
   'Help: the user manual is built in (F1), Report a problem is now a form that shows what will be sent, and this What\'s new list. New installs save files with no name prefix.',
   'Placed objects have their own settings: pick a fire, smoke, fireworks, sunbeam, pigeons, tree, string lights or confetti and set its size, smoke amount, height, spread and colour, rocket rate, burst size and more. Same for all copies them to the rest.',
+  'Placed objects stay correctly hidden behind the scan while you zoom or turn the view, instead of vanishing or jumping in front until you let go.',
   'A realistic Christmas tree made from a real tree model (credit in the tree settings), with lights, baubles, tinsel and a star on the outside of its branches. Style: Simple brings back the drawn tree.',
   'A new Christmas tree: real branches with needles, shaded by the sun or night, snow on the branches, shiny baubles, tinsel, twinkling fairy lights (warm or coloured), a gold star and presents. Each part can be switched off in its settings.',
   'Tidier screens: step names and More views in the top bar, 3D wall sizes that never overlap, A-A and B-B lines hidden until you work on sections, a brighter start screen, and the side panel keeps its place when you change something.']},
