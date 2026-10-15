@@ -1,0 +1,3 @@
+- Floor levels > Rain test: pick the rain, how long, then Start the rain; watch water run, gather and drain on the plan and in 3D, with litres and depths.
+- Floor levels > + Channel drain: click one end, then the other; it drains in the rain test and the ponding.
+- Rain test settings: gully and channel drain capacity, and whether water runs off the edge or is held in.
