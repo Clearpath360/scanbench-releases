@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r401';
+var SB_BUILD='2026-10-15 r402';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26163,7 +26163,7 @@ function sdPonds(P){ var n=P.Z.length; if(n<5) return []; var L=new Float64Array
   R[n-1]=P.Z[n-1]; Ri[n-1]=n-1; for(i=n-2;i>=0;i--){ if(P.Z[i]>R[i+1]){ R[i]=P.Z[i]; Ri[i]=i; } else { R[i]=R[i+1]; Ri[i]=Ri[i+1]; } }
   var out=[], cur=null; for(i=0;i<n;i++){ var w=Math.min(L[i], R[i]), d=w-P.Z[i]; if(d>0.0015){ if(!cur) cur={a:i, b:i, low:i}; cur.b=i; if(P.Z[i]<P.Z[cur.low]) cur.low=i; } else if(cur){ out.push(cur); cur=null; } } if(cur) out.push(cur);
   return out.map(function(p){ var li=Li[p.low], ri=Ri[p.low], lip=Math.min(P.Z[li], P.Z[ri]), deep=lip-P.Z[p.low], vol=0; for(var k=p.a;k<=p.b;k++){ var dd=lip-P.Z[k]; if(dd>0) vol+=dd*(k+1<P.X.length?P.X[k+1]-P.X[k]:0); }
-    return {li:li, ri:ri, low:p.low, lip:lip, high:Math.max(P.Z[li], P.Z[ri]), deep:deep, xa:P.X[p.a], xb:P.X[p.b], width:P.X[p.b]-P.X[p.a], lpm:vol*1000}; }).filter(function(p){ return p.deep>=SDIP.min&&p.width>=SDIP.minW; }).sort(function(a,b){ return b.deep-a.deep; }).slice(0,3); }
+    return {li:li, ri:ri, low:p.low, lip:lip, high:Math.max(P.Z[li], P.Z[ri]), deep:deep, xa:P.X[p.a], xb:P.X[p.b], width:P.X[p.b]-P.X[p.a], lpm:vol*1000}; }).filter(function(p){ return p.deep>=Math.max(SDIP.min, (typeof dpmRes==='function'&&dpmRes()&&dpmRes().minD)||0)&&p.width>=SDIP.minW; }).sort(function(a,b){ return b.deep-a.deep; }).slice(0,3); }
 /* the line it should follow: a typed fall (1 in N) from the high end, or straight from one end to the other */
 function sdShould(P){ var n=P.X.length; if(n<2) return null; var x0=P.X[0], x1=P.X[n-1], z0=P.Z[0], z1=P.Z[n-1];
   if(SEC.dfall>0){ var m=1/SEC.dfall, dir=SEC.ddir||(z0>z1?1:-1); if(dir>0) return function(X){ return z0-m*(X-x0); }; return function(X){ return z1-m*(x1-X); }; }
@@ -26214,7 +26214,7 @@ sbAfter('secBar', function(r){ try{ var b=document.getElementById('secBar'); if(
 var DPM={c:false, w:false, p:false, map:false, photos:true, res:null, pins:[], _lay:false, down:null};
 (function(){ try{ var o=JSON.parse(localStorage.getItem('sb_dipmap')||'null'); if(o){ DPM.c=!!o.c; DPM.bs=o.bs||'lift'; DPM.bw=+o.bw||0; DPM.w=!!o.w; DPM.p=!!o.p; DPM.photos=o.ph!==false; } }catch(e){} })();
 function dpmSave(){ try{ localStorage.setItem('sb_dipmap', JSON.stringify({bw:DPM.bw, bs:DPM.bs, c:DPM.c, w:DPM.w, p:DPM.p, ph:DPM.photos})); }catch(e){} }
-var DPM_BANDS=[[0.010,'rgba(140,200,245,.62)','#8cc8f5','under 10 mm'],[0.020,'rgba(55,138,221,.66)','#378add','10 to 20 mm'],[1e9,'rgba(16,58,120,.74)','#103a78','over 20 mm']];
+var DPM_BANDS=[[0.005,'rgba(190,224,250,.55)','#bee0fa','under 5 mm'],[0.010,'rgba(140,198,242,.62)','#8cc6f2','5 to 10 mm'],[0.020,'rgba(74,152,226,.68)','#4a98e2','10 to 20 mm'],[0.035,'rgba(34,104,190,.74)','#2268be','20 to 35 mm'],[1e9,'rgba(14,62,128,.8)','#0e3e80','over 35 mm']];
 function dpmBand(d){ for(var i=0;i<DPM_BANDS.length;i++) if(d<DPM_BANDS[i][0]) return i; return DPM_BANDS.length-1; }
 
 /* ---------- the whole-area search ---------- */
@@ -26227,7 +26227,10 @@ function dpmLow(R, g){ var P=R.pos, n=R.n, O=R.opa, DL=R.del, nx=g.nx, ny=g.ny, 
 DPM.minA=0.5;
 function dpmGrid(){ var R=APP.res, V=typeof levM==='function'?levM():null, O=typeof LEV!=='undefined'?LEV.out:null;
   /* r393: gaps in the scan inside the area (under a parked car, a lost patch) are filled from the ground round them, so water is not let out down a gap */
-  if(O&&V&&V.area&&O.Fill&&O.Z&&O.g&&O.M){ var Zc=O.Z.slice(); volFillHoles(Zc, O.g, 2.5); for(var qq=0;qq<Zc.length;qq++) if(!O.M[qq]) Zc[qq]=NaN; return {src:'the Floor levels area', g:O.g, Z:Zc, F:levFlood(Zc, O.M, O.g, V.gullies.concat(typeof levDrainPts==='function'?levDrainPts(V.drains, O.g):[])), lev:true}; }
+  if(O&&V&&V.area&&O.Fill&&O.Z&&O.g&&O.M){ var Zc=O.Z.slice(); volFillHoles(Zc, O.g, 2.5); for(var qq=0;qq<Zc.length;qq++) if(!O.M[qq]) Zc[qq]=NaN;
+    /* r402: the same care over scan noise as the whole-scan search: the ground averaged over about 0.6 m, and the cut-off set by the scan's own spread */
+    var sgA=dpmLow(R, O.g).sig||0, rbA=Math.max(1, Math.round(0.3/O.g.cell)), ZsA=levBox(Zc, O.g, rbA); for(qq=0;qq<ZsA.length;qq++) if(!O.M[qq]) ZsA[qq]=NaN;
+    return {src:'the Floor levels area', g:O.g, Z:ZsA, F:levFlood(ZsA, O.M, O.g, V.gullies.concat(typeof levDrainPts==='function'?levDrainPts(V.drains, O.g):[])), lev:true, noise:sgA, minD:Math.max(SDIP.min, Math.ceil(1.2*sgA*1000)/1000)}; }
   var rb=R.robust, x0=rb.x[0]-0.5, y0=rb.y[0]-0.5, w=rb.x[1]-rb.x[0]+1, h=rb.y[1]-rb.y[0]+1, cell=Math.max(0.05, Math.sqrt(w*h/300000), Math.sqrt(12/Math.max(1e-6, R.n/(w*h)))), g={x0:x0, y0:y0, cell:cell, nx:Math.max(2,Math.ceil(w/cell)), ny:Math.max(2,Math.ceil(h/cell))};
   /* r392: the low surface in each square (the ground at the foot of a wall, not halfway up it), as Floor levels reads it */
   var N=g.nx*g.ny, Z0=dpmLow(R, g); var Z=new Float32Array(N).fill(NaN), M=new Uint8Array(N), w9=[], nx=g.nx, ny=g.ny;
@@ -26254,7 +26257,7 @@ function dpmFind(){ var G=dpmGrid(), minD=G.minD||SDIP.min, g=G.g, nx=g.nx, N=g.
   for(var y=0;y<g.ny;y++){ var x=0; while(x<nx){ q=y*nx+x; if(lab[q]<0){ x++; continue; } var b=dpmBand(F[q]-Z[q]), id2=lab[q], x1=x; while(x1+1<nx){ var q2=y*nx+x1+1; if(lab[q2]!==id2||dpmBand(F[q2]-Z[q2])!==b) break; x1++; } runs.push([y, x, x1, b, F[q], id2]); x=x1+1; } }
   return {lab:lab, F:F, raised:G.raised||null, src:G.src, lev:G.lev, skipped:skipped, noise:G.noise, minD:G.minD||SDIP.min, g:g, ponds:ponds, runs:runs, rn:APP.res, litres:ponds.reduce(function(s,p){ return s+p.litres; },0), area:ponds.reduce(function(s,p){ return s+p.area; },0)}; }
 function dpmRes(){ if(DPM.res&&DPM.res.rn!==APP.res) DPM.res=null; return DPM.res; }
-function dpmRun(cb){ if(!APP.res) return; setStatus('Looking for dips'); setTimeout(function(){ try{ DPM.res=dpmFind(); DPM.map=true; dpmRedraw(); secPanel(); toast(DPM.res.ponds.length?DPM.res.ponds.length+' dips deeper than '+Math.round(DPM.res.minD*1000)+' mm':'No dips deeper than '+Math.round(DPM.res.minD*1000)+' mm', 2500); if(cb) cb(); }catch(e){ console.warn(e); toast('Could not check for dips: '+e.message); } finally{ setStatus(''); } }, 30); }
+function dpmRun(cb){ if(!APP.res) return; setStatus('Looking for dips'); setTimeout(function(){ try{ DPM.res=dpmFind(); DPM.res.levKey=(typeof LEV!=='undefined'?LEV.key:''); DPM.map=true; dpmRedraw(); if(typeof pndPanel==='function') pndPanel(); try{ secPanel(); }catch(e){} toast(DPM.res.ponds.length?DPM.res.ponds.length+' dips deeper than '+Math.round(DPM.res.minD*1000)+' mm':'No dips deeper than '+Math.round(DPM.res.minD*1000)+' mm', 2500); if(cb) cb(); }catch(e){ console.warn(e); toast('Could not check for dips: '+e.message); } finally{ setStatus(''); } }, 30); }
 function dpmRedraw(){ try{ if(APP.view==='3d') requestRender(false); else planDrawSoon(); }catch(e){} }
 
 /* ---------- drawing helpers: world to screen through the 3D camera, clipped at the camera ---------- */
@@ -26277,11 +26280,11 @@ function dpmDraw3D(c, Pj, k){ var S=(DPM.c||DPM.w||DPM.p)?dpmSec():null, sc=(APP
 /* the curtain: an upright panel on the cut line above the scan, the profile drawn on it with the heights stretched */
 /* r397, the block is now a real 3D piece of the ground: every square across its width as well as along the cut, read from the scan,
    with water wherever the whole-area search (or, before that has been run, a search inside the block) says it stands */
-function dpmBlockGrid(S){ var R=APP.res, G=S.G, P=S.P, X0=P.X[0], X1=P.X[P.X.length-1], L=Math.max(0.5, X1-X0), sc=R.scale||1, hd=(DPM.bw>0?DPM.bw/2:Math.max(0.75, Math.min(3, L*0.1)))*sc, RS=dpmRes();
-  var key=[SEC.which, CEI.lc, CEI.st, X0.toFixed(2), X1.toFixed(2), hd, R.n, RS?RS.ponds.length+'/'+RS.litres.toFixed(1):'-'].join('|'), C=DPM._bg;
+function dpmBlockGrid(S){ var R=APP.res, G=S.G, P=S.P, X0=P.X[0], X1=P.X[P.X.length-1], L=Math.max(0.5, X1-X0), sc=R.scale||1, hd=(DPM.bw>0?DPM.bw/2:(S.hd||Math.max(0.75, Math.min(3, L*0.1))))*sc, RS=dpmRes();
+  var key=[S.key||(SEC.which+'|'+CEI.lc+'|'+CEI.st), X0.toFixed(2), X1.toFixed(2), hd, R.n, RS?RS.ponds.length+'/'+RS.litres.toFixed(1):'-'].join('|'), C=DPM._bg;
   if(C&&C.key===key) return C; if(C&&performance.now()-(DPM._bgT||0)<300){ dpmRedrawSoon(); return C; } DPM._bgT=performance.now();
   /* the squares on the scan: an upright-to-the-world grid round the block, the lowest layer of points in each */
-  var cs=[G.at(X0,-hd), G.at(X1,-hd), G.at(X1,hd), G.at(X0,hd)], xs=cs.map(function(q){ return q[0]; }), ys=cs.map(function(q){ return q[1]; }), bx0=Math.min.apply(null,xs)-0.5, by0=Math.min.apply(null,ys)-0.5, bw=Math.max.apply(null,xs)-bx0+0.5, bh=Math.max.apply(null,ys)-by0+0.5;
+  var cs=[G.at(X0,-hd), G.at(X1,-hd), G.at(X1,hd), G.at(X0,hd)], xs=cs.map(function(q){ return q[0]; }), ys=cs.map(function(q){ return q[1]; }), bx0=Math.min.apply(null,xs)-2, by0=Math.min.apply(null,ys)-2, bw=Math.max.apply(null,xs)-bx0+2, bh=Math.max.apply(null,ys)-by0+2;
   var dens=R.n/Math.max(1, (R.robust.x[1]-R.robust.x[0])*(R.robust.y[1]-R.robust.y[0])), cell=Math.max(0.05, Math.sqrt(12/Math.max(1e-6,dens)), Math.sqrt(bw*bh/120000)), g={x0:bx0, y0:by0, cell:cell, nx:Math.max(2,Math.ceil(bw/cell)), ny:Math.max(2,Math.ceil(bh/cell))};
   var Z0=dpmLow(R, g), N=g.nx*g.ny, nx=g.nx, ny=g.ny, Zm=new Float32Array(N).fill(NaN), w9=[], x, y, q;
   for(y=0;y<ny;y++) for(x=0;x<nx;x++){ q=y*nx+x; if(!(Z0[q]===Z0[q])) continue; w9.length=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var X=x+dx, Y=y+dy; if(X<0||Y<0||X>=nx||Y>=ny) continue; var v=Z0[Y*nx+X]; if(v===v) w9.push(v); } w9.sort(function(a,b){ return a-b; }); Zm[q]=w9[w9.length>>1]; }
@@ -26343,23 +26346,23 @@ function dpmCurtain(c, Pj, S, k, sc){ var B=dpmBlockGrid(S), G=S.G, nA=B.nA, nT=
   /* level lines on the near face, labelled at the near end */ var stp=secNiceStep(ext, 4), lo2=flat?B.rl:B.zl, hi2=flat?B.rh:B.zh; c.font='600 '+(11*k)+'px system-ui'; c.lineWidth=1*k;
   for(var lv2=Math.ceil(lo2/stp)*stp; lv2<=hi2+1e-9; lv2+=stp){ var tz=function(a4){ return inP?(flat?B.pl(a4,nearT)+(lv2-B.rl)*E+0.01*sc:B.zl+(lv2-B.zl)*E+0.01*sc):base+(lv2-lo2)*E; }, A2=Pj.pt(W3(0,nearT,tz(0))), B2=Pj.pt(W3(nA,nearT,tz(nA))); if(!A2||!B2) continue; c.strokeStyle='rgba(255,255,255,.22)'; c.beginPath(); c.moveTo(A2[0],A2[1]); c.lineTo(B2[0],B2[1]); c.stroke(); var e3=nearA===0?A2:B2, txt=flat?(lv2>=0?'+':'')+Math.round(lv2*1000)+' mm':levN(lv2); c.fillStyle='rgba(17,24,39,.78)'; var tw=c.measureText(txt).width+8*k; c.fillRect(e3[0]+3*k, e3[1]-13*k, tw, 15*k); c.fillStyle='#fff'; c.fillText(txt, e3[0]+7*k, e3[1]-2*k); }
   c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=1.4*k; c.beginPath(); for(j=0;j<nA;j++){ var Q=Pj.poly([W3(j,nearT,top(j,nearT)),W3(j+1,nearT,top(j+1,nearT))]); if(Q){ c.moveTo(Q[0][0],Q[0][1]); c.lineTo(Q[1][0],Q[1][1]); } } c.stroke();
-  var tl=Pj.pt(W3(nearA,nearT,top(nearA,nearT)+0.25*sc)); if(tl) dpmTag(c, tl[0]+70*k, tl[1], 'Section '+SEC.which+'-'+SEC.which+' · '+fmt(2*hd/sc,1)+' m wide · heights ×'+E+(flat?', slope taken out':'')+' · lines every '+Math.round(ci*1000)+' mm'+(B.local?' · water inside the block only':''), '#2C2C2A', k);
+  var tl=Pj.pt(W3(nearA,nearT,top(nearA,nearT)+0.25*sc)); if(tl) dpmTag(c, tl[0]+70*k, tl[1], (S.name||'Section '+SEC.which+'-'+SEC.which)+' · '+fmt(2*hd/sc,1)+' m wide · heights ×'+E+(flat?', slope taken out':'')+' · lines every '+Math.round(ci*1000)+' mm'+(B.local?' · water inside the block only':''), '#2C2C2A', k);
   /* a tag with a leader on the deepest water of each dip */ var best={}; for(var q=0;q<B.W.length;q++){ var w=B.W[q]; if(!(w===w)) continue; var d=w-B.Z[q], id=B.I[q]; if(!best[id]||d>best[id].d) best[id]={d:d, q:q}; } var RS=dpmRes();
   var placed=[]; Object.keys(best).sort(function(p,q){ return best[q].d-best[p].d; }).forEach(function(id){ var T=best[id], a5=Math.floor(T.q/(nT+1)), t5=T.q%(nT+1), z5=WT(a5,t5), s5=Pj.pt(W3(a5,t5,z5)), s6=Pj.pt(W3(a5,t5,z5+0.45*sc)); if(!s5||!s6) return; var pd=RS&&RS.ponds[+id], tx=pd?(+id+1)+' · '+Math.round(pd.depth*1000)+' mm deep · '+fmt(pd.area,1)+' m² · '+Math.round(pd.litres)+' L':Math.round(T.d*1000)+' mm deep here';
     c.font='700 '+(12*k)+'px system-ui'; var tw6=c.measureText(tx).width+10*k, hh=17*k, guard=0; s6=[s6[0],s6[1]]; while(guard++<12&&placed.some(function(r6){ return Math.abs(r6[0]-s6[0])<(r6[2]+tw6)/2+4*k&&Math.abs(r6[1]-s6[1])<hh+3*k; })) s6[1]-=hh+4*k; placed.push([s6[0],s6[1],tw6]); c.strokeStyle='#185FA5'; c.lineWidth=1.5*k; c.beginPath(); c.moveTo(s5[0],s5[1]); c.lineTo(s6[0],s6[1]); c.stroke(); c.fillStyle='#fff'; c.beginPath(); c.arc(s5[0],s5[1],3.5*k,0,7); c.fill(); c.fillStyle='#185FA5'; c.beginPath(); c.arc(s5[0],s5[1],2.2*k,0,7); c.fill(); dpmTag(c, s6[0], s6[1], tx, '#185FA5', k); }); }
 
-sbAfter('secOvDraw', function(r){ try{ if(!(DPM.c||DPM.w||DPM.p||(DPM.map&&dpmRes()))) { DPM.pins=[]; return r; } var cv=document.getElementById('secOv'); if(!cv||!secVisible()||APP.view!=='3d') return r; var st0=document.getElementById('stage'), dpr=window.devicePixelRatio||1, sr=st0.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), c=cv.getContext('2d');
+sbAfter('secOvDraw', function(r){ try{ /* r402: dips in 3D moved to the Ponding tool */ if(true) return r; var cv=document.getElementById('secOv'); if(!cv||!secVisible()||APP.view!=='3d') return r; var st0=document.getElementById('stage'), dpr=window.devicePixelRatio||1, sr=st0.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), c=cv.getContext('2d');
   c.save(); dpmDraw3D(c, dpmPrj(glCv.clientWidth*dpr, glCv.clientHeight*dpr, (gr.left-sr.left)*dpr, (gr.top-sr.top)*dpr), dpr); c.restore(); }catch(e){ console.warn(e); } return r; });
 
 /* click a pin in 3D: the section moves through that dip */
 function dpmJump(p){ var which=p.which||SEC.which; if(SEC.which!==which){ SEC.which=which; secSavePrefs(); } if(which==='A'){ var n=ceiN(); CEI.lc=p.x*n[0]+p.y*n[1]; } else { var a=CEI.axis; CEI.st=p.x*a[0]+p.y*a[1]; }
   var G=secGeom(which), X=G.X(p.x,p.y), rg=secRange(); if(rg&&(X<rg[0]||X>rg[1])) SEC.rng[which]=null; SEC.fp=[]; SEC.vs=null; SEC.vl=null; SEC.key=''; try{ secBar(); }catch(e){} /* r394: in 3D the view turns to the dip too */ if(APP.view==='3d'&&typeof cam!=='undefined'){ cam.tx=p.x; cam.ty=p.y; if(p.z!=null&&p.z===p.z) cam.tz=p.z+(DPM.c?0.6*((APP.res&&APP.res.scale)||1):0); } dpmRedraw(); planDrawSoon(); }
-(function(){ var hit=function(e){ if(!DPM.pins.length||APP.view!=='3d'||!secVisible()) return null; var st0=document.getElementById('stage'); if(!st0) return null; var sr=st0.getBoundingClientRect(), dpr=window.devicePixelRatio||1, x=(e.clientX-sr.left)*dpr, y=(e.clientY-sr.top)*dpr, best=null, bd=18*dpr; DPM.pins.forEach(function(q){ var d=Math.min(Math.hypot(q.sx-x, q.sy-y), Math.hypot(q.ax-x, q.ay-y)); if(d<bd){ bd=d; best=q; } }); return best; };
+(function(){ var hit=function(e){ if(!DPM.pins.length||APP.view!=='3d'||SBP.key!=='ponding') return null; var st0=document.getElementById('stage'); if(!st0) return null; var sr=st0.getBoundingClientRect(), dpr=window.devicePixelRatio||1, x=(e.clientX-sr.left)*dpr, y=(e.clientY-sr.top)*dpr, best=null, bd=18*dpr; DPM.pins.forEach(function(q){ var d=Math.min(Math.hypot(q.sx-x, q.sy-y), Math.hypot(q.ax-x, q.ay-y)); if(d<bd){ bd=d; best=q; } }); return best; };
   document.addEventListener('pointerdown', function(e){ DPM.down=(e.target===glCv)?[e.clientX,e.clientY]:null; }, true);
-  document.addEventListener('pointerup', function(e){ var d=DPM.down; DPM.down=null; if(!d||e.target!==glCv||Math.hypot(e.clientX-d[0], e.clientY-d[1])>5) return; var q=hit(e); if(!q) return; e.stopPropagation(); e.preventDefault(); dpmJump(q.p); toast('Section moved through dip '+q.p.n, 1800); }, true); })();
+  document.addEventListener('pointerup', function(e){ var d=DPM.down; DPM.down=null; if(!d||e.target!==glCv||Math.hypot(e.clientX-d[0], e.clientY-d[1])>5) return; var q=hit(e); if(!q) return; e.stopPropagation(); e.preventDefault(); if(typeof pndSelect==='function') pndSelect(q.p.n-1); }, true); })();
 
 /* on the plan: the whole-area dips coloured by depth, numbered */
-function dpmPlanDraw(){ var R=dpmRes(); if(!R||!(DPM._lay||(DPM.map&&secVisible()&&APP.view!=='3d'))||typeof w2s!=='function') return; var c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), g=R.g, dpr=planView.dpr||1; c.save();
+function dpmPlanDraw(){ var R=dpmRes(); if(!R||!(DPM._lay||(DPM.map&&SBP.key==='ponding'&&APP.view!=='3d'&&(typeof PND==='undefined'||PND.water)))||typeof w2s!=='function') return; var c=(typeof pctx!=='undefined'&&pctx)||planCv.getContext('2d'), g=R.g, dpr=planView.dpr||1; c.save();
   for(var b=0;b<DPM_BANDS.length;b++){ c.fillStyle=DPM_BANDS[b][1]; c.beginPath(); R.runs.forEach(function(r){ if(r[3]!==b) return; var x0=g.x0+r[1]*g.cell, x1=g.x0+(r[2]+1)*g.cell, y0=g.y0+r[0]*g.cell, y1=y0+g.cell; dpmPath(c, [w2s(x0,y0), w2s(x1,y0), w2s(x1,y1), w2s(x0,y1)]); }); c.fill(); }
   var used=[]; R.ponds.slice(0,40).forEach(function(p, i){ var s=w2s(p.x,p.y); if(used.some(function(u){ return Math.hypot(u[0]-s[0],u[1]-s[1])<24*dpr; })) return; used.push(s); c.fillStyle='#A32D2D'; c.strokeStyle='#fff'; c.lineWidth=2*dpr; c.beginPath(); c.arc(s[0],s[1],11*dpr,0,7); c.fill(); c.stroke(); c.fillStyle='#fff'; c.font='700 '+(11*dpr)+'px system-ui'; c.textAlign='center'; c.fillText(String(i+1), s[0], s[1]+4*dpr); c.textAlign='left'; }); c.restore(); }
 sbAfter('planDraw', function(r){ try{ dpmPlanDraw(); }catch(e){ console.warn(e); } return r; });
@@ -26383,7 +26386,9 @@ function dpmPanel(){ var b=document.querySelector('#sbSecSec .body'); if(!b||!AP
   d.querySelectorAll('[data-pi]').forEach(function(x){ x.onclick=function(){ var i=+x.dataset.pi, p=R.ponds[i]; dpmJump({x:p.x, y:p.y, z:p.low, which:p.which, n:i+1}); toast('Section moved through dip '+(i+1), 1800); }; });
   d.querySelector('#dpmPdf').onclick=function(){ if(dpmRes()) dpmSurveyPdf(); else dpmRun(dpmSurveyPdf); }; d.querySelector('#dpmSecPdf').onclick=dpmSecPdf; d.querySelector('#dpmCsv').onclick=function(){ if(dpmRes()) dpmCsv(); else dpmRun(dpmCsv); };
   d.querySelector('#dpmPh').onchange=function(){ DPM.photos=this.checked; dpmSave(); }; }
-sbAfter('secPanel', function(r){ try{ dpmPanel(); }catch(e){ console.warn(e); } return r; });
+sbAfter('secPanel', function(r){ try{ var b=document.querySelector('#sbSecSec .body'); if(!b||!APP.res) return r; var d=b.querySelector('#dpmRow'); if(!d){ var ex=[].slice.call(b.querySelectorAll('.sH')).filter(function(h){ return /Export/.test(h.textContent); })[0]; d=document.createElement('div'); d.id='dpmRow'; if(ex) ex.parentNode.insertBefore(d, ex); else b.appendChild(d); }
+  d.innerHTML='<div class="sH">Dips</div><p class="mini">The dip views on this line are in the bar above the section (Dips list). Finding dips over the whole area, 3D water and the dip survey are in <b>Ponding</b>.</p><div class="row" style="gap:4px"><button class="sBtn" id="dpmToPnd">Open Ponding</button><button class="sBtn" id="dpmSecPdf" title="The section you are looking at with its dips">This section PDF</button></div>';
+  d.querySelector('#dpmToPnd').onclick=function(){ sbPanel('ponding'); }; d.querySelector('#dpmSecPdf').onclick=dpmSecPdf; }catch(e){ console.warn(e); } return r; });
 
 /* ---------- the report ---------- */
 function dpmBase(){ return (typeof baseName==='function'?baseName():'scan').replace(/^(INT_|EXT_)+/,''); }
@@ -26464,6 +26469,81 @@ window.addEventListener('resize', tb2Close);
   'html[data-theme=dark] #tb2Menu{background:#30353c;color:#e8eaee;border-color:#454b54}html[data-theme=dark] #tb2Menu button:hover{background:#3b4149}html[data-theme=dark] #tb2Menu button.on{background:#2c3e5c}html[data-theme=dark] #tb2Menu span{color:#aab2bd}';
   document.head.appendChild(c); tb2Steps(); tb2Build(); setTimeout(function(){ tb2Steps(); tb2Build(); }, 1500);
   if(typeof sbOnBar==='function') sbOnBar(function(){ tb2Steps(); tb2Build(); tb2Sync(); }); })();
+
+/* ===== Ponding (r402): one place for where water stands. Its own tool in the Measure group.
+   Area (the Floor levels area, or the ground of the whole scan), gullies and channel drains, find the dips, a list to pick from,
+   depth-coloured water and numbered pins in 3D and on the plan, the In place block round the picked dip, Section through it,
+   the rain test (played in 3D), and the dip survey PDF and CSV. Floor levels keeps heights, flatness, falls and spots;
+   Sections keeps the views along the cut line. ===== */
+var PND={water:true, pins:true, block:true, inLev:false};
+(function(){ try{ var o=JSON.parse(localStorage.getItem('sb_ponding')||'null'); if(o){ PND.water=o.w!==false; PND.pins=o.p!==false; PND.block=o.b!==false; } }catch(e){} })();
+function pndSave(){ try{ localStorage.setItem('sb_ponding', JSON.stringify({w:PND.water, p:PND.pins, b:PND.block})); }catch(e){} }
+function pndOpen(){ return typeof SBP!=='undefined'&&SBP.key==='ponding'&&!!APP.res; }
+SKIN_IC.ponding='M12 3c-3 4.5-6 7.6-6 11a6 6 0 0 0 12 0c0-3.4-3-6.5-6-11zM3 21h18';
+SBP_ITEMS.push(['ponding','Ponding','ponding','Where water stands: find the dips, see them in 3D, gullies and drains, rain test, dip survey PDF']);
+(function(){ try{ RGP_GROUPS.forEach(function(G){ if(G[0]==='meas'&&G[3].indexOf('ponding')<0){ var i=G[3].indexOf('levels'); G[3].splice(i<0?G[3].length:i+1, 0, 'ponding'); } }); }catch(e){} })();
+
+/* the Floor levels drawing tools (area, gullies, drains) and the rain test work while Ponding is open; the height colours stay hidden here */
+sbAround('levOpen', function(next){ return next()||pndOpen(); });
+sbAround('levMapHidden', function(next){ if(pndOpen()) return true; return next(); });
+
+function pndSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbPndSec'); if(!s){ s=document.createElement('div'); s.id='sbPndSec'; s.className='sec'; s.dataset.sec='ponding'; s.innerHTML='<h2>Ponding</h2><div class="body"></div>'; } if(s.parentNode!==side) side.appendChild(s); return s; }
+function pndSelect(i){ var R=dpmRes(); if(!R||!R.ponds[i]) return; DPM.sel=i; var p=R.ponds[i];
+  if(APP.view==='3d'&&typeof cam!=='undefined'){ cam.tx=p.x; cam.ty=p.y; cam.tz=p.low; cam.dist=Math.max(6, p.ext*2.5+5)*((APP.res.scale)||1); }
+  else if(typeof planView!=='undefined'){ planView.cx=p.x; planView.cy=p.y; }
+  pndPanel(); dpmRedraw(); planDrawSoon(); }
+/* which way to cut through a dip: along its longer way, unless that runs into a wall, a car or the edge of the scan and the other way does not */
+function pndCutWay(p, span){ var R=dpmRes(), g=R.g, a=CEI.axis, n=ceiN(), bad=function(u){ var b=0, m=0; for(var s=-span;s<=span;s+=g.cell){ var x=p.x+u[0]*s, y=p.y+u[1]*s, cx=Math.floor((x-g.x0)/g.cell), cy=Math.floor((y-g.y0)/g.cell); m++; if(cx<0||cy<0||cx>=g.nx||cy>=g.ny){ b++; continue; } var q=cy*g.nx+cx; if((R.raised&&R.raised[q])||!(R.F[q]===R.F[q])) b++; } return m?b/m:1; };
+  var bA=bad([a[0],a[1]]), bB=bad([n[0],n[1]]), pref=p.which, other=pref==='A'?'B':'A', bp=pref==='A'?bA:bB, bo=pref==='A'?bB:bA; return (bp>0.05&&bo<bp*0.5)?other:pref; }
+/* the block round the picked dip: along its longer way, the dip and two metres either side */
+function pndBlockS(i){ var R=dpmRes(), p=R&&R.ponds[i]; if(!p) return null; var a=CEI.axis, n=ceiN(), u=p.which==='A'?[a[0],a[1]]:[-n[0],-n[1]], v=[-u[1],u[0]], span=Math.max(2, p.ext/2+2), hdd=Math.max(1.5, Math.min(6, p.ext/2+1.5));
+  return {key:'dip'+i+'|'+p.x.toFixed(2)+'|'+p.y.toFixed(2), name:'Dip '+(i+1), hd:hdd, P:{X:[-span, span]}, G:{at:function(X,t){ return [p.x+u[0]*X+v[0]*t, p.y+u[1]*X+v[1]*t]; }}}; }
+
+function pndPanel(){ var s=pndSec(); if(!s) return; var b=s.querySelector('.body'); if(!APP.res){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return; }
+  var V=levM(), hasArea=!!(V&&V.area), R=dpmRes(), stale=R&&hasArea&&R.levKey!==LEV.key, tg=function(k,l,t){ return '<button data-pk="'+k+'" title="'+t+'" class="'+(PND[k]?'on':'')+'">'+l+'</button>'; }, h='';
+  h+='<p class="mini">Where water would stand and how deep. Draw the area to check (or leave it and the whole ground is checked), add the gullies and drains, then Find the dips.</p>';
+  h+='<div class="sH">Area</div>'+(hasArea?'<p class="mini">Area drawn'+(LEV.out?': '+fmt(LEV.out.area,1)+' m²':'')+' · '+V.gullies.length+' gull'+(V.gullies.length===1?'y':'ies')+' · '+(V.drains||[]).length+' channel drain'+((V.drains||[]).length===1?'':'s')+'</p>':'<p class="mini">No area drawn: the ground of the whole scan is checked, and gullies and drains cannot be used.</p>');
+  h+='<div class="row" style="flex-wrap:wrap;gap:4px"><button class="sBtn'+(LEV.drawing?' on':'')+'" id="pndArea">'+(LEV.drawing?'Click round the area...':hasArea?'Draw a new area':'Draw the area')+'</button>'+(hasArea?'<button class="sBtn'+(LEV.tool==='gully'?' on':'')+'" id="pndGully">'+(LEV.tool==='gully'?'Click where it is':'+ Gully grate')+'</button><button class="sBtn'+(LEV.tool==='drain'?' on':'')+'" id="pndDrain">'+(LEV.tool==='drain'?'Click along it, Enter to end':'+ Channel drain')+'</button>':'')+'</div>';
+  h+='<div class="sH">Dips</div><div class="row"><button class="sBtn" id="pndFind" style="flex:1'+(stale?';border-color:#d97706;color:#b45309':'')+'">'+(R?(stale?'Area or drains changed: check again':'Check again'):'Find the dips')+'</button></div>';
+  if(R){ h+='<p class="mini"><b>'+R.ponds.length+' dips</b> deeper than '+Math.round(R.minD*1000)+' mm in '+R.src+(R.ponds.length?' · '+fmt(R.area,1)+' m² · about '+Math.round(R.litres)+' litres':'')+(R.noise?' · scan noise about '+Math.round(R.noise*1000)+' mm':'')+'</p>';
+    if(R.ponds.length) h+='<div id="pndList" style="max-height:200px;overflow:auto;border:1px solid var(--sbLn);border-radius:7px">'+R.ponds.slice(0,40).map(function(p,i){ var on=DPM.sel===i; return '<button data-pi="'+i+'" title="Pick this dip" style="display:flex;width:100%;gap:8px;border:0;border-bottom:1px solid var(--sbLn);background:'+(on?'rgba(37,99,235,.12)':'none')+';color:inherit;font:inherit;padding:5px 8px;cursor:pointer;text-align:left"><b style="width:22px">'+(i+1)+'</b><span style="flex:1">'+Math.round(p.depth*1000)+' mm deep</span><span>'+fmt(p.area,1)+' m²</span><span style="width:52px;text-align:right">'+Math.round(p.litres)+' L</span></button>'; }).join('')+'</div>';
+    var P=R.ponds[DPM.sel]; if(P) h+='<div style="margin-top:6px;padding:8px;border:1px solid var(--sbLn);border-radius:8px"><b>Dip '+(DPM.sel+1)+'</b><div class="mini">'+Math.round(P.depth*1000)+' mm deep · '+fmt(P.area,2)+' m² · about '+Math.round(P.litres)+' litres · water stands at '+levN(P.lip)+', lowest '+levN(P.low)+'</div><div class="row" style="gap:4px;margin-top:4px"><button class="sBtn" id="pndSecT">Section through it</button><button class="sBtn" id="pndLook">Look at it in 3D</button></div></div>'; }
+  h+='<div class="sH">Show</div><div class="sbLSeg sSeg">'+tg('water','Water','Water coloured by depth, on the plan and in 3D')+tg('pins','Pins','A numbered pin at each dip; click a pin in 3D to pick it')+tg('block','Block','The ground round the picked dip as a block in place, heights stretched, with its water')+'</div>';
+  h+='<div class="mini" style="display:flex;flex-wrap:wrap;gap:4px 10px;margin:4px 0">'+DPM_BANDS.map(function(B){ return '<span><i style="display:inline-block;width:10px;height:10px;background:'+B[2]+';border-radius:2px;margin-right:4px"></i>'+B[3]+'</span>'; }).join('')+'</div>';
+  h+='<div class="sH">Rain test</div><div id="pndRain">'+(hasArea?'':'<p class="mini">Draw an area to run the rain test.</p>')+'</div>';
+  h+='<div class="sH">Report</div><div class="row" style="flex-wrap:wrap;gap:4px"><button class="sBtn" id="pndPdf" title="Plan with numbered dips, a ranked table, and a page per dip">Dip survey PDF</button><button class="sBtn" id="pndCsv">CSV</button></div><label class="mini" style="display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" id="pndPh"'+(DPM.photos?' checked':'')+'> 3D pictures in the PDF</label>';
+  b.innerHTML=h; var q=function(id){ return b.querySelector('#'+id); };
+  q('pndArea').onclick=function(){ LEV.drawing=true; LEV.draft=[]; LEV.tool=null; if(APP.view==='3d') wsView('plan'); pndPanel(); toast('Click round the area on the plan. Click the first point or press Enter to finish.', 4000); };
+  if(q('pndGully')) q('pndGully').onclick=function(){ LEV.tool=LEV.tool==='gully'?null:'gully'; if(LEV.tool&&APP.view==='3d') wsView('plan'); pndPanel(); };
+  if(q('pndDrain')) q('pndDrain').onclick=function(){ LEV.tool=LEV.tool==='drain'?null:'drain'; LEV.dpts=[]; if(LEV.tool&&APP.view==='3d') wsView('plan'); pndPanel(); };
+  q('pndFind').onclick=function(){ dpmRun(); };
+  b.querySelectorAll('[data-pi]').forEach(function(x){ x.onclick=function(){ pndSelect(+x.dataset.pi); }; });
+  if(q('pndSecT')) q('pndSecT').onclick=function(){ var p=R.ponds[DPM.sel], span=Math.max(3, p.ext*0.9+1.5), wh=pndCutWay(p, span); dpmJump({x:p.x, y:p.y, which:wh, n:DPM.sel+1}); /* the cut just round the dip, with the water line on */ var G=secGeom(wh), X=G.X(p.x,p.y); SEC.rng=SEC.rng||{}; SEC.rng[wh]=[X-span, X+span]; if(!SEC.dip||SEC.dip==='off') SEC.dip='water'; SEC.vs=null; SEC.key=''; sbPanel('sections'); toast('Section through dip '+(DPM.sel+1), 1800); };
+  if(q('pndLook')) q('pndLook').onclick=function(){ if(APP.view!=='3d') wsView('3d'); setTimeout(function(){ pndSelect(DPM.sel); }, 60); };
+  b.querySelectorAll('[data-pk]').forEach(function(x){ x.onclick=function(){ var k=x.dataset.pk; PND[k]=!PND[k]; pndSave(); pndPanel(); dpmRedraw(); planDrawSoon(); }; });
+  q('pndPdf').onclick=function(){ if(dpmRes()) dpmSurveyPdf(); else dpmRun(dpmSurveyPdf); }; q('pndCsv').onclick=function(){ if(dpmRes()) dpmCsv(); else dpmRun(dpmCsv); }; q('pndPh').onchange=function(){ DPM.photos=this.checked; dpmSave(); };
+  /* the rain test: the same controls as before, built by Floor levels and moved here */
+  if(hasArea&&LEV.out){ PND.inLev=true; try{ levPanel(); }catch(e){} PND.inLev=false; var rb=document.querySelector('#sbLevSec #rnBox'); if(rb) q('pndRain').appendChild(rb); } }
+sbAfter('levPanel', function(r){ try{ if(!PND.inLev&&pndOpen()) pndPanel(); }catch(e){ console.warn(e); } return r; });
+sbAfter('sbPanel', function(r){ try{ if(SBP.key==='ponding'){ pndPanel(); DPM.map=true; } dpmRedraw(); planDrawSoon(); }catch(e){ console.warn(e); } return r; });
+(function(){ sbAfter('buildSidebar', function(r){ try{ pndPanel(); }catch(e){} return r; }); try{ pndPanel(); }catch(e){}
+  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=ponding] #side .sec[data-sec=ponding]{display:block}body.sbSkin:not(.sbPanelOn) #sbPndSec,body:not(.hasScan) #sbPndSec{display:none}'+
+    '#sbPndSec .sH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:12px 0 4px}#sbPndSec .sSeg{display:flex;margin:2px 0 4px}#sbPndSec .sSeg button{flex:1}#sbPndSec .sBtn{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:7px;padding:4px 9px;cursor:pointer;font:inherit}#sbPndSec .sBtn.on{background:var(--acc,#2563eb);border-color:var(--acc,#2563eb);color:#fff}';
+  document.head.appendChild(c); })();
+
+/* ---------- 3D: depth-coloured water, pins, and the block round the picked dip ---------- */
+function pndOvDraw(){ var st0=document.getElementById('stage'); if(!st0) return; var cv=document.getElementById('pndOv'), on=pndOpen()&&APP.view==='3d'&&!!dpmRes();
+  if(!cv){ if(!on) return; cv=document.createElement('canvas'); cv.id='pndOv'; cv.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:29'; st0.appendChild(cv); }
+  var dpr=window.devicePixelRatio||1, W=Math.round(st0.clientWidth*dpr), H=Math.round(st0.clientHeight*dpr); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; cv.style.width=st0.clientWidth+'px'; cv.style.height=st0.clientHeight+'px'; }
+  var c=cv.getContext('2d'); c.clearRect(0,0,W,H); if(!on){ DPM.pins=[]; return; }
+  var sr=st0.getBoundingClientRect(), gr=glCv.getBoundingClientRect(), Pj=dpmPrj(glCv.clientWidth*dpr, glCv.clientHeight*dpr, (gr.left-sr.left)*dpr, (gr.top-sr.top)*dpr), R=dpmRes(), sc=(APP.res.scale)||1, S=(PND.block&&DPM.sel!=null)?pndBlockS(DPM.sel):null;
+  c.save(); if(PND.water){ for(var b=0;b<DPM_BANDS.length;b++){ var g=R.g; c.fillStyle=DPM_BANDS[b][1]; c.beginPath(); R.runs.forEach(function(r){ if(r[3]!==b||(S&&r[5]===DPM.sel)) return; var x0=g.x0+r[1]*g.cell, x1=g.x0+(r[2]+1)*g.cell, y0=g.y0+r[0]*g.cell, y1=y0+g.cell, z=r[4]+0.004; dpmPath(c, Pj.poly([[x0,y0,z],[x1,y0,z],[x1,y1,z],[x0,y1,z]])); }); c.fill(); } }
+  if(S){ try{ dpmCurtain(c, Pj, {G:S.G, P:S.P, key:S.key, name:S.name, hd:S.hd}, dpr, sc); }catch(e){ console.warn(e); } }
+  DPM.pins=[]; if(PND.pins) R.ponds.slice(0,40).forEach(function(p, i){ if(S&&i===DPM.sel) return; var a=Pj.pt([p.x,p.y,p.low]), t=Pj.pt([p.x,p.y,p.low+0.9*sc]); if(!a||!t) return; var on2=DPM.sel===i; c.strokeStyle=on2?'#1d4ed8':'#A32D2D'; c.lineWidth=2.2*dpr; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(t[0],t[1]); c.stroke(); c.fillStyle='#fff'; c.beginPath(); c.arc(a[0],a[1],4*dpr,0,7); c.fill();
+    dpmTag(c, t[0], t[1], (i+1)+' · '+Math.round(p.depth*1000)+' mm', on2?'#1d4ed8':'#A32D2D', dpr); DPM.pins.push({sx:t[0], sy:t[1]-8*dpr, ax:a[0], ay:a[1], p:{n:i+1}}); });
+  c.restore(); }
+sbAfter('gl_render', function(r){ try{ if(!miniVP) pndOvDraw(); }catch(e){ console.warn(e); } return r; });
+sbAfter('wsView', function(r){ try{ pndOvDraw(); if(pndOpen()) pndPanel(); }catch(e){} return r; });
 
 
 </script>
