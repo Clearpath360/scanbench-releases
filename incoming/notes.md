@@ -1,2 +1,0 @@
-- Floor levels > Hide colours: hides the colour map so you can see the scan for placing gullies and drains.
-- Rain test: the colour map hides by itself while the water shows; Show colours brings it back.

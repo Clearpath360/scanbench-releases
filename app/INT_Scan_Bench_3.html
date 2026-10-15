@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r384';
+var SB_BUILD='2026-10-15 r385';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26097,6 +26097,14 @@ sbAfter('levPanel', function(r){ try{ var s=document.getElementById('sbLevSec'),
     if(q('rnX')) q('rnX').onclick=function(){ rainPlay(false); RAIN.res=null; levPanel(); rainDrawSoon(); };
     if(q('rnF')) q('rnF').oninput=function(){ rainPlay(false); RAIN.f=+this.value; rainReadout(); rainDrawSoon(); var pl=q('rnPl'); if(pl) pl.textContent='▶ Play'; };
   }catch(e){ console.warn(e); } return r; });
+/* r385: the colour map can be hidden so the scan shows for placing gullies and drains, and it is hidden while rain water is shown */
+function levMapHidden(){ return LEV.hideMap===true||(!!RAIN.res&&LEV.hideMap!==false); }
+sbAround('levImage', function(next){ if(levMapHidden()&&!window.LAY_ONLY) return null; return next(); });
+sbAround('levContours', function(next){ if(levMapHidden()&&!window.LAY_ONLY) return []; return next(); });
+sbAround('levArrows', function(next){ if(levMapHidden()&&!window.LAY_ONLY) return; return next(); });
+sbAround('lv3Groups', function(next){ if(levMapHidden()) return {}; return next(); });
+sbAfter('levPanel', function(r){ try{ var b=document.querySelector('#sbLevSec .body'), rd=b&&b.querySelector('#lvRedraw'); if(!rd||b.querySelector('#lvMapT')) return r; var hid=levMapHidden(), bt=document.createElement('button'); bt.id='lvMapT'; bt.className='lBtn'+(hid?' on':''); bt.textContent=hid?'Show colours':'Hide colours'; bt.title='Hide the colour map to see the scan underneath, for placing gullies and drains or watching the rain';
+    var row=document.createElement('div'); row.className='lRow'; row.appendChild(bt); rd.closest('.lRow').after(row); bt.onclick=function(){ LEV.hideMap=!levMapHidden(); levPanel(); planDrawSoon(); requestRender(false); }; }catch(e){ console.warn(e); } return r; });
 
 
 </script>
