@@ -1,7 +1,5 @@
-r405: Sky, light & weather in one tool
-- Look group > Sky, light & weather replaces Light and Sky & weather.
-- Presets at the top only set the controls; change anything and it shows Custom (started from ...).
-- Save as my preset: type a name and save; your presets sit in the row with a cross to delete.
-- New Sunshower preset: rain in bright sun with a rainbow.
-- Tabs: Time & sun, Sky, Weather, Lights, Placed, Film; each has its own Reset button.
-- Weather > Sky darkens with weather: Off lets rain, snow or fog fall in sunshine.
+r406: Effects hide behind the scan, tidier markers, panel close always in reach
+- Fires, trees, smoke, pigeons, confetti and string lights are hidden when the scan is in front of them.
+- Effect markers and arrows show only on the Placed tab; light markers only on the Lights tab.
+- Click empty space or press Esc to let go of the picked effect.
+- The panel title and its close button stay at the top while you scroll.
