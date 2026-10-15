@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r408';
+var SB_BUILD='2026-10-15 r409';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26576,8 +26576,8 @@ function fxProg(){ if(FX.prog||!GL) return FX.prog; var gl=GL;
   var FS='#version 300 es\nprecision mediump float; in vec4 vC; in float vAdd; out vec4 o; uniform float uTri; void main(){ vec2 q=uTri>0.5?vec2(0.0):gl_PointCoord*2.0-1.0; float d=dot(q,q); if(d>1.0) discard; float f=uTri>0.5?1.0:(vAdd>0.5?(pow(1.0-d,1.6)+0.8*exp(-d*30.0)):smoothstep(1.0,0.0,d)*0.9); float a=vC.a*f; o=vec4(vC.rgb*a*(vAdd>0.5?2.2:1.0), vAdd>0.5?0.0:a); }';
   FX.prog=program(gl, VS, FS); FX.buf=gl.createBuffer(); return FX.prog; }
 function fxBuild(){ var F=fxS(), X=wxState(), t=X.t, sc=fxSc(), V=[], T=[], S=X.S, wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wx=Math.cos(wd)*wv, wy=Math.sin(wd)*wv, sky=wxMix([0.55,0.56,0.6],[0.16,0.17,0.2], X.night);
-  FX.vis=1; var P=function(x,y,z,r,g,b,a,s,add){ var v=FX.vis; if(v<=0.01) return; V.push(x,y,z,r,g,b,a*v,s,add?1:0); }, Tr=function(A,B,C,r,g,b,a,add,aB,aC){ var v=FX.vis; if(v<=0.01) return; T.push(A[0],A[1],A[2],r,g,b,a*v,0,add?1:0, B[0],B[1],B[2],r,g,b,(aB==null?a:aB)*v,0,add?1:0, C[0],C[1],C[2],r,g,b,(aC==null?a:aC)*v,0,add?1:0); };
-  F.items.forEach(function(it, ii){ var sd=fxH(ii*9.1+it.x*1.3+it.y*0.7); FX.vis=fxVis(it);
+  FX.vis=1; FX.oc=null; fxOccFrame(); var P=function(x,y,z,r,g,b,a,s,add){ var v=FX.vis; if(v<=0.01||(FX.oc&&fxHidden(x,y,z))) return; V.push(x,y,z,r,g,b,a*v,s,add?1:0); }, Tr=function(A,B,C,r,g,b,a,add,aB,aC){ var v=FX.vis; if(v<=0.01||(FX.oc&&fxHidden((A[0]+B[0]+C[0])/3,(A[1]+B[1]+C[1])/3,(A[2]+B[2]+C[2])/3))) return; T.push(A[0],A[1],A[2],r,g,b,a*v,0,add?1:0, B[0],B[1],B[2],r,g,b,(aB==null?a:aB)*v,0,add?1:0, C[0],C[1],C[2],r,g,b,(aC==null?a:aC)*v,0,add?1:0); };
+  F.items.forEach(function(it, ii){ var sd=fxH(ii*9.1+it.x*1.3+it.y*0.7); FX.vis=1; FX.oc=fxOcc(it);
     if(it.kind==='fire'){ var C=FX_FIRE[it.sub]||FX_FIRE.firepit, spots=C.candles?[[0,0,0.12],[0.09,0.05,0.16],[-0.07,0.06,0.1]]:[[0,0,0]], lift=(C.lift||0)*sc;
       spots.forEach(function(sp, si){ var bx=it.x+sp[0]*sc, by=it.y+sp[1]*sc, bz=it.z+sp[2]*sc+lift;
         /* the glow at the base */ P(bx,by,bz+C.h*0.25*sc, 1,0.55,0.2, 0.35*(0.85+0.15*Math.sin(t*9+sd*20)), Math.max(0.12, C.r*3.2)*sc, true);
@@ -26597,7 +26597,7 @@ function fxBuild(){ var F=fxS(), X=wxState(), t=X.t, sc=fxSc(), V=[], T=[], S=X.
           var x2=R.top[0]+dx*dr+wx*b*1.5*sc, y2=R.top[1]+dy*dr+wy*b*1.5*sc, z2=R.top[2]+dz*dr-0.5*gz*b*b*0.35, tw=0.55+0.45*Math.sin(t*25+q*7.1);
           P(x2,y2,z2, Math.min(1,R.col[0]*1.4+0.15),Math.min(1,R.col[1]*1.4+0.15),Math.min(1,R.col[2]*1.4+0.15), Math.min(1,fade*tw*1.6), (0.55+0.25*fade)*sc*R.big, true);
           for(var tr=1;tr<4;tr++){ var bb=Math.max(0,b-tr*0.07), dr2=v*(1-Math.exp(-bb*1.6))/1.6; P(R.top[0]+dx*dr2+wx*bb*1.5*sc, R.top[1]+dy*dr2+wy*bb*1.5*sc, R.top[2]+dz*dr2-0.5*gz*bb*bb*0.35, R.col[0],R.col[1],R.col[2], fade*0.55*(1-tr/4), 0.35*sc*R.big, true); } } }); } });
-  FX.vis=1; if(typeof fx2Build==='function') fx2Build(P, Tr, X, F, t, sc, wx, wy, sky);
+  FX.vis=1; FX.oc=null; if(typeof fx2Build==='function') fx2Build(P, Tr, X, F, t, sc, wx, wy, sky);
   return {V:V, T:T}; }
 /* smoke: soft grey puffs that rise, spread and drift with the wind; a picture of smoke, nothing more */
 function fxSmoke(P, x, y, z, amt, sd, t, sc, wx, wy, sky, X){ var n=Math.round(46*amt), life=9;
@@ -26614,6 +26614,20 @@ function fxVis(it){ if(it.kind==='fw'||it.kind==='rays'||typeof stScanHit!=='fun
   if(C&&(C.key===key||now-C.t<120)) return C.v; var pts=fxVisPts(it), sc=fxSc(), seen=0;
   pts.forEach(function(p){ var d=[p[0]-E[0], p[1]-E[1], p[2]-E[2]], L=Math.hypot(d[0],d[1],d[2]); if(L<0.05){ seen++; return; } var h=null; try{ h=stScanHit({o:E, d:[d[0]/L, d[1]/L, d[2]/L]}); }catch(e){} if(!h||!h.p){ seen++; return; } var Lh=Math.hypot(h.p[0]-E[0], h.p[1]-E[1], h.p[2]-E[2]); if(Lh>L-0.35*sc) seen++; });
   var v=seen/pts.length; FX.visC[it.id]={key:key, v:v, t:now}; return v; }
+/* r409: a small grid of rays from the eye over each placed thing finds where the scan is in front; each spark, flame and puff behind it is left out.
+   The grid is worked out again when the view moves, a little at a time, so moving the view stays smooth */
+FX.occ={}; FX.ocQ=0;
+function fxOccFrame(){ var m=camMVP(), r=glCv.getBoundingClientRect(); FX.ocM={m:m, w:r.width, h:r.height, E:camBasis().eye}; FX.ocBudget=1; }
+function fxScrPt(x,y,z){ var M=FX.ocM, m=M.m, cx=m[0]*x+m[4]*y+m[8]*z+m[12], cy=m[1]*x+m[5]*y+m[9]*z+m[13], cw=m[3]*x+m[7]*y+m[11]*z+m[15]; if(cw<0.02) return null; return [(cx/cw*0.5+0.5)*M.w, (0.5-cy/cw*0.5)*M.h]; }
+function fxOccBox(it){ var sc=fxSc(), r=1, h=1; if(it.kind==='fire'){ var C=FX_FIRE[it.sub]||FX_FIRE.firepit; r=Math.max(0.3, C.r*1.6); h=C.h*1.6+(C.lift||0)+(C.smoke?4:0.5); } else if(it.kind==='tree'){ r=1.1; h=2.8; } else if(it.kind==='smoke'){ r=2.5; h=6; } else if(it.kind==='confetti'){ r=3; h=3; } else if(it.kind==='pigeon'){ r=0.6; h=0.4; } else if(it.kind==='string'&&it.x2!=null){ return null; } return {r:r*sc, h:h*sc}; }
+function fxOcc(it){ if(it.kind==='fw'||it.kind==='rays'||typeof stScanHit!=='function') return null; var B=fxOccBox(it); if(!B) return null; var M=FX.ocM, E=M.E, key=E.map(function(v){ return v.toFixed(2); }).join(',')+'|'+M.w+'|'+it.x.toFixed(2)+','+it.y.toFixed(2)+','+it.z.toFixed(2), O=FX.occ[it.id];
+  if(O&&O.key===key) return O; if(O&&(!FX.ocBudget||(typeof glMoving!=='undefined'&&glMoving))){ clearTimeout(FX.ocT); FX.ocT=setTimeout(function(){ requestRender(false); }, 220); return O; } FX.ocBudget=0;
+  var xs=[], ys=[]; [-1,1].forEach(function(a){ [-1,1].forEach(function(b){ [0,1].forEach(function(c){ var q=fxScrPt(it.x+a*B.r, it.y+b*B.r, it.z+c*B.h); if(q){ xs.push(q[0]); ys.push(q[1]); } }); }); }); if(xs.length<8) return O||null;
+  var x0=Math.max(0,Math.min.apply(null,xs)), x1=Math.min(M.w,Math.max.apply(null,xs)), y0=Math.max(0,Math.min.apply(null,ys)), y1=Math.min(M.h,Math.max.apply(null,ys)); if(x1-x0<2||y1-y0<2) return O||null;
+  var n=13, D=new Float32Array(n*n), r0=glCv.getBoundingClientRect();
+  for(var j=0;j<n;j++) for(var i=0;i<n;i++){ var sx=x0+(i+0.5)*(x1-x0)/n, sy=y0+(j+0.5)*(y1-y0)/n, R=pickRay(sx+r0.left, sy+r0.top), h2=null; try{ h2=stScanHit(R); }catch(e){} D[j*n+i]=(h2&&h2.p)?Math.hypot(h2.p[0]-E[0], h2.p[1]-E[1], h2.p[2]-E[2]):1e9; }
+  FX.occ[it.id]={key:key, x0:x0, y0:y0, x1:x1, y1:y1, n:n, D:D}; if(O) requestRender(false); return FX.occ[it.id]; }
+function fxHidden(x,y,z){ var O=FX.oc, q=fxScrPt(x,y,z); if(!q) return false; var n=O.n, i=Math.floor((q[0]-O.x0)/(O.x1-O.x0)*n), j=Math.floor((q[1]-O.y0)/(O.y1-O.y0)*n); if(i<0||j<0||i>=n||j>=n) return false; var E=FX.ocM.E, L=Math.hypot(x-E[0], y-E[1], z-E[2]); return L>O.D[j*n+i]+0.12*fxSc(); }
 function fxDraw(){ if(!fxOn()||APP.view!=='3d'||miniVP) return; var F=fxS(); if(!(F.items.length||F.leaves>0||F.birds>0)) return; var gl=GL, pr=fxProg(); if(!pr) return; var BU=fxBuild(), V=BU.V, TT=BU.T; if(!V.length&&!TT.length) return;
   /* smoke laid over first, then the glowing things added on top */ var Vs=[], Va=[]; for(var i=0;i<V.length;i+=9){ (V[i+8]>0.5?Va:Vs).push.apply(V[i+8]>0.5?Va:Vs, V.slice(i,i+9)); }
   if(gl.bindVertexArray) gl.bindVertexArray(null); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uM'), false, camMVP()); gl.uniform1f(gl.getUniformLocation(pr,'uPS'), glCv.height/(2*Math.tan(0.45)));
@@ -26772,7 +26786,7 @@ function fx2Moon(){ var S=wxS(); if(!S) return null; var T=S.site||{}, p=String(
 function fx2Build(P, Tr, X, F, t, sc, wx, wy, sky){ var S=X.S, sun=X.sun, wl=Math.hypot(wx,wy);
   var quad=function(c, ux, uy, r, g, b, a, add){ var A=[c[0]-ux[0]-uy[0], c[1]-ux[1]-uy[1], c[2]-ux[2]-uy[2]], B=[c[0]+ux[0]-uy[0], c[1]+ux[1]-uy[1], c[2]+ux[2]-uy[2]], C=[c[0]+ux[0]+uy[0], c[1]+ux[1]+uy[1], c[2]+ux[2]+uy[2]], D=[c[0]-ux[0]+uy[0], c[1]-ux[1]+uy[1], c[2]-ux[2]+uy[2]]; Tr(A,B,C,r,g,b,a,add); Tr(A,C,D,r,g,b,a,add); };
   var ground=function(x,y){ var z=wxTopAt(x,y); return z>-1e8?z:(typeof mdlFloor==='function'?mdlFloor():0); };
-  F.items.forEach(function(it, ii){ var sd=fxH(ii*5.3+it.x*0.9+it.y*1.7); FX.vis=fxVis(it);
+  F.items.forEach(function(it, ii){ var sd=fxH(ii*5.3+it.x*0.9+it.y*1.7); FX.vis=1; FX.oc=fxOcc(it); if(!FX.oc) FX.vis=fxVis(it);
     if(it.kind==='rays'){ if(!(sun.el>1)||!(F.rays>0)) return; var Ld=[-sun.dir[0], -sun.dir[1], -sun.dir[2]], hz=Math.hypot(sun.dir[0], sun.dir[1])||1, u=[-sun.dir[1]/hz, sun.dir[0]/hz, 0], v=[0,0,1], w=(it.w||1.0)*sc/2, h=(it.h||1.4)*sc/2, c=[it.x,it.y,it.z];
       var gz=ground(it.x,it.y), len=Ld[2]<-0.05?Math.min(14*sc, Math.max(1.5*sc, (it.z-gz+h)/(-Ld[2]))):8*sc, amt=F.rays*Math.min(1.3,X.k)*(1-0.75*X.cov)*Math.min(1, sun.el/6), col=X.sunCol;
       [1,0.72,0.45].forEach(function(s){ var W=w*s, H=h*s, cs=[[-1,-1],[1,-1],[1,1],[-1,1]].map(function(q){ return [c[0]+u[0]*W*q[0]+v[0]*H*q[1], c[1]+u[1]*W*q[0]+v[1]*H*q[1], c[2]+v[2]*H*q[1]]; }), ce=cs.map(function(q){ return [q[0]+Ld[0]*len, q[1]+Ld[1]*len, q[2]+Ld[2]*len]; }), a0=0.05*amt;
@@ -26794,7 +26808,7 @@ function fx2Build(P, Tr, X, F, t, sc, wx, wy, sky){ var S=X.S, sun=X.sun, wl=Mat
       for(var q=0;q<240;q++){ var r1=fxH(q*1.3+kk*7.1+sd), r2=fxH(q*2.9+kk*3.3), r3=fxH(q*5.7+kk), an5=r1*6.283, sp=(2+4*r2)*sc, vz=(5+5*r3)*sc, tt=Math.min(age, 0.6), fall=Math.max(0, age-0.6);
         var x=it.x+Math.cos(an5)*sp*tt+wx*age*1.2*sc+Math.sin(age*3+q)*0.15*sc*Math.min(1,fall), y=it.y+Math.sin(an5)*sp*tt+wy*age*1.2*sc+Math.cos(age*2.6+q)*0.15*sc*Math.min(1,fall), z=it.z+vz*tt-4.9*sc*tt*tt-(0.5+0.4*r3)*sc*fall; var gz2=ground(x,y)+0.01*sc; if(z<gz2) z=gz2;
         var cc2=FX_CONF[q%7], rot=age*(4+6*r2)+q, ca=Math.cos(rot), sa=Math.sin(rot), s2=0.025*sc, fade=Math.min(1, (6.5-age)/1.2); quad([x,y,z], [ca*s2, sa*s2, 0], [-sa*s2*0.5*Math.cos(rot*1.3), ca*s2*0.5, s2*0.6*Math.sin(rot*1.3)], cc2[0],cc2[1],cc2[2], 0.95*fade, false); } } });
-  FX.vis=1;
+  FX.vis=1; FX.oc=null;
   /* autumn leaves: falling round what you are looking at, then skating across the ground with the wind */
   if(F.leaves>0){ var nL=Math.round(40+260*F.leaves), Hh=Math.min(28, Math.max(8, cam.dist*0.8))*sc, cx=cam.tx, cy=cam.ty, life=10;
     for(var i=0;i<nL;i++){ var h1=fxH(i*1.91+3), h2=fxH(i*3.37+5), h3=fxH(i*0.71+9), age2=((t/life+h3)%1+1)%1, x0=wxWrap(cx+(h1*2-1)*Hh+wx*t*0.6*sc, cx, Hh), y0=wxWrap(cy+(h2*2-1)*Hh+wy*t*0.6*sc, cy, Hh), gz3=ground(x0,y0), drop=(4+5*h2)*sc, fallT=0.55;
