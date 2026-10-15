@@ -1,5 +1,7 @@
-r404: Sky & weather effects, batch 2
-- Sky & weather > Effects: Northern lights, Real moon (phase and position for the date and place, lights the scan), Sunbeams, Autumn leaves, Birds, Wind and Wind from.
-- Place in the scene: + Sunbeam window (beams with glinting dust, follow the sun), + Pigeons, + Confetti.
-- Christmas: Christmas snow, + Christmas tree, + String lights and + Coloured lights (click the start, then the end).
-- Rain, snow, smoke, fireworks, confetti and leaves all go with the wind.
+r405: Sky, light & weather in one tool
+- Look group > Sky, light & weather replaces Light and Sky & weather.
+- Presets at the top only set the controls; change anything and it shows Custom (started from ...).
+- Save as my preset: type a name and save; your presets sit in the row with a cross to delete.
+- New Sunshower preset: rain in bright sun with a rainbow.
+- Tabs: Time & sun, Sky, Weather, Lights, Placed, Film; each has its own Reset button.
+- Weather > Sky darkens with weather: Off lets rain, snow or fog fall in sunshine.

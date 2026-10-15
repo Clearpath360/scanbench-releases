@@ -8431,7 +8431,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-15 r404';
+var SB_BUILD='2026-10-15 r405';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -26803,6 +26803,106 @@ sbAround('fxStartPlace', function(next, kind, sub, name){ var r=next(kind, sub, 
 window.addEventListener('pointerup', function(e){ var M=FX.mode, d=FX.dn; if(!M||M.kind!=='string'||!d||e.target!==glCv||!fxUI()) return; if(Math.hypot(e.clientX-d.x, e.clientY-d.y)>5) return; var q=ltScanPt(e.clientX, e.clientY); if(!q) return;
   if(!M.a){ M.a=q; FX.dn=null; e.preventDefault(); e.stopImmediatePropagation(); toast('Now click where they end.', 2500); return; }
   e.preventDefault(); e.stopImmediatePropagation(); FX.dn=null; pushUndo(); var it={id:fxNewId(), kind:'string', x:M.a[0], y:M.a[1], z:M.a[2], x2:q[0], y2:q[1], z2:q[2], multi:!!M.multi}; fxS().items.push(it); FX.sel=it.id; FX.mode=null; glCv.style.cursor=''; afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); }, true);
+
+/* ===== Sky, light & weather (r405): one tool in place of Light and Sky & weather. Presets along the top only move the controls;
+   change anything after and it says "Custom (started from ...)". Save your own mix as a preset. Below, tabs for every control:
+   Time & sun, Sky, Weather, Lights, Placed, Film, each with its own Reset. "Sky darkens with weather" off lets it rain in sunshine.
+   The old panels still build their controls; this panel takes them into its tabs, so everything behaves exactly as before. ===== */
+var SKP={tab:'weather', busy:false};
+try{ SKP.tab=localStorage.getItem('sb_skytab')||'weather'; }catch(e){}
+var SKP_TABS=[['time','Time & sun'],['sky','Sky'],['weather','Weather'],['lights','Lights'],['placed','Placed'],['film','Film']];
+SKIN_IC.sky='M12 3v2M5.6 5.6l1.4 1.4M3 12h2M18.4 5.6 17 7M8.5 12a3.5 3.5 0 0 1 6.6-1.6A3.5 3.5 0 1 1 16 17H8a3 3 0 0 1 .5-5z';
+(function(){ for(var i=SBP_ITEMS.length-1;i>=0;i--) if(SBP_ITEMS[i][0]==='light'||SBP_ITEMS[i][0]==='weather') SBP_ITEMS.splice(i,1);
+  SBP_ITEMS.push(['sky','Sky, light & weather','sky','Presets, time and sun, sky, weather, lights, placed effects and the weather film, all in one place']);
+  try{ RGP_GROUPS.forEach(function(G){ if(G[0]==='look'){ G[3]=G[3].filter(function(k){ return k!=='light'&&k!=='weather'; }); G[3].push('sky'); } }); }catch(e){} })();
+(function(){ var inner=window.sbPanel; window.sbPanel=function(key, quiet){ if(key==='light'||key==='weather'){ key='sky'; if(SBP.key==='sky') return; } return inner.call(this, key, quiet); }; })();
+sbAround('ltShowUI', function(next){ return next()||(SBP.key==='sky'&&APP.view==='3d'&&!miniVP&&!!APP.res&&ltOn()); });
+sbAround('fxUI', function(next){ return next()||(SBP.key==='sky'&&APP.view==='3d'&&!miniVP&&!!APP.res&&fxOn()); });
+
+/* ---------- rain in sunshine: the sky and the light are worked out as if there were no rain or snow; the rain and snow still fall ---------- */
+function skLinked(){ var S=wxS(); return !S||S.linked!==false; }
+sbAround('wxState', function(next){ var S=wxS(); if(!S||S.linked!==false) return next(); var k={rain:S.rain, snow:S.snow, lt:S.lightning}; S.rain=0; S.snow=0; S.lightning=false; var X; try{ X=next(); } finally{ S.rain=k.rain; S.snow=k.snow; S.lightning=k.lt; } X.flash=wxFlash(X.t)*Math.min(1.2, X.k); return X; });
+['styUniforms','wxSkyDraw'].forEach(function(f){ sbAround(f, function(next){ var S=typeof wxS==='function'?wxS():null; if(!S||S.linked!==false) return next.apply(null, [].slice.call(arguments,1)); var r0=S.rain, s0=S.snow; S.rain=r0*0.3; S.snow=s0*0.3; try{ return next.apply(null, [].slice.call(arguments,1)); } finally{ S.rain=r0; S.snow=s0; } }); });
+
+/* ---------- presets: what each one is called, a new Sunshower, and "Custom (started from ...)" once you change anything ---------- */
+var SKP_PN={misty:'Misty morning', storm:'Stormy evening', winter:'Winter’s day', night:'Clear night', clear:'Clear day', stormpass:'Storm passing', bonfire:'Bonfire Night', golden:'Golden hour', sunshower:'Sunshower'};
+var SKP_KEYS=['time','clouds','speed','wind','windDir','rain','snow','snowCover','fog','mist','lightning','stars','strength','puddles','shaftAmt','linked','wet','splash','dusk'], SKP_FXK=['meteors','shower','rainbow','rbDouble','aurora','moon','leaves','birds','rays','fwCol','fwRate'];
+function skSig(){ var S=wxS(), F=fxS(); if(!S) return ''; return JSON.stringify(SKP_KEYS.map(function(k){ return S[k]; }).concat(F?SKP_FXK.map(function(k){ return F[k]; }):[])); }
+function skPick(){ var S=wxS(), F=fxS(), o={S:{}, F:{}}; SKP_KEYS.forEach(function(k){ if(S[k]!==undefined) o.S[k]=S[k]; }); SKP_FXK.forEach(function(k){ if(F&&F[k]!==undefined) o.F[k]=F[k]; }); return o; }
+sbAround('wxPreset', function(next, k){ if(String(k).indexOf('my:')===0){ var S=wxS(), F=fxS(), P=skMine().filter(function(p){ return 'my:'+p.name===k; })[0]; if(!P||!S) return; pushUndo(); Object.assign(S, P.S, {on:true}); if(F) Object.assign(F, P.F); var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=S.time; afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); toast(P.name+'. Ctrl+Z undoes it.', 2500); return; }
+  if(k!=='sunshower') return next(k); var S2=wxS(), F2=fxS(); if(!S2) return; pushUndo(); Object.assign(S2, {on:true, time:fxSunTime(28, true), clouds:0.3, speed:0.5, wind:0.2, rain:0.45, snow:0, snowCover:0, fog:0, mist:0, lightning:false, wet:true, splash:true, stars:false, strength:1, puddles:0.35, shaftAmt:0.6, linked:false}); F2.rainbow=true; F2.rbDouble=false;
+  var ts2=typeof ltTodSun==='function'?ltTodSun():null; if(ts2) ts2.time=S2.time; afterEdit(); wxPanel(); requestRender(false); if(wxAnimNeed()) wxLoop(); toast('Sunshower: rain in bright sun, with a rainbow. Ctrl+Z undoes it.', 3000); });
+sbAround('wxPreset', function(next, k){ var r=next(k); try{ var S=wxS(); if(S){ if(k!=='sunshower'&&String(k).indexOf('my:')!==0&&S.linked===false) S.linked=true; S._preset=k; S._psig=skSig(); wxPanel(); } }catch(e){} return r; });
+function skPresetLine(){ var S=wxS(); if(!S||!S._preset) return 'Pick a preset to start from, then change anything below.'; var nm=String(S._preset).indexOf('my:')===0?S._preset.slice(3):(SKP_PN[S._preset]||S._preset); return skSig()===S._psig?'Preset: <b>'+nm+'</b>':'<b>Custom</b> (started from '+nm+')'; }
+function skMine(){ try{ return JSON.parse(localStorage.getItem('sb_mypresets')||'[]'); }catch(e){ return []; } }
+function skMineSave(L){ try{ localStorage.setItem('sb_mypresets', JSON.stringify(L)); }catch(e){ toast('Could not save the preset in this browser.', 2500); } }
+
+/* ---------- resets, one per tab ---------- */
+function skReset(t){ var S=wxS(), F=fxS(); if(!S) return; pushUndo();
+  if(t==='time'){ S.time=12; if(S.site) S.site.on=false; var ts=typeof ltTodSun==='function'?ltTodSun():null; if(ts) ts.time=12; }
+  if(t==='sky'){ Object.assign(S, {clouds:0.15, speed:0.3, stars:true, shaftAmt:0}); Object.assign(F, {meteors:0, shower:false, rainbow:false, rbDouble:false, aurora:0, moon:false, birds:0}); }
+  if(t==='weather'){ Object.assign(S, {rain:0, snow:0, snowCover:0, fog:0, mist:0, lightning:false, wind:0, puddles:0, linked:true, wet:true, splash:true}); F.leaves=0; }
+  if(t==='lights'){ var M=ltM(); if(M){ M.lights=M.lights.filter(function(l){ return l.kind==='sun'; }); M.lightAmb=0.55; M.lightsOn=true; } S.dusk=true; }
+  if(t==='placed'){ F.items=[]; FX.sel=null; F.rays=0.6; }
+  afterEdit(); wxPanel(); try{ ltPanel(); }catch(e){} requestRender(false); toast('Reset. Ctrl+Z undoes it.', 2000); }
+
+/* ---------- the panel: a home for the old controls, sorted into tabs ---------- */
+function skSec(){ var side=document.getElementById('side'); if(!side) return null; var s=document.getElementById('sbSkySec'); if(!s){ s=document.createElement('div'); s.id='sbSkySec'; s.className='sec'; s.dataset.sec='sky'; s.innerHTML='<h2>Sky, light &amp; weather</h2><div class="body"></div>'; } if(s.parentNode!==side) side.appendChild(s); return s; }
+function skShell(){ var s=skSec(); if(!s) return null; var b=s.querySelector('.body'); if(b.querySelector('#skTabs')) return b; if(!APP.res){ b.innerHTML='<p class="mini">Open a scan first.</p>'; return null; }
+  b.innerHTML='<div id="skTop"></div><div class="skH">Presets</div><div id="skPLine" class="mini"></div><div id="skPresets" class="skGrid"></div><div id="skMyRow" class="row" style="gap:4px"><input id="skMyName" placeholder="Name for your preset" style="flex:1;min-width:0"><button class="skBtn" id="skMySave">Save as my preset</button></div>'+
+    '<div id="skTabs">'+SKP_TABS.map(function(t){ return '<button data-skt="'+t[0]+'">'+t[1]+'</button>'; }).join('')+'</div>'+
+    SKP_TABS.map(function(t){ return '<div class="skTab" data-tab="'+t[0]+'"><div data-src="lt"></div><div data-src="wx"></div>'+(t[0]!=='film'?'<button class="skBtn skReset" data-rst="'+t[0]+'">Reset '+t[1].toLowerCase()+'</button>':'')+'</div>'; }).join('')+'<div id="skFoot"></div>';
+  b.querySelectorAll('[data-skt]').forEach(function(x){ x.onclick=function(){ SKP.tab=x.dataset.skt; try{ localStorage.setItem('sb_skytab', SKP.tab); }catch(e){} skShowTab(); }; });
+  b.querySelectorAll('[data-rst]').forEach(function(x){ x.onclick=function(){ skReset(x.dataset.rst); }; });
+  b.querySelector('#skMySave').onclick=function(){ var nm=(b.querySelector('#skMyName').value||'').trim(); if(!nm){ toast('Type a name for the preset first.', 2000); return; } var L=skMine().filter(function(p){ return p.name!==nm; }), o=skPick(); o.name=nm; L.push(o); skMineSave(L); var S=wxS(); S._preset='my:'+nm; S._psig=skSig(); b.querySelector('#skMyName').value=''; wxPanel(); toast('Saved as "'+nm+'".', 2000); };
+  skShowTab(); return b; }
+function skShowTab(){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; b.querySelectorAll('[data-skt]').forEach(function(x){ x.classList.toggle('on', x.dataset.skt===SKP.tab); }); b.querySelectorAll('.skTab').forEach(function(x){ x.style.display=x.dataset.tab===SKP.tab?'':'none'; }); }
+/* where each weather control goes, by its label */
+var SKP_LBL={'Sky & weather':'top','Strength':'top','Animate':'foot','Time':'time','Clouds':'sky','Cloud speed':'sky','Stars & moon':'sky','Light shafts':'sky','Sound in videos':'film','Volume':'film','Lamps on at dusk':'lights',
+  'Shooting stars':'sky','Meteor shower':'sky','Rainbow':'sky','Double bow':'sky','Northern lights':'sky','Real moon':'sky','Birds':'sky','Sunbeams':'placed','Autumn leaves':'weather'};
+var SKP_HDR={'Presets':'presets','Sky':'sky','Weather':'weather','Lights':'lights','Effects':'sky','Place in the scene':'placed','Christmas':'placed'};
+function skLabel(n){ var l=n.querySelector&&n.querySelector(':scope > label'); return l?l.textContent.trim():''; }
+function skFromWx(){ if(SBP.key!=='sky') return; var b=skShell(), src=document.querySelector('#sbWxSec .body'); if(!b||!src) return; var dst=function(t){ return t==='top'?b.querySelector('#skTop'):t==='foot'?b.querySelector('#skFoot'):b.querySelector('.skTab[data-tab="'+t+'"] [data-src="wx"]'); };
+  ['top','foot'].concat(SKP_TABS.map(function(t){ return t[0]; })).forEach(function(t){ var d=dst(t); if(d) d.innerHTML=''; }); b.querySelector('#skPresets').innerHTML='';
+  var list=[]; [].slice.call(src.children).forEach(function(n){ if(n.id==='fxBox'){ [].slice.call(n.children).forEach(function(m){ m._fx=1; list.push(m); }); } else list.push(n); });
+  var cur='top';
+  list.forEach(function(n){ var tx=(n.textContent||'').trim(), t;
+    if(n.classList&&n.classList.contains('wxH')){ var h=SKP_HDR[tx]; if(h) cur=h; if(tx==='Place in the scene'||tx==='Christmas'){ dst(cur).appendChild(n); } return; }
+    if(n.classList&&n.classList.contains('wxGrid')&&cur==='presets'){ [].slice.call(n.children).forEach(function(bt){ b.querySelector('#skPresets').appendChild(bt); }); return; }
+    if(n.id==='wsRow'||n.id==='wxRec'){ dst('film').appendChild(n); return; }
+    if(/^Real sun/.test(tx)){ dst('time').appendChild(n); return; }
+    var lb=skLabel(n); if(n._fx&&(lb==='Wind'||lb==='Wind from')) return;
+    t=SKP_LBL[lb]||(cur==='presets'?'top':cur); if(n.tagName==='P'&&!n._fx&&cur==='lights') t='foot'; dst(t).appendChild(n); });
+  /* the presets row: the Sunshower and your own, then the line saying where you are */
+  var G=b.querySelector('#skPresets'), add=function(k, nm, mine){ var bt=document.createElement('button'); bt.dataset.wp=k; bt.innerHTML=nm+(mine?' <span class="skX" title="Delete this preset">✕</span>':''); bt.onclick=function(e){ if(e.target.classList.contains('skX')){ e.stopPropagation(); skMineSave(skMine().filter(function(p){ return p.name!==nm; })); wxPanel(); return; } wxPreset(k); }; G.appendChild(bt); };
+  if(!G.querySelector('[data-wp="sunshower"]')) add('sunshower','Sunshower'); skMine().forEach(function(p){ add('my:'+p.name, p.name, true); });
+  var S=wxS(), cur2=S&&S._preset; G.querySelectorAll('[data-wp]').forEach(function(x){ x.classList.toggle('on', x.dataset.wp===cur2&&skSig()===S._psig); });
+  b.querySelector('#skPLine').innerHTML=skPresetLine();
+  /* rain in sunshine */ var wt=dst('weather'), lk=document.createElement('div'); lk.className='row'; lk.title='Off: rain, snow and fog fall but the sky stays bright and the sun keeps shining (a sunshower)'; lk.innerHTML='<label>Sky darkens with weather</label><div class="sbLSeg"><button data-lk="1" class="'+(skLinked()?'on':'')+'">On</button><button data-lk="0" class="'+(!skLinked()?'on':'')+'">Off</button></div>';
+  wt.insertBefore(lk, wt.firstChild); lk.querySelectorAll('[data-lk]').forEach(function(x){ x.onclick=function(){ pushUndo(); wxS().linked=x.dataset.lk==='1'; wxS().on=true; afterEdit(); wxPanel(); requestRender(false); }; });
+  skShowTab(); }
+function skFromLt(){ if(SBP.key!=='sky') return; var b=skShell(), src=document.querySelector('#sbLightSec .body'); if(!b||!src) return; var d=b.querySelector('.skTab[data-tab="lights"] [data-src="lt"]'); d.innerHTML=''; [].slice.call(src.children).forEach(function(n){ if(n.classList&&n.classList.contains('ltH')&&n.textContent.trim()==='Presets') n.textContent='Light presets'; d.appendChild(n); }); }
+sbAfter('wxPanel', function(r){ try{ skFromWx(); }catch(e){ console.warn(e); } return r; });
+sbAfter('ltPanel', function(r){ try{ skFromLt(); }catch(e){ console.warn(e); } return r; });
+/* before the old panels build again, take back what was moved, so they build it afresh */
+function skClear(src){ var b=document.querySelector('#sbSkySec .body'); if(!b) return; if(src==='wx'){ ['#skTop','#skFoot','#skPresets'].forEach(function(q){ var d=b.querySelector(q); if(d) d.innerHTML=''; }); } b.querySelectorAll('.skTab [data-src="'+src+'"]').forEach(function(d){ d.innerHTML=''; }); }
+sbAround('wxPanel', function(next){ if(SBP.key==='sky') skClear('wx'); return next(); });
+sbAround('ltPanel', function(next){ if(SBP.key==='sky') skClear('lt'); return next(); });
+/* the old panels' looks, for their controls in their new home */
+function skCss(){ if(document.getElementById('skCss')) return; var out=[]; [].slice.call(document.styleSheets).forEach(function(sh){ var R2; try{ R2=sh.cssRules; }catch(e){ return; } [].slice.call(R2||[]).forEach(function(r){ var t=r.cssText; if(/#sbLightSec|#sbWxSec/.test(t)&&!/display:\s*none/.test(t)) out.push(t.replace(/#sbLightSec|#sbWxSec/g,'#sbSkySec')); }); });
+  var c=document.createElement('style'); c.id='skCss'; c.textContent=out.join('\n'); document.head.appendChild(c); }
+sbAfter('sbPanel', function(r){ try{ if(SBP.key==='sky'){ skCss(); skShell(); ltPanel(); wxPanel(); } }catch(e){ console.warn(e); } return r; });
+/* the line under the presets keeps up as you change things */
+sbAfter('afterEdit', function(r){ try{ if(SBP.key==='sky'){ var l=document.getElementById('skPLine'); if(l) l.innerHTML=skPresetLine(); } }catch(e){} return r; });
+document.addEventListener('input', function(e){ if(SBP.key!=='sky'||!e.target.closest||!e.target.closest('#sbSkySec')) return; var l=document.getElementById('skPLine'); if(l) setTimeout(function(){ l.innerHTML=skPresetLine(); }, 0); }, true);
+(function(){ sbAfter('buildSidebar', function(r){ try{ var s=skSec(); if(s&&!s.querySelector('#skTabs')&&SBP.key==='sky'){ skShell(); ltPanel(); wxPanel(); } }catch(e){} return r; }); try{ skSec(); }catch(e){}
+  var c=document.createElement('style'); c.textContent='body.sbSkin[data-sbpanel=sky] #side .sec[data-sec=sky]{display:block}body.sbSkin:not(.sbPanelOn) #sbSkySec,body:not(.hasScan) #sbSkySec{display:none}'+
+    '#sbSkySec .skH,#sbSkySec .wxH,#sbSkySec .ltH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:10px 0 4px}'+
+    '#sbSkySec .skGrid,#sbSkySec .wxGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0}#sbSkySec .skGrid button,#sbSkySec .wxGrid button{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:8px;padding:6px 4px;cursor:pointer;font:inherit;font-size:12px}#sbSkySec .skGrid button.on{border-color:var(--acc,#2563eb);box-shadow:inset 0 0 0 1px var(--acc,#2563eb)}#sbSkySec .skX{opacity:.6;margin-left:4px}'+
+    '#skTabs{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:4px;margin:12px 0 6px;padding:6px 0;background:var(--sbBg,#fff);border-bottom:1px solid var(--sbLn)}#skTabs button{flex:1 1 30%;border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:999px;padding:5px 6px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}#skTabs button.on{background:var(--acc,#2563eb);border-color:var(--acc,#2563eb);color:#fff}'+
+    '#sbSkySec .skBtn{border:1px solid var(--sbLn);background:var(--bg3);color:inherit;border-radius:7px;padding:5px 9px;cursor:pointer;font:inherit;font-size:12px}#sbSkySec .skReset{display:block;margin:12px 0 4px;width:100%;opacity:.85}#skPLine{margin:2px 0 4px}#skMyRow input{border:1px solid var(--sbLn);border-radius:7px;padding:5px 8px;font:inherit;background:var(--sbBg,#fff);color:inherit}'+
+    '#sbSkySec .ltGrid,#sbSkySec .ltGrid3{margin:4px 0}';
+  document.head.appendChild(c); })();
 
 
 </script>
