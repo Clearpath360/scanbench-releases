@@ -8191,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-16 r431';
+var SB_BUILD='2026-10-16 r432';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -27327,9 +27327,9 @@ function brnFlowTick(ts){ BRNF.raf=requestAnimationFrame(brnFlowTick); var cv=do
   BRNF.p.forEach(function(P){ if(P.X==null&&!brnFlowSpawn(P, R, B, Fr)) return; var cq=brnCell(R, P.X, P.T); if(cq<0||R.M[cq]!==1){ P.X=null; return; } var h=Fr.h[cq]; if(h<0.0002){ P.X=null; return; }
     var vx=Fr.fx[cq]/60000/h, vy=Fr.fy[cq]/60000/h, sp=Math.hypot(vx, vy); if(sp>1.5){ vx*=1.5/sp; vy*=1.5/sp; } P.X+=vx*BRNF.K*dt*sc; P.T+=vy*BRNF.K*dt*sc; P.age+=dt;
     if(P.age>P.life||Math.abs(P.X-(B.X0+B.L/2))>B.L/2||Math.abs(P.T)>B.hd){ P.X=null; return; }
-    var w=S.G.at(P.X, P.T), wl=(R.Zm[cq]+h)*sc, s=Pj.pt([w[0], w[1], zAt(P.X, P.T, wl)]); if(!s) return; P.tr.push(s); if(P.tr.length>14) P.tr.shift(); if(P.tr.length<2) return;
+    var w=S.G.at(P.X, P.T), wl=(R.Zm[cq]+h)*sc; P.tr.push([w[0], w[1], zAt(P.X, P.T, wl)]); if(P.tr.length>14) P.tr.shift(); if(P.tr.length<2) return; /* r432: the tail is kept on the ground and drawn from the view as it is now, so turning the view never smears it */ var TS=P.tr.map(function(q3){ return Pj.pt(q3); }); if(TS.some(function(v){ return !v; })) return;
     var spill=R.D[cq]&&St.spill>0.5, fade=Math.min(1, P.age/0.3, (P.life-P.age)/0.4);
-    for(var i=1;i<P.tr.length;i++){ var al=fade*i/P.tr.length; c.strokeStyle=spill?'rgba(253,186,116,'+(0.95*al)+')':'rgba(125,211,252,'+(0.95*al)+')'; c.lineWidth=(spill?3:2.4)*dpr*(0.5+0.5*i/P.tr.length); c.beginPath(); c.moveTo(P.tr[i-1][0], P.tr[i-1][1]); c.lineTo(P.tr[i][0], P.tr[i][1]); c.stroke(); } }); }
+    for(var i=1;i<TS.length;i++){ var al=fade*i/TS.length; c.strokeStyle=spill?'rgba(253,186,116,'+(0.95*al)+')':'rgba(125,211,252,'+(0.95*al)+')'; c.lineWidth=(spill?3:2.4)*dpr*(0.5+0.5*i/TS.length); c.beginPath(); c.moveTo(TS[i-1][0], TS[i-1][1]); c.lineTo(TS[i][0], TS[i][1]); c.stroke(); } }); }
 (function(){ if(!BRNF.raf) BRNF.raf=requestAnimationFrame(brnFlowTick); })();
 
   /* r431: the water itself. Round the block (on the scan) every wet square, deeper is stronger; on the block the thin water that is running,
@@ -27392,7 +27392,8 @@ try{ sbAfter('volPanel', function(r){ try{ var b=document.querySelector('#sbVolS
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'16 October 2026', r:'r422 to r431', t:[
+ {d:'16 October 2026', r:'r422 to r432', t:[
+  'Rain on the block: the moving water no longer smears across the screen when you turn the view.',
   'Rain on the block shows the water spreading: thin running water shows as light blue streams, the water on the ground round the block shows too, and the water that overflows the dip is coloured orange so you can follow where it goes. The readout says which other dips its overflow reaches. Rain can now last up to 3 hours, with up to 2 hours after.',
   'Rain on the block: moving streaks of water now run across the block the way the arrows point, sped up 10 times so you can follow them, and turn orange where they pour out of the dip. They keep moving when you pause, and show in pictures and recordings.',
   'Rain on the block is more real: rain also falls on the ground round the block (2, 3 or 5 times its size) so water from uphill runs in, water runs at the speed the surface allows and soaks into soft ground (pick tarmac, block paving, permeable paving, gravel or grass), and goes round cars. Arrows show which way it runs, and an orange marker shows where the dip overflows, in litres a minute.',
