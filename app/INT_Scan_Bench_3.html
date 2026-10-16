@@ -8193,7 +8193,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-16 r439';
+var SB_BUILD='2026-10-16 r440';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -27355,6 +27355,23 @@ function brnDrawWater(c, Pj, S, B, sc, dpr, part){ var R=BRN.res, Fr=R.frames[BR
 /* the water round the block goes down before the block, so the block stands on top of it */
 try{ sbBefore('dpmCurtain', function(c, Pj, S0, k, sc){ try{ if(brnLive()&&APP.view==='3d'&&/^dip\d/.test((S0&&S0.key)||'')){ var S=pndBlockS(DPM.sel), B=DPM._bg; if(S&&B) brnDrawWater(c, Pj, S, B, (BRN.res&&BRN.res.sc)||1, window.devicePixelRatio||1, 'out'); } }catch(e){ console.warn(e); } }); }catch(e){}
 
+/* ===== r440: deleted things stay deleted while you turn the view. An LCC scan swaps in its lighter level while the view moves;
+   that lighter copy was made once, before any deleting, so a deleted car came back while turning and went again when you stopped.
+   Now the lighter copy is remade after each delete or put-back, and only keeps what is still in the scan (in 15 cm cells). ===== */
+var LODFX={ver:0};
+try{ sbAfter('clnApply', function(r){ LODFX.ver++; return r; }); }catch(e){}
+try{ if(typeof clbFlushDel==='function'){ var _clbFD=clbFlushDel; clbFlushDel=function(){ var r=_clbFD.apply(this, arguments); LODFX.ver++; return r; }; } }catch(e){}
+function lodfxReady(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.res) return null; var R=APP.res, del=R.del, k=lccXfKey()+'|'+SPL.n+'|'+LODFX.ver; if(S.set&&S.key===k&&S.srcRef===SPL.src) return S.set;
+  lccDrop(S); var P=SPL.src.pos, n=SPL.src.n, mn=[1e30,1e30,1e30], mx=[-1e30,-1e30,-1e30], i, a, live=function(j){ return !(del&&del[j])&&P[j*3+2]>DEL_Z+1; };
+  for(i=0;i<n;i++){ if(!live(i)) continue; for(a=0;a<3;a++){ var v=P[i*3+a]; if(v<mn[a]) mn[a]=v; if(v>mx[a]) mx[a]=v; } }
+  if(mn[0]>mx[0]) return null;
+  var c=0.15, dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); while(dims[0]*dims[1]*dims[2]>120e6){ c*=1.25; dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); }
+  var G=new Uint8Array(dims[0]*dims[1]*dims[2]), X=dims[0], XY=dims[0]*dims[1]; for(i=0;i<n;i++){ if(!live(i)) continue; var gx=((P[i*3]-mn[0])/c|0)+1, gy=((P[i*3+1]-mn[1])/c|0)+1, gz=((P[i*3+2]-mn[2])/c|0)+1; G[gx+gy*X+gz*XY]=1; }
+  function keep(x,y,z){ var gx=Math.floor((x-mn[0])/c)+1, gy=Math.floor((y-mn[1])/c)+1, gz=Math.floor((z-mn[2])/c)+1; if(gx<1||gy<1||gz<1||gx>X-2||gy>dims[1]-2||gz>dims[2]-2) return false;
+    for(var dz=-1;dz<=1;dz++) for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) if(G[gx+dx+(gy+dy)*X+(gz+dz)*XY]) return true; return false; }
+  S.set=lccSet(lccToRes(S.raw, keep)); S.key=k; S.srcRef=SPL.src; return S.set; }
+try{ if(typeof lccLodReady==='function') sbAround('lccLodReady', function(next){ return lodfxReady(); }); }catch(e){}
+
 /* ===== r438: the opening reveal, as the XGRIDS viewer does it. When a scan opens (shown as Splats), it appears inside a sphere that
    grows from where you are looking from: near things first, then out to the far walls, in about 1.6 seconds. At the growing edge
    a thin band of small glowing dots. View > Reveal the scan when it opens turns it off; View > Play the opening reveal plays it again
@@ -27525,7 +27542,8 @@ try{ sbAfter('levPanel', function(r){ try{ if(typeof PND!=='undefined'&&PND.inLe
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'16 October 2026', r:'r422 to r439', t:[
+ {d:'16 October 2026', r:'r422 to r440', t:[
+  'Fix: on LCC scans, something you deleted (and filled) no longer comes back while you turn the view.',
   'Style: three new looks. Cel shaded (anime-style flat colours, hard light and shadow bands from the 3D shape, thick outlines), Painterly (oil paint brush strokes) and Retro pixel (chunky pixels and few colours, like an old games console).',
   'Opening reveal: when a scan opens as Splats it grows into view from where you stand, with a band of glowing dots at the edge, like the XGRIDS viewer. Turn it off or play it again in the View menu.',
   'Style: up close, the ground no longer shows as overlapping discs in White model, Clay and the other shape looks; surfaces are smoothed over about 12 cm and lines only show at real steps.',
