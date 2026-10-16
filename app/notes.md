@@ -1,8 +1,8 @@
-# r422: overnight test sweep, ponding accuracy, graphics-card hiding
+# r423: red Clear buttons, ponding area made clear
 
-- Ponding: depth, wet area and litres now read from finer ground. On test dips of known size: 50 mm dip reads 50-51 mm (was 39-50), small and sloped dips are found and within a few mm.
-- Ponding: dips that run into a gap or the edge of the scan are marked "edge, check" in the list and the CSV.
-- Effects and the Christmas tree are hidden behind the scan by the graphics card, pixel by pixel, even while moving. View > Hide effects behind the scan with the graphics card turns it off.
-- Saved files get exactly one name prefix (no more EXT_INT_), and your Help prefix setting applies to every file.
-- What's new waits until no other window (like the LCC Open box) is open.
-- Manual: wall drawing steps corrected (one wall per two clicks; tick chain to carry on).
+- Ponding: a red Clear button takes off the area, gullies, drains and dips. Drawing or clearing the area drops the old dips so the list always matches the area.
+- Ponding: the dip survey PDF plan now frames the drawn area and shows its blue dashed outline. "Checked" reads "the drawn area (63.7 m²)".
+- Floor levels: Start again is now a red Clear button, and also clears the dips.
+- Sections: a red Clear button goes back to the whole line, clears the fall points and turns the dip check off.
+- Volume: a red Clear all areas button.
+- All Clear buttons can be undone with Ctrl+Z.
