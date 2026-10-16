@@ -8191,7 +8191,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-16 r436';
+var SB_BUILD='2026-10-16 r437';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -27365,21 +27365,21 @@ function slkShader(gl, type, src){ var s=gl.createShader(type); gl.shaderSource(
 function slkInit(){ var gl=GL; if(SLK.prog||SLK.err) return !!SLK.prog; try{
   var VS='#version 300 es\nout vec2 vUv; void main(){ vec2 p=vec2(float((gl_VertexID<<1)&2), float(gl_VertexID&2)); vUv=p; gl_Position=vec4(p*2.0-1.0,0.0,1.0); }';
   var FS=['#version 300 es','precision highp float; in vec2 vUv; out vec4 o;',
-   'uniform sampler2D uC; uniform sampler2D uD; uniform vec2 uTx; uniform int uMode; uniform float uP0; uniform float uP5; uniform float uP10; uniform float uP14; uniform float uOrtho; uniform float uHasD; uniform float uFocus; uniform float uDpr;',
+   'uniform sampler2D uC; uniform sampler2D uD; uniform vec2 uTx; uniform int uMode; uniform float uP0; uniform float uP5; uniform float uP10; uniform float uP14; uniform float uOrtho; uniform float uHasD; uniform float uFocus; uniform float uDpr; uniform float uPpm; uniform float uSc;',
    'float lin(vec2 uv){ float d=texture(uD, uv).r; if(d>=0.99999) return 1e6; float z=d*2.0-1.0; return uOrtho>0.5?-(z-uP14)/uP10:uP14/(z+uP10); }',
    /* r436: the splat depth is grainy, so surfaces are read from a smoothed depth that keeps real steps (bilateral) */
-   'float slin(vec2 uv){ float c=lin(uv); if(c>1e5) return c; float s=c, w=1.0; for(int y=-2;y<=2;y++) for(int x=-2;x<=2;x++){ if(x==0&&y==0) continue; float l=lin(uv+vec2(float(x),float(y))*uTx*2.5*uDpr); if(l>1e5) continue; float k=exp(-pow((l-c)/(c*0.025),2.0)); s+=l*k; w+=k; } return s/w; }',
+   'float slin(vec2 uv){ float c=lin(uv); if(c>1e5) return c; float s=c, w=1.0; float rp=clamp(0.06*uSc*uPpm/c, 1.5*uDpr, 14.0*uDpr); for(int y=-2;y<=2;y++) for(int x=-2;x<=2;x++){ if(x==0&&y==0) continue; float l=lin(uv+vec2(float(x),float(y))*uTx*rp); if(l>1e5) continue; float k=exp(-pow((l-c)/max(c*0.02, 0.05*uSc),2.0)); s+=l*k; w+=k; } return s/w; }',
    'vec3 vpos(vec2 uv){ float l=slin(uv); vec2 n=uv*2.0-1.0; return uOrtho>0.5?vec3(n.x/uP0, n.y/uP5, -l):vec3(n.x*l/uP0, n.y*l/uP5, -l); }',
    'vec3 nrm(vec2 uv, float r){ vec2 dx=vec2(uTx.x*r,0.0), dy=vec2(0.0,uTx.y*r); vec3 c=vpos(uv), l=vpos(uv-dx), rr=vpos(uv+dx), d=vpos(uv-dy), u=vpos(uv+dy);',
    '  vec3 hx=abs(rr.z-c.z)<abs(c.z-l.z)?rr-c:c-l; vec3 hy=abs(u.z-c.z)<abs(c.z-d.z)?u-c:c-d; vec3 n=normalize(cross(hx,hy)); return n.z<0.0?-n:n; }',
-   'vec3 N(vec2 uv){ return nrm(uv,4.0*uDpr); }',
+   'vec3 N(vec2 uv){ float c=lin(uv); float r=c>1e5?4.0*uDpr:clamp(0.15*uSc*uPpm/c, 3.0*uDpr, 30.0*uDpr); return nrm(uv,r); }',
    'float lum(vec3 c){ return dot(c, vec3(0.299,0.587,0.114)); }',
    'float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }',
-   'float edgeD(vec2 uv, float w){ float c=lin(uv); if(c>1e5) return 0.0; float m=0.0; vec2 s=uTx*w*uDpr; float a=lin(uv+vec2(s.x,0.0)), b=lin(uv-vec2(s.x,0.0)), e=lin(uv+vec2(0.0,s.y)), f=lin(uv-vec2(0.0,s.y));',
-   '  m=max(max(abs(a+b-2.0*c), abs(e+f-2.0*c)), 0.0)/c; float bg=(a>1e5||b>1e5||e>1e5||f>1e5)?1.0:0.0; return max(bg, smoothstep(0.04, 0.12, m)); }',
+   'float edgeD(vec2 uv, float w){ float c=slin(uv); if(c>1e5) return 0.0; float m=0.0; vec2 s=uTx*w*uDpr; float a=slin(uv+vec2(s.x,0.0)), b=slin(uv-vec2(s.x,0.0)), e=slin(uv+vec2(0.0,s.y)), f=slin(uv-vec2(0.0,s.y));',
+   '  float j=max(abs(a+b-2.0*c), abs(e+f-2.0*c)); m=j/c; float bg=(a>1e5||b>1e5||e>1e5||f>1e5)?1.0:0.0; return max(bg, smoothstep(0.04, 0.12, m)*smoothstep(0.04*uSc, 0.10*uSc, j)); }',
    'float edgeN(vec2 uv, vec3 n, float w){ vec2 s=uTx*w*3.0*uDpr; float k=0.0; k=max(k, 1.0-dot(n, N(uv+vec2(s.x,0.0)))); k=max(k, 1.0-dot(n, N(uv+vec2(0.0,s.y)))); return smoothstep(0.35, 0.7, k); }',
    'float edgeC(vec2 uv, float w){ vec2 s=uTx*w*uDpr; float a=lum(texture(uC,uv+vec2(s.x,0.0)).rgb)-lum(texture(uC,uv-vec2(s.x,0.0)).rgb), b=lum(texture(uC,uv+vec2(0.0,s.y)).rgb)-lum(texture(uC,uv-vec2(0.0,s.y)).rgb); return smoothstep(0.10, 0.30, length(vec2(a,b))); }',
-   'float ao(vec2 uv){ float c=lin(uv); if(c>1e5) return 1.0; float occ=0.0; for(int i=0;i<8;i++){ float an=float(i)*0.785398; vec2 o2=vec2(cos(an),sin(an))*uTx*14.0*uDpr; float l=slin(uv+o2); occ+=smoothstep(0.0, 0.03, (c-l)/c)*(1.0-smoothstep(0.08,0.25,(c-l)/c)); } return 1.0-occ/8.0*0.55; }',
+   'float ao(vec2 uv){ float c=lin(uv); if(c>1e5) return 1.0; float occ=0.0; for(int i=0;i<8;i++){ float an=float(i)*0.785398; vec2 o2=vec2(cos(an),sin(an))*uTx*14.0*uDpr; float l=slin(uv+o2); occ+=smoothstep(0.0, 0.03, (c-l)/c)*(1.0-smoothstep(0.08,0.25,(c-l)/c)); } return 1.0-occ/8.0*0.35; }',
    'vec3 blur(vec2 uv, float r){ vec3 s=vec3(0.0); float w=0.0; for(int y=-2;y<=2;y++) for(int x=-2;x<=2;x++){ vec2 o2=vec2(float(x),float(y))*uTx*r*uDpr; float k=1.0/(1.0+float(x*x+y*y)); s+=texture(uC,uv+o2).rgb*k; w+=k; } return s/w; }',
    'vec3 inferno(float t){ const vec3 c0=vec3(0.0002189,0.0016510,-0.0194809); const vec3 c1=vec3(0.1065134,0.5639564,3.9327124); const vec3 c2=vec3(11.6024931,-3.9728540,-15.9423941); const vec3 c3=vec3(-41.7039961,17.4363989,44.3541452); const vec3 c4=vec3(77.1629357,-33.4023589,-81.8073093); const vec3 c5=vec3(-71.3194282,32.6260643,73.2095199); const vec3 c6=vec3(25.1311262,-12.2426690,-23.0703250); return clamp(c0+t*(c1+t*(c2+t*(c3+t*(c4+t*(c5+t*c6))))),0.0,1.0); }',
    'void main(){ vec2 uv=vUv; vec3 col=texture(uC,uv).rgb; float l0=lin(uv); bool bg=uHasD>0.5&&l0>1e5; vec3 L=normalize(vec3(-0.45,0.65,0.62));',
@@ -27399,7 +27399,7 @@ function slkInit(){ var gl=GL; if(SLK.prog||SLK.err) return !!SLK.prog; try{
    ' if(uMode==8){ float t=lum(blur(uv,1.2)); t=smoothstep(0.03,0.97,t); o=vec4(inferno(t),1.0); return; }',
    ' o=vec4(col,1.0); }'].join('\n');
   var p=gl.createProgram(); gl.attachShader(p, slkShader(gl, gl.VERTEX_SHADER, VS)); gl.attachShader(p, slkShader(gl, gl.FRAGMENT_SHADER, FS)); gl.linkProgram(p); if(!gl.getProgramParameter(p, gl.LINK_STATUS)){ console.warn(gl.getProgramInfoLog(p)); throw new Error('style link'); }
-  SLK.prog=p; ['uC','uD','uTx','uMode','uP0','uP5','uP10','uP14','uOrtho','uHasD','uFocus','uDpr'].forEach(function(k){ SLK.loc[k]=gl.getUniformLocation(p,k); }); SLK.vao=gl.createVertexArray(); return true; }
+  SLK.prog=p; ['uC','uD','uTx','uMode','uP0','uP5','uP10','uP14','uOrtho','uHasD','uFocus','uDpr','uPpm','uSc'].forEach(function(k){ SLK.loc[k]=gl.getUniformLocation(p,k); }); SLK.vao=gl.createVertexArray(); return true; }
   catch(e){ console.warn(e); SLK.err=true; toast('This graphics card could not make the Style looks.', 4000); return false; } }
 function slkTargets(W, H){ var gl=GL; if(SLK.fb&&SLK.w===W&&SLK.h===H) return; if(SLK.fb){ gl.deleteFramebuffer(SLK.fb); gl.deleteFramebuffer(SLK.fbd); gl.deleteTexture(SLK.tc); gl.deleteTexture(SLK.td); }
   var tex=function(ifmt, fmt, type){ var t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, ifmt, W, H, 0, fmt, type, null); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
@@ -27417,7 +27417,7 @@ function slkApply(){ if(!SLK.mode||APP.view!=='3d'||miniVP||typeof GL==='undefin
     var v=slkDepth(), P=v?v.P:splatView().P, focus=Math.max(0.05, cam.dist);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0,0,W,H); gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.SCISSOR_TEST); gl.disable(gl.POLYGON_OFFSET_FILL); gl.disable(gl.CULL_FACE); gl.colorMask(true,true,true,true);
     gl.useProgram(SLK.prog); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, SLK.tc); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, SLK.td); var L=SLK.loc;
-    gl.uniform1i(L.uC, 0); gl.uniform1i(L.uD, 1); gl.uniform2f(L.uTx, 1/W, 1/H); gl.uniform1i(L.uMode, SLK.mode); gl.uniform1f(L.uP0, P[0]); gl.uniform1f(L.uP5, P[5]); gl.uniform1f(L.uP10, P[10]); gl.uniform1f(L.uP14, P[14]); gl.uniform1f(L.uOrtho, APP.ortho3d?1:0); gl.uniform1f(L.uHasD, v?1:0); gl.uniform1f(L.uFocus, focus); gl.uniform1f(L.uDpr, Math.max(1, Math.min(2, W/Math.max(1, glCv.clientWidth))));
+    gl.uniform1i(L.uC, 0); gl.uniform1i(L.uD, 1); gl.uniform2f(L.uTx, 1/W, 1/H); gl.uniform1i(L.uMode, SLK.mode); gl.uniform1f(L.uP0, P[0]); gl.uniform1f(L.uP5, P[5]); gl.uniform1f(L.uP10, P[10]); gl.uniform1f(L.uP14, P[14]); gl.uniform1f(L.uOrtho, APP.ortho3d?1:0); gl.uniform1f(L.uHasD, v?1:0); gl.uniform1f(L.uFocus, focus); gl.uniform1f(L.uDpr, Math.max(1, Math.min(2, W/Math.max(1, glCv.clientWidth)))); gl.uniform1f(L.uPpm, Math.abs(P[5])*H/2); gl.uniform1f(L.uSc, (APP.res&&APP.res.scale)||1);
     gl.bindVertexArray(SLK.vao); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.depthMask(true); gl.enable(gl.DEPTH_TEST);
     if(!v&&[1,2,5,6,7,4].indexOf(SLK.mode)>=0&&!SLK.warned){ SLK.warned=true; toast('Style: the shape looks need the scan shown as Splats (Splats menu). Using the colours only for now.', 4500); } }
   catch(e){ console.warn(e); } }
@@ -27490,7 +27490,8 @@ try{ sbAfter('levPanel', function(r){ try{ if(typeof PND!=='undefined'&&PND.inLe
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'16 October 2026', r:'r422 to r436', t:[
+ {d:'16 October 2026', r:'r422 to r437', t:[
+  'Style: up close, the ground no longer shows as overlapping discs in White model, Clay and the other shape looks; surfaces are smoothed over about 12 cm and lines only show at real steps.',
   'New Style menu in the 3D bar: redraw the view as a White model, Clay, Watercolour, Miniature, Cartoon, Blueprint, Pencil sketch or Thermal, live while you turn it, in pictures and in videos. The shape looks use the real 3D shape of the scan. View only: the scan is not changed.',
   'Gullies, channel drains and the rain test are now in Ponding only. Floor levels still uses the same gullies and drains for its falls, and has an Open Ponding button.',
   'Floor levels in 3D: 3D squares can be Standard, Fine or Finest. The finer squares are drawn once the view stops moving, so turning it stays smooth. For even smaller squares, set Grid to 20 mm.',
