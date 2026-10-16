@@ -1,3 +1,3 @@
-# r432: no smearing when turning
+# r433: overflow colour choice
 
-- Rain on the block: the moving water streaks keep their tails on the ground, so turning the view no longer smears them across the screen.
+- Rain on the block > Overflow shown: Orange or Water (deep blue). Remembered for next time.
