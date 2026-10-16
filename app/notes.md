@@ -1,3 +1,3 @@
-# r434: finer 3D squares in Floor levels
+# r435: gullies, drains and rain test in Ponding only
 
-- Floor levels > 3D squares: Standard, Fine when still, Finest when still. Finer squares are drawn once the view stops moving.
+- Floor levels no longer has its own gully, drain and rain test controls; a note and an Open Ponding button point to Ponding. The same gullies and drains are still used for Floor levels falls.
