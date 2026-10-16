@@ -1,3 +1,2 @@
-# r437: smoother shape looks up close
-
-- Style: ground and walls smoothed over a real-world size (about 12 cm) so close-up splats no longer show as overlapping discs; lines only at real steps; softer corner shading.
+# r438
+- Opening reveal: the scan grows into view from the viewer with a band of glowing dots, like XGRIDS. View > Reveal the scan when it opens / Play the opening reveal.
