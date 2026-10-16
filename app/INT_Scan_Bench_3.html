@@ -8194,7 +8194,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-16 r444';
+var SB_BUILD='2026-10-16 r445';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -27602,11 +27602,15 @@ try{ sbBefore('cuiShow', function(){ try{ var seg=document.getElementById('cltSe
 var CLT_REPAIR=['repeat','straight','erase','flat','shadow'];
 function cltNoPick(){ if(typeof CUI==='undefined') return false; var k=CUI.task; if(!k) return true; if(k==='trim') return true; if(k==='repair') return CLT_REPAIR.indexOf(CLN.mode)<0; return false; }
 (function(){ if(typeof clnDown!=='function') return; var cd=clnDown; clnDown=function(w, alt, scr){ if(APP.tool==='clean'&&cltNoPick()){ CLN.gl=false; CLN.path=null; CLN.box=null; return false; } return cd.apply(this, arguments); }; })();
+/* r445: opening Trim box (or Repair, or closing the job) puts the select tool down, so the panel cannot flip itself back to
+   Tidy floaters because a lasso was still set, and the next drag cannot draw one */
+try{ sbAfter('cuiShow', function(r){ try{ if(cltNoPick()&&CLN.mode!=='none'&&CLT_REPAIR.indexOf(CLN.mode)<0){ CLN.mode='none'; CUI._lmode=null; CLN._lmode=null; CLN._fill=false; CLN.poly=null; CLN.hov=null; CLN.path=null; CLN.box=null; try{ clnBar(); }catch(e){} try{ clnRedraw(); }catch(e){} } }catch(e){ console.warn(e); } return r; }); }catch(e){}
 
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'16 October 2026', r:'r422 to r444', t:[
+ {d:'16 October 2026', r:'r422 to r445', t:[
+  'Fix: Clean up no longer jumps from Trim box back to Tidy floaters by itself, so a drag beside the box can no longer select with a lasso.',
   'Fix: in Clean up, Trim box no longer draws a lasso when you click beside the box: dragging there turns the view. The same in Repair until you pick one of its tools.',
   'Fix: on LCC scans, floaters trimmed with the Trim box (or deleted next to a wall or floor) no longer come back while you turn the view.',
   'Clean up laid out like Sky, light & weather: the jobs are tiles with an icon and what each is doing, the settings open under the tile, Lasso, Box, Brush and Lines are one switch, and no button hides under ⋯.',

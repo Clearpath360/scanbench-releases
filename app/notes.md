@@ -1,2 +1,2 @@
-# r444
-- Fix: Trim box no longer lassoes when clicking beside the box.
+# r445
+- Fix: Trim box no longer flips to Tidy floaters by itself.
