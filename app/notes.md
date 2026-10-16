@@ -1,2 +1,2 @@
-# r445
-- Fix: Trim box no longer flips to Tidy floaters by itself.
+# r446
+- Left rail groups open on click only.
