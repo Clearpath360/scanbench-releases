@@ -4977,7 +4977,8 @@ function splatEnsure(){
     ' if(uRvW>0.0){ float dR=length(A.xyz-uRvl.xyz); if(dR>uRvl.w) return; float shR=1.0-smoothstep(0.0,uRvW,uRvl.w-dR); if(shR>0.0){ uint hr=aI*2654435761u; float hR=float((hr>>8u)&65535u)/65535.0; if(hR>mix(1.0,0.3,shR)) return; float kR=mix(1.0,0.10,shR); M1*=kR; M2*=kR; rgb=mix(rgb, vec3(0.85,0.95,0.30)*1.5, shR*0.9); fa=max(fa, shR*3.0); } }\n'+
     ' vCol=vec4(rgb*uBright, min(1.0, A.w*fa)); vPos=aQ;\n'+
     ' gl_Position=vec4(ndc.xy+aQ.x*M1*2.0/uVp+aQ.y*M2*2.0/uVp, ndc.z, 1.0); }';
-  var FS='#version 300 es\nprecision highp float;\nin vec4 vCol; in vec2 vPos; out vec4 o; uniform float uCut; uniform float uStoch;\nvoid main(){ float A=-dot(vPos,vPos); if(A<-4.0) discard; float B=exp(A)*vCol.a; if(B<0.004) discard; if(uCut>0.5&&B<(uCut>1.05?uCut-1.0:0.4)) discard; if(uStoch>0.5){ float hh=fract(sin(dot(gl_FragCoord.xy+vPos*41.3,vec2(12.9898,78.233)))*43758.5453); if(B<hh) discard; o=vec4(vCol.rgb,1.0); return; } o=vec4(vCol.rgb*B,B); }';
+  var FS='#version 300 es\nprecision highp float;\nin vec4 vCol; in vec2 vPos; out vec4 o; uniform float uCut; uniform float uStoch;\nvoid main(){ float A=-dot(vPos,vPos); if(A<-4.0) discard; float B=exp(A)*vCol.a; if(B<0.004) discard; if(uCut>0.5&&B<(uCut>1.05?uCut-1.0:0.4)) discard;'+
+    ' if(uStoch>0.5){ float hh=fract(sin(dot(gl_FragCoord.xy+vPos*41.3,vec2(12.9898,78.233)))*43758.5453); if(B<hh) discard; o=vec4(vCol.rgb,1.0); return; } o=vec4(vCol.rgb*B,B); }';
   var p=program(gl,VS,FS); if(!p){ SPL.failed=true; toast('Splat view could not start on this graphics card', 5000); return false; }
   SPL.prog=p; SPL.loc={};   /* r307: a rebuilt splat program needs every uniform looked up again (the ones fetched later, uStoch, uIso, uLtOn..., pointed at the old program) */
   ['uA','uB','uC','uD','uV','uP','uF','uVp','uZMax','uBright','uMaxVar','uOrtho','uSlab','uZMin','uBox','uBoxOn','uCl','uCutOn','uFaint','uCut','uRvl','uRvW'].forEach(function(k){ SPL.loc[k]=gl.getUniformLocation(p,k); });
@@ -8193,7 +8194,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-16 r440';
+var SB_BUILD='2026-10-16 r441';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -25775,14 +25776,14 @@ sbInstead('ltPreset', function(k){ if(k!=='night') return SB_GO; var M=ltM(); if
 
 /* ===== Rail groups (r380): the panels on the left rail are gathered into four groups so the rail fits the screen:
    Prepare, Look, Measure and Survey. Point at a group (or tap it) and its panels open in a small menu beside it.
-   The group holding the open panel is lit, and shows that panel's name under its icon. ===== */
+   The group holding the open panel is lit (r441: it keeps its own name and icon). ===== */
 var RGP_GROUPS=[['prep','Prepare','scan',['load','scale','level','crop','cleanup','slice','clean']],['look','Look','sun',['grade','light','weather']],['meas','Measure','meas',['volume','sections','levels','qty']],['survey','Survey','checks',['checks','dwg','cover']]];
 var RGP={t:0, open:null};
 function rgpItems(){ var have=function(x){ return x[0]==='cleanup'||!!document.querySelector('#side .sec[data-sec="'+x[0]+'"]'); }, used={}, out=[];
   RGP_GROUPS.forEach(function(G){ var its=G[3].map(function(k){ return SBP_ITEMS.filter(function(x){ return x[0]===k; })[0]; }).filter(function(x){ return x&&have(x); }); its.forEach(function(x){ used[x[0]]=1; }); if(its.length) out.push({k:G[0], name:G[1], ic:G[2], items:its}); });
   var rest=SBP_ITEMS.filter(function(x){ return !used[x[0]]&&have(x); }); if(rest.length) out.push({k:'more', name:'More', ic:'more', items:rest}); return out; }
 window.sbPanelItems=function(r){ if(!APP.res) return; rgpItems().forEach(function(G){ var cur=G.items.filter(function(x){ return x[0]===SBP.key; })[0], b=document.createElement('button');
-    b.className='sbIt sbGrp'+(cur?' on':''); b.dataset.grp=G.k; b.innerHTML=skinIcon(cur?cur[2]:G.ic)+'<span>'+(cur?cur[1]:G.name)+'</span>'; b.title=G.name+': '+G.items.map(function(x){ return x[1]; }).join(', ');
+    b.className='sbIt sbGrp'+(cur?' on':''); b.dataset.grp=G.k; /* r441: the group keeps its own name and icon; it is lit when the open panel is in it, and the hover names that panel */ b.innerHTML=skinIcon(G.ic)+'<span>'+G.name+'</span>'; b.title=G.name+': '+G.items.map(function(x){ return x[1]; }).join(', ')+(cur?'. Open now: '+cur[1]:'');
     b.onclick=function(e){ e.stopPropagation(); if(RGP.open===G.k&&document.getElementById('sbFly')){ skinFlyClose(); RGP.open=null; return; } rgpFly(G, b); };
     b.onmouseenter=function(){ clearTimeout(RGP.t); RGP.t=setTimeout(function(){ rgpFly(G, b); }, 120); }; b.onmouseleave=function(){ clearTimeout(RGP.t); RGP.t=setTimeout(rgpMaybeClose, 350); }; r.appendChild(b); });
   var sp=document.createElement('div'); sp.className='sbSep'; r.appendChild(sp); };
@@ -27542,7 +27543,8 @@ try{ sbAfter('levPanel', function(r){ try{ if(typeof PND!=='undefined'&&PND.inLe
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'16 October 2026', r:'r422 to r440', t:[
+ {d:'16 October 2026', r:'r422 to r441', t:[
+  'Left rail: Prepare, Look, Measure and Survey keep their own names and icons. The group with the open panel is lit, and pointing at it names the panel.',
   'Fix: on LCC scans, something you deleted (and filled) no longer comes back while you turn the view.',
   'Style: three new looks. Cel shaded (anime-style flat colours, hard light and shadow bands from the 3D shape, thick outlines), Painterly (oil paint brush strokes) and Retro pixel (chunky pixels and few colours, like an old games console).',
   'Opening reveal: when a scan opens as Splats it grows into view from where you stand, with a band of glowing dots at the edge, like the XGRIDS viewer. Turn it off or play it again in the View menu.',
