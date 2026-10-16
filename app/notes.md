@@ -1,2 +1,2 @@
-# r443
-- Fix: trimmed floaters stay gone while turning (LCC lighter level).
+# r444
+- Fix: Trim box no longer lassoes when clicking beside the box.
