@@ -8194,7 +8194,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-16 r442';
+var SB_BUILD='2026-10-16 r443';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -27360,16 +27360,24 @@ try{ sbBefore('dpmCurtain', function(c, Pj, S0, k, sc){ try{ if(brnLive()&&APP.v
    that lighter copy was made once, before any deleting, so a deleted car came back while turning and went again when you stopped.
    Now the lighter copy is remade after each delete or put-back, and only keeps what is still in the scan (in 15 cm cells). ===== */
 var LODFX={ver:0};
+/* where the deleted points were: Clean up keeps each deleted point's height in its undo record, and x, y are untouched */
+function lodfxDeletedPos(){ var R=APP.res, del=R&&R.del; if(!del) return null; var P=R.pos, zs=new Map(); try{ (CLN.ops||[]).forEach(function(op){ if(!op||!op.i) return; for(var q=0;q<op.i.length;q++) zs.set(op.i[q], op.z[q]); }); }catch(e){}
+  try{ if(typeof PATCH!=='undefined') PATCH.list.forEach(function(p){ if(p&&p.del&&p.del.i&&p.del.z) for(var q=0;q<p.del.i.length;q++) if(!zs.has(p.del.i[q])) zs.set(p.del.i[q], p.del.z[q]); }); }catch(e){}
+  var out=[]; for(var i=0;i<R.n;i++){ if(!del[i]) continue; var z=zs.get(i); if(z===undefined) continue; out.push(P[i*3], P[i*3+1], z); } return out; }
 try{ sbAfter('clnApply', function(r){ LODFX.ver++; return r; }); }catch(e){}
 try{ if(typeof clbFlushDel==='function'){ var _clbFD=clbFlushDel; clbFlushDel=function(){ var r=_clbFD.apply(this, arguments); LODFX.ver++; return r; }; } }catch(e){}
 function lodfxReady(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.res) return null; var R=APP.res, del=R.del, k=lccXfKey()+'|'+SPL.n+'|'+LODFX.ver; if(S.set&&S.key===k&&S.srcRef===SPL.src) return S.set;
   lccDrop(S); var P=SPL.src.pos, n=SPL.src.n, mn=[1e30,1e30,1e30], mx=[-1e30,-1e30,-1e30], i, a, live=function(j){ return !(del&&del[j])&&P[j*3+2]>DEL_Z+1; };
   for(i=0;i<n;i++){ if(!live(i)) continue; for(a=0;a<3;a++){ var v=P[i*3+a]; if(v<mn[a]) mn[a]=v; if(v>mx[a]) mx[a]=v; } }
   if(mn[0]>mx[0]) return null;
-  var c=0.15, dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); while(dims[0]*dims[1]*dims[2]>120e6){ c*=1.25; dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); }
-  var G=new Uint8Array(dims[0]*dims[1]*dims[2]), X=dims[0], XY=dims[0]*dims[1]; for(i=0;i<n;i++){ if(!live(i)) continue; var gx=((P[i*3]-mn[0])/c|0)+1, gy=((P[i*3+1]-mn[1])/c|0)+1, gz=((P[i*3+2]-mn[2])/c|0)+1; G[gx+gy*X+gz*XY]=1; }
-  function keep(x,y,z){ var gx=Math.floor((x-mn[0])/c)+1, gy=Math.floor((y-mn[1])/c)+1, gz=Math.floor((z-mn[2])/c)+1; if(gx<1||gy<1||gz<1||gx>X-2||gy>dims[1]-2||gz>dims[2]-2) return false;
-    for(var dz=-1;dz<=1;dz++) for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) if(G[gx+dx+(gy+dy)*X+(gz+dz)*XY]) return true; return false; }
+  var c=0.15, dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); while(dims[0]*dims[1]*dims[2]>60e6){ c*=1.25; dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); }
+  /* r443: two counts per 15 cm cell, what is still in the scan and what was deleted; a lighter splat stays only where kept beats deleted */
+  var X=dims[0], XY=dims[0]*dims[1], NC=XY*dims[2], G=new Uint8Array(NC), Dg=null, cell=function(x,y,z){ var gx=Math.floor((x-mn[0])/c)+1, gy=Math.floor((y-mn[1])/c)+1, gz=Math.floor((z-mn[2])/c)+1; if(gx<1||gy<1||gz<1||gx>X-2||gy>dims[1]-2||gz>dims[2]-2) return -1; return gx+gy*X+gz*XY; };
+  for(i=0;i<n;i++){ if(!live(i)) continue; var q=cell(P[i*3],P[i*3+1],P[i*3+2]); if(q>=0&&G[q]<255) G[q]++; }
+  var DZ=lodfxDeletedPos(); if(DZ&&DZ.length){ Dg=new Uint8Array(NC); for(i=0;i<DZ.length;i+=3){ var q2=cell(DZ[i],DZ[i+1],DZ[i+2]); if(q2>=0&&Dg[q2]<255) Dg[q2]++; } }
+  function keep(x,y,z){ var q=cell(x,y,z); if(q<0) return false; var L=0, D=0;
+    if(G[q]||(Dg&&Dg[q])){ L=G[q]; D=Dg?Dg[q]:0; return L>0&&L>=D; }
+    for(var dz=-1;dz<=1;dz++) for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var k=q+dx+dy*X+dz*XY; L+=G[k]; if(Dg) D+=Dg[k]; } return L>0&&L>=D; }
   S.set=lccSet(lccToRes(S.raw, keep)); S.key=k; S.srcRef=SPL.src; return S.set; }
 try{ if(typeof lccLodReady==='function') sbAround('lccLodReady', function(next){ return lodfxReady(); }); }catch(e){}
 
@@ -27593,7 +27601,8 @@ try{ sbBefore('cuiShow', function(){ try{ var seg=document.getElementById('cltSe
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'16 October 2026', r:'r422 to r442', t:[
+ {d:'16 October 2026', r:'r422 to r443', t:[
+  'Fix: on LCC scans, floaters trimmed with the Trim box (or deleted next to a wall or floor) no longer come back while you turn the view.',
   'Clean up laid out like Sky, light & weather: the jobs are tiles with an icon and what each is doing, the settings open under the tile, Lasso, Box, Brush and Lines are one switch, and no button hides under ⋯.',
   'Left rail: Prepare, Look, Measure and Survey keep their own names and icons. The group with the open panel is lit, and pointing at it names the panel.',
   'Fix: on LCC scans, something you deleted (and filled) no longer comes back while you turn the view.',

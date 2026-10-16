@@ -1,2 +1,2 @@
-# r442
-- Clean up laid out as tiles like Sky, light & weather.
+# r443
+- Fix: trimmed floaters stay gone while turning (LCC lighter level).
