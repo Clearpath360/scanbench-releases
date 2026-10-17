@@ -1,2 +1,2 @@
-# r447
-- Style: shape looks cleaner up close (ray depth + edge-keeping smoothing).
+# r448
+- One icon style across rail, menus and Clean up tiles.
