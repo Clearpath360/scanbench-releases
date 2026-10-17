@@ -1,2 +1,2 @@
-r459
-- Fix: turning fast (RC car, Walk, spinning the view) no longer runs past the edge of the drawn scan.
+r460
+- Fix: spinning the RC car on the spot no longer smears the scan at the sides.
