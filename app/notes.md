@@ -1,2 +1,2 @@
-r461
-- RC car designs: Car button picks Monster (default), Sports or Classic.
+r462
+- RC car sounds: recorded motor, landing thump, wall knock, softer squeal.
