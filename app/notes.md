@@ -1,2 +1,2 @@
-# r448
-- One icon style across rail, menus and Clean up tiles.
+# r449
+- Find lamp posts in Sky, light & weather > Lamps.
