@@ -1,2 +1,2 @@
-# r453
-- RC car is now a realistic off-road buggy.
+# r454
+- RC buggy drawn as a solid model.
