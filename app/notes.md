@@ -1,2 +1,2 @@
-r460
-- Fix: spinning the RC car on the spot no longer smears the scan at the sides.
+r461
+- RC car designs: Car button picks Monster (default), Sports or Classic.
