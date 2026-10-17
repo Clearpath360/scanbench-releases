@@ -27990,8 +27990,8 @@ function rcsShadowInit(){ var gl=GL; if(RCS.shp) return true; if(RCS.sherr) retu
    graphics. Auto (the default) keeps it while the frame rate holds and turns it off for the drive if it drops below 22 fps. ---------- */
 function rcsOccMode(){ try{ return localStorage.getItem('sb_rc_occ')||'auto'; }catch(e){ return 'auto'; } }
 function rcsOccOn(){ var m=rcsOccMode(); return m==='on'||(m==='auto'&&!RCS.autoOff); }
-function rcsFps(){ var t=performance.now(); if(RCS.ft0==null||t-RCS.ft0>500){ RCS.ft0=t; RCS.fn=0; RCS.fs=t; return; } RCS.fn++; RCS.ft0=t;
-  if(RCS.fn>=60){ var fps=RCS.fn*1000/(t-RCS.fs); RCS.fps=fps; RCS.fn=0; RCS.fs=t;
+function rcsFps(){ var t=performance.now(); if(RCS.ft0==null||t-RCS.ft0>1000){ RCS.ft0=t; RCS.fn=0; RCS.fs=t; return; } RCS.fn++; RCS.ft0=t;
+  if(t-RCS.fs>=1500&&RCS.fn>=5){ var fps=RCS.fn*1000/(t-RCS.fs); RCS.fps=fps; RCS.fn=0; RCS.fs=t;
     if(rcsOccMode()==='auto'&&!RCS.autoOff&&fps<22&&typeof RC!=='undefined'&&RC.speed>0.3){ RCS.autoOff=true; rcsOccBtn(); toast('Hiding the car behind objects is off for this drive to keep it smooth. It still works when the car stops. Change it with the Behind button.', 4500); } } }
 function rcsOccBtn(){ var b=document.getElementById('rcOccB'); if(!b) return; var m=rcsOccMode(); b.textContent='Behind: '+(m==='on'?'On':m==='off'?'Off':(RCS.autoOff?'Auto (off)':'Auto')); }
 function rcsOccNext(){ var m=rcsOccMode(), n=m==='auto'?'on':m==='on'?'off':'auto'; try{ localStorage.setItem('sb_rc_occ', n); }catch(e){} RCS.autoOff=false; RCS.dOK=false; rcsOccBtn();
