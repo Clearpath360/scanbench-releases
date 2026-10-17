@@ -4922,7 +4922,7 @@ function splatReset(d){
   SPL.src=d; SPL.ready=false; SPL.failed=false; SPL.tex=[]; SPL.sw=null; SPL.busy=false; SPL.want=false; SPL.gotOrder=false; SPL.n=d?d.n:0;
   APP.canSplat=!!d; var ls=$('#lookSel'); if(ls){ ls.disabled=false; if(!APP.look) APP.look=d?'splat':'points'; if(!d && APP.look==='splat') APP.look='points'; ls.value=APP.look; }
 }
-var SPLAT_SORT_SRC='var P=null,n=0,DT=1,cx=0,cy=0,cz=0,rr=1,KEY=null,CNT=new Uint32Array(65536),VIS=null;onmessage=function(e){var d=e.data;if(!d.f)DT=1;if(d.pos){P=d.pos;n=d.n;return;}if(!P)return;var i,j;if(DT){cx=0;cy=0;cz=0;for(i=0,j=0;i<n;i++,j+=3){cx+=P[j];cy+=P[j+1];cz+=P[j+2];}cx/=Math.max(1,n);cy/=Math.max(1,n);cz/=Math.max(1,n);var r2=0;for(i=0,j=0;i<n;i++,j+=3){var ax=P[j]-cx,ay=P[j+1]-cy,az=P[j+2]-cz,q=ax*ax+ay*ay+az*az;if(q>r2&&q<1e12)r2=q;}rr=Math.max(1e-6,Math.sqrt(r2));DT=0;}if(!KEY||KEY.length<n)KEY=new Uint16Array(n);var f=d.f,ex=d.e,sc=65535/(2*rr),f0=f[0]*sc,f1=f[1]*sc,f2=f[2]*sc,base=((cx-ex[0])*f[0]+(cy-ex[1])*f[1]+(cz-ex[2])*f[2]+rr+ex[0]*f[0]+ex[1]*f[1]+ex[2]*f[2])*sc;CNT.fill(0);var M=d.m,nv=0,HR=d.hide&&d.hide.length?d.hide:null;if(M){if(!VIS||VIS.length<n)VIS=new Uint8Array(n);var m0=M[0],m1=M[1],m3=M[3],m4=M[4],m5=M[5],m7=M[7],m8=M[8],m9=M[9],m11=M[11],m12=M[12],m13=M[13],m15=M[15];for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],w=m3*x+m7*y+m11*z+m15,v=0;if(w>0.001){var qx=m0*x+m4*y+m8*z+m12,qy=m1*x+m5*y+m9*z+m13,lim=1.35*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}if(v&&HR){for(var h=0;h<HR.length;h+=2){if(i>=HR[h]&&i<HR[h+1]){v=0;break;}}}VIS[i]=v;if(v){var k=(base-(x*f0+y*f1+z*f2))|0;if(k<0)k=0;else if(k>65535)k=65535;KEY[i]=k;CNT[k]++;nv++;}}}else{for(i=0,j=0;i<n;i++,j+=3){var k2=(base-(P[j]*f0+P[j+1]*f1+P[j+2]*f2))|0;if(k2<0)k2=0;else if(k2>65535)k2=65535;KEY[i]=k2;CNT[k2]++;}nv=n;}var s=0;for(i=0;i<65536;i++){var c=CNT[i];CNT[i]=s;s+=c;}var o=(d.buf&&d.buf.byteLength>=n*4)?new Uint32Array(d.buf,0,n):new Uint32Array(n);if(M){var t=nv;for(i=0;i<n;i++){if(VIS[i])o[CNT[KEY[i]]++]=i;else o[t++]=i;}}else{for(i=0;i<n;i++){o[CNT[KEY[i]]++]=i;}}postMessage({o:o,id:d.id,nv:M?nv:undefined},[o.buffer]);};';
+var SPLAT_SORT_SRC='var P=null,n=0,DT=1,cx=0,cy=0,cz=0,rr=1,KEY=null,CNT=new Uint32Array(65536),VIS=null;onmessage=function(e){var d=e.data;if(!d.f)DT=1;if(d.pos){P=d.pos;n=d.n;return;}if(!P)return;var i,j;if(DT){cx=0;cy=0;cz=0;for(i=0,j=0;i<n;i++,j+=3){cx+=P[j];cy+=P[j+1];cz+=P[j+2];}cx/=Math.max(1,n);cy/=Math.max(1,n);cz/=Math.max(1,n);var r2=0;for(i=0,j=0;i<n;i++,j+=3){var ax=P[j]-cx,ay=P[j+1]-cy,az=P[j+2]-cz,q=ax*ax+ay*ay+az*az;if(q>r2&&q<1e12)r2=q;}rr=Math.max(1e-6,Math.sqrt(r2));DT=0;}if(!KEY||KEY.length<n)KEY=new Uint16Array(n);var f=d.f,ex=d.e,sc=65535/(2*rr),f0=f[0]*sc,f1=f[1]*sc,f2=f[2]*sc,base=((cx-ex[0])*f[0]+(cy-ex[1])*f[1]+(cz-ex[2])*f[2]+rr+ex[0]*f[0]+ex[1]*f[1]+ex[2]*f[2])*sc;CNT.fill(0);var M=d.m,nv=0,HR=d.hide&&d.hide.length?d.hide:null;if(M){if(!VIS||VIS.length<n)VIS=new Uint8Array(n);var m0=M[0],m1=M[1],m3=M[3],m4=M[4],m5=M[5],m7=M[7],m8=M[8],m9=M[9],m11=M[11],m12=M[12],m13=M[13],m15=M[15];for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],w=m3*x+m7*y+m11*z+m15,v=0;if(w>0.001){var qx=m0*x+m4*y+m8*z+m12,qy=m1*x+m5*y+m9*z+m13,lim=(d.lim||1.35)*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}if(v&&HR){for(var h=0;h<HR.length;h+=2){if(i>=HR[h]&&i<HR[h+1]){v=0;break;}}}VIS[i]=v;if(v){var k=(base-(x*f0+y*f1+z*f2))|0;if(k<0)k=0;else if(k>65535)k=65535;KEY[i]=k;CNT[k]++;nv++;}}}else{for(i=0,j=0;i<n;i++,j+=3){var k2=(base-(P[j]*f0+P[j+1]*f1+P[j+2]*f2))|0;if(k2<0)k2=0;else if(k2>65535)k2=65535;KEY[i]=k2;CNT[k2]++;}nv=n;}var s=0;for(i=0;i<65536;i++){var c=CNT[i];CNT[i]=s;s+=c;}var o=(d.buf&&d.buf.byteLength>=n*4)?new Uint32Array(d.buf,0,n):new Uint32Array(n);if(M){var t=nv;for(i=0;i<n;i++){if(VIS[i])o[CNT[KEY[i]]++]=i;else o[t++]=i;}}else{for(i=0;i<n;i++){o[CNT[KEY[i]]++]=i;}}postMessage({o:o,id:d.id,nv:M?nv:undefined},[o.buffer]);};';
 function splatEnsure(){
   if(SPL.ready) return true; if(SPL.failed||!SPL.src||!GL2) return false;
   var gl=GL, d=SPL.src, n=d.n, W=SPL.W, H=Math.ceil(n/W), cap=gl.getParameter(gl.MAX_TEXTURE_SIZE);
@@ -5059,7 +5059,7 @@ function splatSort(){
   var key=f.map(function(v){ return v.toFixed(3); }).join(',')+'|'+b.eye.map(function(v){ return v.toFixed(2); }).join(',');
   if(typeof strOnAny==='function'&&strOnAny()) key+='|str'+STR.x.toFixed(1)+','+STR.y.toFixed(1)+','+STR.z.toFixed(1);   // r305: turning a Straighten ring re-sorts the splats, so near ones stay in front
   try{ if(typeof splatHideRanges==='function'){ var hk=splatHideRanges(); key+='|h'+(hk?hk.join(','):''); } }catch(eh){} if(key===SPL.lastKey) return; SPL.lastKey=key; SPL.busy=true; var ob=SPL.obuf; SPL.obuf=null; var mv=null; try{ var vv=splatView(), VV=vv.V; if(typeof strOnAny==='function'&&strOnAny()) VV=mMul(VV, strM4()); mv=Array.prototype.slice.call(mMul(vv.P, VV)); }catch(er){ mv=null; } var fS=f, eS=b.eye; if(typeof strOnAny==='function'&&strOnAny()&&typeof strToScan==='function'){ fS=strToScan(f,false); eS=strToScan(b.eye,true); }   // r305: depth order in the scan's own frame while it is turned
-  var hide=null; try{ hide=typeof splatHideRanges==='function'?splatHideRanges():null; }catch(eh){ hide=null; } SPL.lastHide=hide?hide.join(','):''; SPL.sw.postMessage({f:fS, e:eS, id:++SPL.reqId, buf:ob, m:mv, hide:hide}, ob?[ob]:[]);
+  var hide=null; try{ hide=typeof splatHideRanges==='function'?splatHideRanges():null; }catch(eh){ hide=null; } SPL.lastHide=hide?hide.join(','):''; SPL.sw.postMessage({f:fS, e:eS, id:++SPL.reqId, buf:ob, m:mv, hide:hide, lim:SPL.lim||0}, ob?[ob]:[]);
 }
 function splatView(){
   var asp=glCv.width/Math.max(1,glCv.height), cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-17 r458';
+var SB_BUILD='2026-10-17 r459';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -21718,11 +21718,11 @@ sbAfter('styUniforms', function(r){ try{ if(GL&&SPL.prog){ var L=SPL.loc; if(L.u
    now left out, and the depth range is taken from what is in view only, so the order is finer than before too. ===== */
 SPLAT_SORT_SRC='var P=null,n=0,KEY=null,DEP=null,VIS=null,CNT=new Uint32Array(65536);onmessage=function(e){var d=e.data;if(d.pos){P=d.pos;n=d.n;return;}if(!P)return;'+
  'var i,j,f=d.f,ex=d.e,M=d.m,nv=0,mn=1e30,mx=-1e30,HR=d.hide&&d.hide.length?d.hide:null;if(!KEY||KEY.length<n){KEY=new Uint16Array(n);DEP=new Float32Array(n);VIS=new Uint8Array(n);}'+
- 'for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],v=1;if(!(z>-9000))v=0;else if(M){var w=M[3]*x+M[7]*y+M[11]*z+M[15];v=0;if(w>0.001){var qx=M[0]*x+M[4]*y+M[8]*z+M[12],qy=M[1]*x+M[5]*y+M[9]*z+M[13],lim=1.6*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}}'+
+ 'for(i=0,j=0;i<n;i++,j+=3){var x=P[j],y=P[j+1],z=P[j+2],v=1;if(!(z>-9000))v=0;else if(M&&!(d.lim>1e8)){var w=M[3]*x+M[7]*y+M[11]*z+M[15];v=0;if(w>0.001){var qx=M[0]*x+M[4]*y+M[8]*z+M[12],qy=M[1]*x+M[5]*y+M[9]*z+M[13],lim=(d.lim||1.6)*w;if(qx<=lim&&qx>=-lim&&qy<=lim&&qy>=-lim)v=1;}}'+
  'if(v&&HR){for(var h=0;h<HR.length;h+=2){if(i>=HR[h]&&i<HR[h+1]){v=0;break;}}}VIS[i]=v;if(v){var dd=(x-ex[0])*f[0]+(y-ex[1])*f[1]+(z-ex[2])*f[2];DEP[i]=dd;if(dd<mn)mn=dd;if(dd>mx)mx=dd;nv++;}}'+
  'var sc=65535/Math.max(1e-9,mx-mn);CNT.fill(0);for(i=0;i<n;i++){if(VIS[i]){var k=((mx-DEP[i])*sc)|0;if(k<0)k=0;else if(k>65535)k=65535;KEY[i]=k;CNT[k]++;}}'+
  'var s=0;for(i=0;i<65536;i++){var c=CNT[i];CNT[i]=s;s+=c;}var o=(d.buf&&d.buf.byteLength>=n*4)?new Uint32Array(d.buf,0,n):new Uint32Array(n);var t=nv;for(i=0;i<n;i++){if(VIS[i])o[CNT[KEY[i]]++]=i;else o[t++]=i;}'+
- 'postMessage({o:o,id:d.id,nv:M?nv:undefined},[o.buffer]);};';
+ 'postMessage({o:o,id:d.id,nv:(M&&!(d.lim>1e8))?nv:undefined},[o.buffer]);};';
 PROP_SORT_SRC=SPLAT_SORT_SRC.replace('if(d.pos){P=d.pos;n=d.n;return;}','if(d.pos){P=d.pos;n=d.n;return;}if(d.grow){var Q=new Float32Array(d.n*3);Q.set(P.subarray(0,Math.min(P.length,d.off)));Q.set(d.grow,d.off);P=Q;n=d.n;return;}if(d.patch){P.set(d.patch,d.off);return;}');
 
 /* an orbit always runs the whole timelapse, even if the length changes after it was made */
@@ -27809,6 +27809,23 @@ try{ sbAfter('wsView', function(r, v){ if(WKV.on&&v&&v!=='3d') wkvStop(); return
   setInterval(function(){ var b=document.getElementById('gWalk'); if(b) b.classList.toggle('on', WKV.on); }, 400); })();
 try{ sbAfter('sbMenus', function(M){ try{ var V=M.filter(function(m){ return m.id==='view'; })[0]; if(V&&!V.items.some(function(x){ return x&&x.wkv; })) V.items.push({wkv:1, t:'Walk around (a person\'s view)', fn:function(){ if(WKV.on) wkvStop(); else wkvStart(); }}); }catch(e){} return M; }); }catch(e){}
 
+/* ===== r459: turning fast no longer runs past the edge of the drawn scan. The splat sorter only keeps what is in view plus a margin,
+   and a new order takes a moment (longer on laptop graphics and big scans). While the view turns, the margin grows with how fast it
+   turns and how long a sort is taking, so the edge stays off screen; turning faster than a sort can follow, nothing is left out. When the view stops turning, the margin goes back to normal. ===== */
+var SMG={yaw:null, t:0, rate:0, lat:120, tPost:0, id:0};
+function smgLim(){ var asp=glCv.width/Math.max(1,glCv.height), th=Math.tan(0.45)*Math.max(1,asp), half=Math.atan(th), need=SMG.rate*(SMG.lat/1000)*1.6+0.12;
+  /* RC car: the chase camera swings round as soon as you steer, before the turn shows in the view, so steering at speed sorts everything at once */
+  try{ if(typeof DRV!=='undefined'&&DRV.on&&DRV.rc&&typeof RC!=='undefined'&&RC.speed>0.8&&(Math.abs(RC.steer||0)>0.1||Math.abs(RC.yr||0)>0.8||(DRV.keys&&DRV.keys.hb))) return 1e9; }catch(e){}
+  if(need<0.25) return 0; if(half+need>1.3) return 1e9; /* turning faster than a sort can keep up with: sort everything, nothing culled */
+  return Math.max(1.6, Math.tan(half+need)/th); }
+try{ sbAround('splatSort', function(next){ try{ var now=performance.now(), b=camBasis(), f=[cam.tx-b.eye[0], cam.ty-b.eye[1]], y=Math.atan2(f[1], f[0]);
+    if(SMG.yaw!=null&&now-SMG.t<20){ SPL.lim=smgLim(); var id0=SPL.reqId, r0=next(); if(SPL.reqId!==id0) SMG.tPost=performance.now(); return r0; } /* several draws in one frame: measure per frame */
+    if(SMG.yaw!=null){ var dt=Math.max(1, now-SMG.t)/1000, d=y-SMG.yaw; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; var r=Math.abs(d)/dt;
+      SMG.rate=r>SMG.rate?r:SMG.rate*Math.pow(0.25, dt); } SMG.yaw=y; SMG.t=now;
+    if(SMG.tPost&&!SPL.busy){ SMG.lat=SMG.lat*0.6+Math.min(1500, now-SMG.tPost)*0.4; SMG.tPost=0; }
+    SPL.lim=smgLim(); }catch(e){}
+  var id=SPL.reqId, r=next(); if(SPL.reqId!==id) SMG.tPost=performance.now(); return r; }); }catch(e){}
+
 /* ===== r452: RC car. A remote-control toy car to race round the scan like a game: throttle, brake and reverse, steering that
    tightens with speed, a handbrake to slide round corners, Shift for a boost. It bumps off walls, kerbs and anything solid,
    and follows the ground. A chase camera sits low behind it (C changes the camera). Laps are timed from where you start:
@@ -28223,7 +28240,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'17 October 2026', r:'r447 to r458', t:[
+ {d:'17 October 2026', r:'r447 to r459', t:[
+  'Fix: turning fast (RC car, Walk, or spinning the view) no longer runs past the edge of the drawn scan. The scan is prepared wider while the view turns quickly, more so on slower computers.',
   'RC car smoother on laptop graphics: Behind (Auto, On, Off) on the RC bar. Hiding the car behind objects costs a second drawing of the scan, so Auto turns it off while driving if the frame rate drops (and remembers on that computer); the car still hides when it stops.',
   'RC car: Sound on the RC bar loads your own motor sound (a Pixabay motor loop works well). Its pitch follows the motor and it is kept for next time. Shift+click goes back to built-in.',
   'RC car: soft shadow under the car, jumps with real airtime (shown on the HUD) and suspension that lands, and checkpoint gates: G or + Gate puts one across your path, laps go through them in order.',
