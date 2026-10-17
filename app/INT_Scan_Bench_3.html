@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-17 r462';
+var SB_BUILD='2026-10-17 r463';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22793,7 +22793,7 @@ function wxPanel(){ var s=wxSec(); if(!s) return; var b=s.querySelector('.body')
     tg('stars','Stars & moon', S.stars!==false, 'Stars and a moon after dark')+
     '<div class="wxH">Weather</div>'+sl('wxRain','Rain',0,1,0.05,S.rain,S.rain<=0?'off':S.rain<0.3?'drizzle':S.rain>0.75?'downpour':'rain','From drizzle to a downpour')+
     sl('wxSnow','Snow',0,1,0.05,S.snow,S.snow<=0?'off':S.snow>0.75?'blizzard':pc(S.snow),'From a few flakes to a blizzard')+sl('wxFog','Fog',0,1,0.05,S.fog,pc(S.fog),'Distance fades into fog')+sl('wxMist','Ground mist',0,1,0.05,S.mist,pc(S.mist),'Low mist lying on the ground')+
-    tg('lightning','Lightning', S.lightning, 'Flashes in a storm, lighting the scene for a moment')+tg('wet','Wet ground', S.wet!==false, 'In the rain the ground goes darker with a damp sheen')+tg('splash','Splashes', S.splash!==false, 'Little splashes where the rain lands')+
+    tg('lightning','Lightning', S.lightning, 'Flashes in a storm, lighting the scene for a moment')+tg('bolts','Forked bolts', S.bolts!==false, 'Branching bolts in the sky with each flash. Off: the flash only')+tg('wet','Wet ground', S.wet!==false, 'In the rain the ground goes darker with a damp sheen')+tg('splash','Splashes', S.splash!==false, 'Little splashes where the rain lands')+
     '<div class="wxH">Lights</div>'+tg('dusk','Lamps on at dusk', S.dusk!==false, 'Lamps and beams in the Light panel switch on as the sun goes down')+tg('anim','Animate', S.anim!==false, 'Keep rain, snow and clouds moving in the 3D view (switch off on a slow computer; videos always move)')+
     '<p class="mini">Pictures, clips and walk-through videos include the sky and weather. Fog and the wet look show on splat scans. Saved with the job.</p>';
   var q=function(id){ return document.getElementById(id); }, live=function(){ requestRender(false); if(wxAnimNeed()) wxLoop(); }, commit=function(){ afterEdit(); };
@@ -26956,6 +26956,43 @@ document.addEventListener('input', function(e){ if(SBP.key!=='sky'||!e.target.cl
 /* r406: the panel's title line with its close button stays at the top while you scroll; the tabs sit just under it */
 (function(){ var c=document.createElement('style'); c.textContent='body.sbSkin #sbPanelHead{position:sticky;top:0;z-index:6;background:var(--sbBg,#fff);padding-top:6px}html[data-theme=dark] body.sbSkin #sbPanelHead{background:var(--sbBg,#262a30)}'; document.head.appendChild(c); })();
 
+/* ===== r463: forked lightning. With Lightning on, each flash now has a branching bolt in the sky: a jagged main channel from the cloud
+   to the ground with forks off it, a white core and a soft violet glow, flickering with the flash. Each strike lands somewhere new
+   out beyond the scan, in the direction you are looking, so the scan stands in front of it. Worked out from the clock like the flashes, so a video gets the
+   same bolts every time. Sky, light & weather > Lightning > Forked bolts switches them off (flash only). ===== */
+var WXB={prog:null, buf:null, geo:{}};
+function wxbOn(){ var S=wxS(); return !!(S&&wxOn()&&S.lightning&&S.bolts!==false); }
+/* the strikes showing now: index, how far into it, brightness */
+function wxbStrikes(t){ var S=wxS(), win=3.2, k=Math.floor(t/win), out=[]; for(var j=k-1;j<=k;j++){ if(wxHash(j)>0.55) continue; var t0=j*win+wxHash(j+7)*win*0.8, d=t-t0; if(d<0||d>0.5) continue;
+    var I=d<0.07?1:(d<0.12?0.3:(d<0.2?0.9:0.45*Math.exp(-(d-0.2)*12))); out.push({j:j, d:d, I:I*(0.6+0.4*Math.min(1,(S.rain||0)*1.5+0.3))}); } return out; }
+/* one bolt's shape, height 1, standing on (0,0,0): [x0,y0,z0, x1,y1,z1, width, branch] per segment */
+function wxbShape(j){ if(WXB.geo[j]) return WXB.geo[j]; var seed=j*97.13+5, h=function(){ seed+=1.618; return wxHash(seed); }, S=[];
+  function walk(x,y,z,dx,dy,steps,len,w,br,depth){ for(var i=0;i<steps&&z>0;i++){ var nx=x+dx*len+(h()-0.5)*len*0.9, ny=y+dy*len+(h()-0.5)*len*0.9, nz=Math.max(0, z-len*(0.7+h()*0.5)); S.push([x,y,z,nx,ny,nz,w,br]);
+      if(depth<2&&i>1&&h()<(depth?0.12:0.2)){ var a=h()*Math.PI*2, s=0.45+h()*0.5; walk(nx,ny,nz, dx+Math.cos(a)*s, dy+Math.sin(a)*s, Math.floor((depth?4:7)+h()*(depth?4:8)), len*0.8, w*0.5, 1, depth+1); }
+      x=nx; y=ny; z=nz; if(depth===0){ dx=dx*0.6+(h()-0.5)*0.25; dy=dy*0.6+(h()-0.5)*0.25; } } }
+  walk((h()-0.5)*0.15, (h()-0.5)*0.15, 1, 0, 0, 40, 0.032, 1, 0, 0);
+  /* the main channel must reach the ground */ var last=S.filter(function(s){ return !s[7]; }).pop(); if(last&&last[5]>0) S.push([last[3],last[4],last[5],last[3]+(h()-0.5)*0.03,last[4]+(h()-0.5)*0.03,0,1,0]);
+  WXB.geo[j]=S; var ks=Object.keys(WXB.geo); if(ks.length>12) delete WXB.geo[ks[0]]; return S; }
+function wxbProg(){ if(WXB.prog) return WXB.prog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; layout(location=2) in float aU; uniform mat4 uMVP; out vec4 vC; out float vU; void main(){ vC=aC; vU=aU; gl_Position=uMVP*vec4(aP,1.0); gl_Position.z=gl_Position.w*0.9998; }';
+  var FS='#version 300 es\nprecision highp float; in vec4 vC; in float vU; out vec4 o; void main(){ float k=exp(-vU*vU*3.5); o=vec4(vC.rgb*vC.a*k, 0.0); }';
+  WXB.prog=program(gl, VS, FS); WXB.buf=gl.createBuffer(); WXB.vao=gl.createVertexArray(); gl.bindVertexArray(WXB.vao); gl.bindBuffer(gl.ARRAY_BUFFER, WXB.buf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,32,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,4,gl.FLOAT,false,32,12); gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2,1,gl.FLOAT,false,32,28); gl.bindVertexArray(null); return WXB.prog; }
+function wxbDraw(mvp){ if(!wxbOn()) return; var R=APP.res; if(!R||!R.robust) return; var L=wxbStrikes(wxT()); if(!L.length) return; var gl=GL, pr=wxbProg(); if(!pr) return;
+  var rb=R.robust, cx=(rb.x[0]+rb.x[1])/2, cy=(rb.y[0]+rb.y[1])/2, z0=rb.z[0], rs=Math.max(20*wxSc(), Math.hypot(rb.x[1]-rb.x[0], rb.y[1]-rb.y[0])/2), eye=camBasis().eye, V=[];
+  L.forEach(function(st){ var j=st.j, a=Math.atan2(cy-eye[1], cx-eye[0])+(wxHash(j*3.1+1)-0.5)*1.6, /* in front of the camera, so you see it */ D=rs*(2.4+1.6*wxHash(j*5.7+2)), H=D*(0.42+0.18*wxHash(j*2.3+4)), bx=cx+Math.cos(a)*D, by=cy+Math.sin(a)*D, ux=-Math.sin(a), uy=Math.cos(a), vx=Math.cos(a), vy=Math.sin(a), W=H*0.0035;
+    var P=function(x,y,z){ return [bx+(ux*x+vx*y)*H, by+(uy*x+vy*y)*H, z0+z*H]; }, brI=st.d<0.12?1:Math.max(0,1-(st.d-0.12)*5);
+    wxbShape(j).forEach(function(s){ var p0=P(s[0],s[1],s[2]), p1=P(s[3],s[4],s[5]), I=st.I*(s[7]?brI*0.75:1); if(I<0.01) return;
+      var d=[p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]], m=[(p0[0]+p1[0])/2-eye[0],(p0[1]+p1[1])/2-eye[1],(p0[2]+p1[2])/2-eye[2]], sd=[d[1]*m[2]-d[2]*m[1], d[2]*m[0]-d[0]*m[2], d[0]*m[1]-d[1]*m[0]], l=Math.hypot(sd[0],sd[1],sd[2])||1; sd=[sd[0]/l,sd[1]/l,sd[2]/l];
+      [[W*s[6]*7, [0.55,0.6,1.0], 0.22*I], [W*s[6]*1.6, [0.92,0.94,1.0], 1.0*I]].forEach(function(q){ var w=q[0], c=q[1], al=q[2], A=[p0[0]-sd[0]*w,p0[1]-sd[1]*w,p0[2]-sd[2]*w], B=[p0[0]+sd[0]*w,p0[1]+sd[1]*w,p0[2]+sd[2]*w], C=[p1[0]+sd[0]*w,p1[1]+sd[1]*w,p1[2]+sd[2]*w], E=[p1[0]-sd[0]*w,p1[1]-sd[1]*w,p1[2]-sd[2]*w];
+        [[A,-1],[B,1],[C,1],[A,-1],[C,1],[E,-1]].forEach(function(v){ V.push(v[0][0],v[0][1],v[0][2], c[0],c[1],c[2],al, v[1]); }); }); }); });
+  if(!V.length) return; gl.bindVertexArray(WXB.vao); gl.bindBuffer(gl.ARRAY_BUFFER, WXB.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.DYNAMIC_DRAW); gl.useProgram(pr);
+  gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uMVP'), false, new Float32Array(mvp||camMVP())); gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  gl.drawArrays(gl.TRIANGLES, 0, V.length/8); gl.bindVertexArray(null); gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); }
+try{ sbAfter('wxSkyDraw', function(r, mvp){ try{ wxbDraw(mvp); }catch(e){ console.warn(e); } return r; }); }catch(e){}
+/* the option, under Lightning (the row itself is in the Sky & weather panel) */
+try{ if(typeof SKP_LBL!=='undefined') SKP_LBL['Forked bolts']='lightning'; if(typeof SKP_KEYS!=='undefined'&&SKP_KEYS.indexOf('bolts')<0) SKP_KEYS.push('bolts'); }catch(e){}
+
 /* ===== r417: settings for each placed thing. Pick one (in the list or in 3D) and its own sliders show under the list:
    fires, smoke, fireworks, sunbeam windows, pigeons, Christmas tree, string lights and confetti. Unset values use the defaults. ===== */
 var FXC_FW=[['','Same as all'],['mixed','Mixed'],['gold','Gold'],['red','Red'],['green','Green'],['blue','Blue'],['silver','Silver']];
@@ -28387,7 +28424,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'17 October 2026', r:'r447 to r462', t:[
+ {d:'17 October 2026', r:'r447 to r463', t:[
+  'Forked lightning: with Lightning on, each flash has a branching bolt in the sky beyond the scan, flickering with the flash, in pictures and videos too. Sky, light & weather > Lightning > Forked bolts switches them off.',
   'RC car sounds: the motor is now a real toy RC car recording whose pitch follows the speed (lower on the Monster, higher on the Sports car), a soft thump when it lands a jump, a light knock when it hits something, and a quieter tyre squeal.',
   'RC car designs: Car on the RC bar picks Monster (black off-road truggy with lime flashes, roll cage, tall wing, coil-over shocks and big chunky tyres, now the default), Sports (low orange supercar) or Classic (the red buggy). Kept for next time.',
   'Fix: spinning the RC car on the spot (W, A and Space) no longer smears the scan at the sides while it turns.',

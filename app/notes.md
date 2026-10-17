@@ -1,2 +1,2 @@
-r462
-- RC car sounds: recorded motor, landing thump, wall knock, softer squeal.
+r463
+- Forked lightning bolts with each flash (option under Lightning).
