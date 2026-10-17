@@ -1,2 +1,2 @@
-# r446
-- Left rail groups open on click only.
+# r447
+- Style: shape looks cleaner up close (ray depth + edge-keeping smoothing).
