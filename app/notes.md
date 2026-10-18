@@ -1,1 +1,1 @@
-r482: Plan view Photo / Points switch works.
+r483: scan library start screen with picture cards; Focus view.

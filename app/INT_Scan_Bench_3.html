@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r482';
+var SB_BUILD='2026-10-18 r483';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28970,6 +28970,49 @@ try{ sbAround('planDraw', function(next){ var keep=planBmp; try{ if(PLK.look==='
 try{ sbAfter('sb3dSync', function(r){ try{ plkSync(); }catch(e){} return r; }); }catch(e){}
 try{ sbAfter('wsView', function(r){ try{ if(plkInPlan()) plkSync(); else if(typeof sb3dSync==='function') sb3dSync(); }catch(e){} return r; }); }catch(e){}
 
+/* ===== r483: Scan library and Focus view.
+   Library: the start screen shows your scans as cards with a picture of each (taken from the 3D view a few seconds after it opens),
+   the name, size and when you last had it open. Click a card to open it again; the cross takes it off the list.
+   Focus: View > Focus view (or the Focus button at the top right, or Ctrl+Shift+F) hides the menus, side panels and bars so the scan
+   fills the window. Esc, the button at the top or Ctrl+Shift+F again brings them back. ===== */
+var LIB={key:null, res:null, t0:0, done:false, max:12};
+/* remember which recent entry the scan being opened belongs to */
+try{ sbAfter('rcAdd', function(r, f){ try{ if(f&&f.name) { LIB.key=f.name+'|'+f.size; LIB.done=false; LIB.res=null; } }catch(e){} return r; }); }catch(e){}
+/* a picture for the card: taken from the 3D view right after it is drawn, a few seconds after the scan opens */
+function libSaveThumb(url){ var k=LIB.key; if(!k||!url) return; rcAll().then(function(L){ var o=L.filter(function(q){ return q.k===k; })[0]; if(!o) return; o.thumb=url; return rcPut(o); }).then(function(){ try{ libRender(); }catch(e){} }); }
+try{ sbAfter('gl_render', function(r){ try{ if(!APP.res||miniVP||APP.view!=='3d'||LIB.done||!LIB.key) return r; if(LIB.res!==APP.res){ LIB.res=APP.res; LIB.t0=performance.now(); return r; } if(performance.now()-LIB.t0<3500) return r; if(typeof SB!=='undefined'&&SB.busy) return r;
+    var c=document.createElement('canvas'), w=360, h=Math.round(w*glCv.height/Math.max(1,glCv.width)); h=Math.min(240, Math.max(120, h)); c.width=w; c.height=h; var x=c.getContext('2d'), sw=glCv.width, sh=glCv.height, a=w/h, sa=sw/sh, cw=sw, ch=sh, ox=0, oy=0;
+    if(sa>a){ cw=sh*a; ox=(sw-cw)/2; } else { ch=sw/a; oy=(sh-ch)/2; } x.drawImage(glCv, ox, oy, cw, ch, 0, 0, w, h); var d=x.getImageData(w>>1, h>>1, 1, 1).data; LIB.done=true; libSaveThumb(c.toDataURL('image/jpeg', 0.72)); }catch(e){ LIB.done=true; } return r; }); }catch(e){}
+/* the start screen: cards instead of a text list */
+function libRender(){ var dr=document.getElementById('dropRecent'); if(!dr) return; rcAll().then(function(L){ RCNT.list=L; if(!L.length){ dr.innerHTML=''; return; }
+  var esc=function(s){ return String(s).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); };
+  dr.innerHTML='<div class="libH">Your scans</div><div class="libG">'+L.slice(0, LIB.max).map(function(q, i){ return '<div class="libC" data-rc="'+i+'" title="'+(q.h||q.lcc?'Open '+esc(q.name)+' again':'Opened before this browser could keep the file: you will be asked to find it')+'">'+
+    '<div class="libI">'+(q.thumb?'<img src="'+q.thumb+'" alt="">':'<span>'+esc((q.name.split('.').pop()||'').toUpperCase())+'</span>')+'</div>'+
+    '<div class="libT"><b>'+esc(q.name)+'</b><small>'+bytes(q.size)+' · '+rcAgo(q.t)+(q.lcc?' · LCC':'')+'</small></div><button class="libX" data-rd="'+i+'" title="Take off the list">✕</button></div>'; }).join('')+'</div>';
+  dr.querySelectorAll('[data-rc]').forEach(function(b){ b.onclick=function(){ rcOpen(RCNT.list[+b.dataset.rc]); }; });
+  dr.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); rcDel(RCNT.list[+b.dataset.rd].k).then(function(){ rcRender(); }); }; }); }); }
+try{ sbAfter('rcRender', function(r){ setTimeout(function(){ try{ libRender(); }catch(e){} }, 60); return r; }); }catch(e){}
+setTimeout(function(){ try{ libRender(); }catch(e){} }, 800);
+/* ---------- Focus view ---------- */
+function libFocus(on){ if(on==null) on=!document.body.classList.contains('sbFocus'); document.body.classList.toggle('sbFocus', on); var b=document.getElementById('libFocusB'); if(b) b.classList.toggle('on', on);
+  setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); requestRender(false); }catch(e){} }, 30); if(on) toast('Focus view: Esc or Ctrl+Shift+F brings the menus back.', 2500); }
+(function(){ var top=document.getElementById('top'), shot=document.getElementById('btnShot'); if(top&&!document.getElementById('libFocusB')){ var b=document.createElement('button'); b.className='btn sm'; b.id='libFocusB'; b.style.flex='0 0 auto'; b.title='Focus view: hide the menus and panels so the scan fills the window (Ctrl+Shift+F, Esc to leave)'; b.innerHTML='⛶'; b.onclick=function(){ libFocus(); };
+    if(shot&&shot.parentNode===top) top.insertBefore(b, shot); else top.appendChild(b); }
+  var ex=document.createElement('button'); ex.id='libFocusX'; ex.type='button'; ex.textContent='Show menus (Esc)'; ex.onclick=function(){ libFocus(false); }; document.body.appendChild(ex); })();
+document.addEventListener('keydown', function(e){ if(e.ctrlKey&&e.shiftKey&&(e.key==='F'||e.key==='f')){ e.preventDefault(); libFocus(); return; } if(e.key==='Escape'&&document.body.classList.contains('sbFocus')){ var t=e.target; if(t&&/INPUT|TEXTAREA|SELECT/.test(t.tagName)) return; libFocus(false); } }, true);
+try{ sbAfter('sbMenus', function(M){ try{ var V=M.filter(function(m){ return m.id==='view'; })[0]; if(V&&!V.items.some(function(x){ return x&&x.libf; })) V.items.push({libf:1, t:'Focus view (scan fills the window)', k:'Ctrl+Shift+F', chk:document.body.classList.contains('sbFocus'), fn:function(){ libFocus(); }}); }catch(e){} return M; }); }catch(e){}
+try{ var lst=document.createElement('style'); lst.textContent=
+  '#dropRecent{width:min(980px,100%);max-height:52vh;overflow:auto}#dropRecent .libH{text-align:left;color:#b4bfcc;font-size:13px;font-weight:600;margin:4px 2px 8px}'+
+  '#dropRecent .libG{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}'+
+  '#dropRecent .libC{position:relative;background:#141a22;border:1px solid #263040;border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;transition:transform .12s,border-color .12s}#dropRecent .libC:hover{border-color:#4b7bd8;transform:translateY(-2px)}'+
+  '#dropRecent .libI{aspect-ratio:3/2;background:#0c1016;display:flex;align-items:center;justify-content:center;color:#5b6573;font-weight:700;letter-spacing:.05em}#dropRecent .libI img{width:100%;height:100%;object-fit:cover;display:block}'+
+  '#dropRecent .libT{padding:8px 10px}#dropRecent .libT b{display:block;color:#eef2f6;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#dropRecent .libT small{color:#8a95a3;font-size:11.5px}'+
+  '#dropRecent .libX{position:absolute;top:6px;right:6px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;opacity:0;transition:opacity .12s}#dropRecent .libC:hover .libX{opacity:1}'+
+  'body.sbFocus #top,body.sbFocus #side,body.sbFocus #sbRail,body.sbFocus #tools3d,body.sbFocus #status,body.sbFocus #right,body.sbFocus #tools,body.sbFocus #tipbar,body.sbFocus #modeBar{display:none!important}'+
+  'body.sbFocus #stage{position:fixed!important;left:0!important;top:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:60;margin:0!important}'+
+  '#libFocusX{display:none;position:fixed;top:10px;right:16px;z-index:9000;border:0;border-radius:18px;padding:7px 14px;background:rgba(15,20,28,.72);color:#fff;font:13px system-ui,Segoe UI,sans-serif;cursor:pointer;opacity:.25;transition:opacity .2s}#libFocusX:hover{opacity:1}body.sbFocus #libFocusX{display:block}#libFocusB.on{background:#dbe8ff}';
+  document.head.appendChild(lst); }catch(e){}
+
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
    the motor; the Monster is pitched a little lower and the Sports car higher. A soft thump when it lands a jump and a light plastic
    knock when it hits something, louder the harder the hit. Sound on the RC bar still loads your own file; Shift+click goes back to this. ===== */
@@ -29047,7 +29090,9 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r482', t:[
+ {d:'18 October 2026', r:'r469 to r483', t:[
+  'Your scans: the start screen shows the scans you have opened as picture cards (the picture is taken from the 3D view when you open it). Click one to open it again.',
+  'Focus view: the scan fills the window with the menus and panels hidden. The ⛶ button at the top right, View > Focus view or Ctrl+Shift+F; Esc brings them back.',
   'Plan view: Photo and Points at the bottom left now work. Photo shows a colour picture of the scan from above, Points the grey plan slice (still the default).',
   'Side menus (like Tools > Fun) move up to fit on the screen instead of running off the bottom.',
   'Tools > Fun is now one submenu: Scanner sweep, Brick world, Paintball, and every look (White model, Clay, Watercolour, Miniature, Cartoon, Blueprint, Pencil, Thermal, Cel shaded, Painterly, Retro pixel, Night vision, Retro VHS, Old film). The Style button is gone from the 3D bar, and the duplicate Thermal is gone.',
