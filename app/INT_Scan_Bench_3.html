@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r474';
+var SB_BUILD='2026-10-18 r475';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28325,14 +28325,20 @@ rcGridBuild=function(){ var R=APP.res; if(!R||!R.pos) return null; var sc=ltSc()
   /* pass 2: points standing above their own square's floor are walls; how many it takes goes up with how dense the scan is, so a few stray dots are not a wall */
   var C=new Uint8Array(N); for(var i2=0;i2<n;i2+=st){ if(!ok(i2)) continue; var x3=P[i2*3], y3=P[i2*3+1], z3=P[i2*3+2], cx3=Math.floor((x3-x0)/cell), cy3=Math.floor((y3-y0)/cell); if(cx3<0||cy3<0||cx3>=NX||cy3>=NY) continue; var c3=cy3*NX+cx3, h=(z3-Fm[c3])/sc; if(h>0.09&&h<0.45&&C[c3]<255) C[c3]++; }
   var ks=[]; for(var c5=0;c5<N;c5+=7) if(K[c5]>=4) ks.push(K[c5]); ks.sort(function(a,b){ return a-b; }); var thr=Math.max(3, Math.min(40, Math.round(0.2*(ks[ks.length>>1]||0))));
-  RC.thr=thr; return {C:C, F:Fm, x0:x0, y0:y0, cell:cell, NX:NX, NY:NY, thr:thr}; };
+  /* r475: a solid square on its own (a few stray dots in the open) is not a wall: walls, kerbs and cars are runs of solid squares */
+  var Sd=new Uint8Array(N); for(var c6=0;c6<N;c6++) if(C[c6]>=thr) Sd[c6]=1;
+  var S2=new Uint8Array(N); for(var y6=1;y6<NY-1;y6++) for(var x6=1;x6<NX-1;x6++){ var k6=y6*NX+x6; if(!Sd[k6]) continue; var nb=0; for(var dy6=-1;dy6<=1;dy6++) for(var dx6=-1;dx6<=1;dx6++){ if(dx6||dy6) nb+=Sd[k6+dx6+dy6*NX]; } if(nb>=2) S2[k6]=1; }
+  RC.thr=thr; return {C:C, S:S2, F:Fm, x0:x0, y0:y0, cell:cell, NX:NX, NY:NY, thr:thr}; };
 /* the floor under a point, blended between squares */
 function rcGround(x, y){ var Gd=RC.grid; if(!Gd||!Gd.F) return ltGround(x, y); var fx=(x-Gd.x0)/Gd.cell-0.5, fy=(y-Gd.y0)/Gd.cell-0.5, ix=Math.floor(fx), iy=Math.floor(fy), tx=fx-ix, ty=fy-iy;
   var at=function(X,Y){ X=Math.max(0,Math.min(Gd.NX-1,X)); Y=Math.max(0,Math.min(Gd.NY-1,Y)); return Gd.F[Y*Gd.NX+X]; };
   var a=at(ix,iy), b=at(ix+1,iy), c=at(ix,iy+1), d=at(ix+1,iy+1); if(!(isFinite(a)&&isFinite(b)&&isFinite(c)&&isFinite(d))) return ltGround(x, y); return (a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty; }
 /* r469: a square is solid when it has as many standing dots as this scan's density calls for (at least 3, as before) */
-rcHit=function(x, y, r){ var Gd=RC.grid; if(!Gd) return false; var T=Gd.thr||3, k=Math.max(1, Math.round(r/Gd.cell)), cx=Math.floor((x-Gd.x0)/Gd.cell), cy=Math.floor((y-Gd.y0)/Gd.cell);
-  for(var dy=-k;dy<=k;dy++) for(var dx=-k;dx<=k;dx++){ if(dx*dx+dy*dy>k*k) continue; var X=cx+dx, Y=cy+dy; if(X<0||Y<0||X>=Gd.NX||Y>=Gd.NY) return true; if(Gd.C[Y*Gd.NX+X]>=T) return true; } return false; };
+function rcSolidN(x, y, r){ var Gd=RC.grid; if(!Gd) return 0; var k=Math.max(1, Math.round(r/Gd.cell)), cx=Math.floor((x-Gd.x0)/Gd.cell), cy=Math.floor((y-Gd.y0)/Gd.cell), n=0, T=Gd.thr||3;
+  for(var dy=-k;dy<=k;dy++) for(var dx=-k;dx<=k;dx++){ if(dx*dx+dy*dy>k*k) continue; var X=cx+dx, Y=cy+dy; if(X<0||Y<0||X>=Gd.NX||Y>=Gd.NY){ n+=1000; continue; } var c=Y*Gd.NX+X; if(Gd.S?Gd.S[c]:(Gd.C[c]>=T)) n++; } return n; }
+/* r469/r475: solid where this scan's density says so and only in runs of solid squares; and if the car is already inside something
+   (placed there, or the map changed under it) it may always drive out, so it can never be stuck for good */
+rcHit=function(x, y, r){ var n=rcSolidN(x, y, r); if(!n) return false; var p=DRV&&DRV.p; if(p&&DRV.rc){ var here=rcSolidN(p.x, p.y, r); if(here>0&&n<=here&&(x!==p.x||y!==p.y)) return false; } return true; };
 
 /* ===== r461: RC car designs. Monster (the default): a black off-road truggy with lime flashes, an open roll cage, a tall rear wing,
    coil-over shocks and big chunky tyres on dark spoked rims. Sports: a low orange supercar with dark glass and big grey rims on low
@@ -28596,12 +28602,17 @@ try{ sbAfter('rcHud', function(r){ try{ var h=document.getElementById('rcHud'), 
   b.onclick=function(){ try{ localStorage.setItem('sb_rc_rear', rclRearOn()?'0':'1'); }catch(e){} rclRearBtn(); rclSync(); try{ requestRender(false); drvFocus(); }catch(e){} }; lb.parentNode.insertBefore(b, lb.nextSibling); rclRearBtn(); }catch(e){ console.warn(e); } return r; }); }catch(e){}
 /* the car's own lamp glows are drawn after the car, so they show on its lenses instead of being hidden by the body */
 try{ sbAfter('gl_render', function(r){ try{ if(!miniVP&&DRV.on&&DRV.rc){ window.LT_RCONLY=true; ltGlowDraw(); } }catch(e){ console.warn(e); } finally{ window.LT_RCONLY=false; } return r; }); }catch(e){}
-/* r472: reverse lights. Two small white lights on the back come on while the car is reversing (with Rear on, day or night) */
+/* r472: reverse lights. Two small white lights on the back come on while the car is reversing, when the car's lights are on (r475: not in
+   daylight, where adding a light turned the whole scene down to night lighting) */
 (function(){ var base=rclSync; rclSync=function(){ base(); try{ var M=APP.model; if(!M) return; if(!M.lights) M.lights=[]; var K=DRV.keys||{}, rev=DRV.on&&DRV.rc&&rclRearOn()&&!!K.b&&(RC.vx||0)<-0.05, L=M.lights.filter(function(l){ return l._rc&&l._rev; });
     if(!rev){ if(L.length){ M.lights=M.lights.filter(function(l){ return !(l._rc&&l._rev); }); try{ requestRender(false); }catch(e){} } return; } if(typeof ltOn==='function'&&!ltOn()) return;
     if(!L.length){ [1,-1].forEach(function(s){ var l=ltMake('lamp'); Object.assign(l, {name:'RC reverse light', _rc:true, _rev:true, _side:s, col:'#f2f5ff', str:1.2, reach:0.9, glow:true, glowR:0.02, haze:0}); M.lights.push(l); L.push(l); }); }
     var p=DRV.p, sc=ltSc(), hd=RC.head!=null?RC.head:(p.rot||0)*Math.PI/180, c=Math.cos(hd), s2=Math.sin(hd), F=rclRearPos(), gz=(RC.wz?(RC.wz[2]+RC.wz[3])/2:(p.z||0)), yi=Math.max(0.006, F.y*0.45);
     L.forEach(function(l){ var ly=yi*l._side*sc, lx=F.x*sc; l.x=p.x+c*lx-s2*ly; l.y=p.y+s2*lx+c*ly; l.z=gz+F.z*sc; l.az=Math.round(hd*1800/Math.PI)/10+180; l.el=0; l.on=true; }); }catch(e){} }; })();
+/* r475: the car's own lights never darken the scene. With no lights of your own the scan shows as scanned; adding the first light used to
+   switch it to lit mode at the default room light, so the whole scene went darker the moment a car light came on */
+try{ sbAround('ltAmb', function(next){ var v=next(); try{ var M=ltM(); if(!M||!M.lights||!M.lights.length) return v; if(typeof M.lightAmb==='number') return v; if(typeof wxOn==='function'&&wxOn()) return v; if(typeof ltTodSun==='function'&&ltTodSun()) return v;
+  if(M.lights.every(function(l){ return l._rc; })) return Math.max(v, 1); }catch(e){} return v; }); }catch(e){}
 
 /* ===== r464: drive your own car model. Car on the RC bar now also offers "Your model": load a 3D model file (GLB) of any car and it
    becomes the RC car, scaled to toy size (45 cm long), standing on the ground, with its own colours and textures and the same
@@ -28698,6 +28709,9 @@ try{ var rcs=document.createElement('style'); rcs.textContent=
 /* one at a time: Walk stops the car, the car stops Walk */
 try{ sbBefore('wkvStart', function(){ try{ if(DRV.on&&DRV.rc) drvStop(); }catch(e){} }); }catch(e){}
 try{ sbBefore('rcStart', function(){ try{ if(typeof WKV!=='undefined'&&WKV.on) wkvStop(); }catch(e){} }); }catch(e){}
+/* r475: the RC bar really goes when the car stops (its own display rule beat the hidden flag), and the Walk bar likewise */
+try{ var rch2=document.createElement('style'); rch2.textContent='#rcHud[hidden],#wkvHud[hidden],#drvHud[hidden]{display:none!important}'; document.head.appendChild(rch2); }catch(e){}
+try{ setInterval(function(){ try{ var h=document.getElementById('rcHud'); if(h&&!h.hidden&&!(DRV.on&&DRV.rc)) h.hidden=true; }catch(e){} }, 500); }catch(e){}
 
 /* ===== r467: after you delete something in Clean up, the RC car and Walk see it gone: their maps of the ground and walls are made
    again when they start if anything has been deleted, put back or filled since they were last made. ===== */
@@ -28976,7 +28990,10 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r474', t:[
+ {d:'18 October 2026', r:'r469 to r475', t:[
+  'RC car: no more getting stuck in the open. A few stray dots on their own no longer count as solid, and if the car ends up inside something it can always drive out.',
+  'RC car lights no longer turn the whole scene darker (the reverse lights in daylight did).',
+  'The RC bar now goes away when you stop the car.',
   'Fun trials in Tools > Fun: Scanner sweep (a laser plane rises and builds the scan), Brick world (the scan rebuilt as toy bricks), and Paintball (click to splat paint on walls and floors; Ctrl+Z takes it off).',
   'Rain and snow from inside: looking out of a window or door of a scanned building you now see it falling outside, while none falls under the roof.',
   'Delete + fill fills only the real hole: the ground round the removed object is checked, and only the missing part is filled, so good ground near the edge stays as scanned and the fill fades into it.',

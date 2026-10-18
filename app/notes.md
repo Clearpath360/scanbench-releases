@@ -1,1 +1,1 @@
-r474: Tools > Fun trials: Scanner sweep, Brick world, Paintball.
+r475: RC no longer stuck in the open, car lights no longer darken the scene, RC bar hides when stopped.
