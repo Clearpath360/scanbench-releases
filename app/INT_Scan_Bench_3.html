@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r490';
+var SB_BUILD='2026-10-18 r491';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29078,6 +29078,41 @@ try{ var kst=document.createElement('style'); kst.textContent=
   '#kfDlg .kfB{border:1px solid #cfd8e3;background:#fff;color:#1d232b;border-radius:9px;padding:7px 14px;cursor:pointer;font:inherit}#kfDlg .kfB.p{background:#0b5cd5;border-color:#0b5cd5;color:#fff}';
   document.head.appendChild(kst); }catch(e){}
 
+/* ===== r491: smooth camera routes. The Walk-through video and the Compare Walk/Fly path used to speed up and slow down at every
+   point (short legs ran fast, long legs slow) and the turning jumped there too, so you could feel each point. Now the route is a
+   curve that does not overshoot, the camera moves along it with a speed that changes gradually (easing in and out of stops and the
+   ends), and the turning eases between points. The timing of each leg is the same as before, so videos keep their length. ===== */
+var WTS={key:'', B:null};
+function wtsCR(p0, p1, p2, p3, u){ /* centripetal Catmull-Rom: no loops or overshoot when the points are unevenly spaced */
+  var d=function(a,b){ return Math.max(1e-4, Math.pow(Math.hypot(b[0]-a[0], b[1]-a[1], b[2]-a[2]), 0.5)); }, t0=0, t1=t0+d(p0,p1), t2=t1+d(p1,p2), t3=t2+d(p2,p3), t=t1+(t2-t1)*u;
+  var L=function(a, b, ta, tb){ var w=(tb-ta)||1e-6; return a.map(function(_, k){ return (tb-t)/w*a[k]+(t-ta)/w*b[k]; }); };
+  var A1=L(p0,p1,t0,t1), A2=L(p1,p2,t1,t2), A3=L(p2,p3,t2,t3), B1=L(A1,A2,t0,t2), B2=L(A2,A3,t1,t3); return L(B1,B2,t1,t2); }
+function wtsHerm(T, V, M, t){ var n=T.length; if(t<=T[0]) return V[0]; if(t>=T[n-1]) return V[n-1]; var j=0; while(j<n-2&&T[j+1]<t) j++; var h=Math.max(1e-6, T[j+1]-T[j]), u=(t-T[j])/h, u2=u*u, u3=u2*u;
+  return (2*u3-3*u2+1)*V[j]+(u3-2*u2+u)*h*M[j]+(-2*u3+3*u2)*V[j+1]+(u3-u2)*h*M[j+1]; }
+function wtsBuild(TL){ var P=TL.P, n=P.length, Ms=48, g=function(j){ return P[Math.max(0, Math.min(n-1, j))]; }, pts=[], cum=[0], sKey=[0];
+  for(var i=0;i<n-1;i++){ for(var k=0;k<Ms;k++){ var p=wtsCR(g(i-1).eye, g(i).eye, g(i+1).eye, g(i+2).eye, k/Ms); if(pts.length) cum.push(cum[cum.length-1]+Math.hypot(p[0]-pts[pts.length-1][0], p[1]-pts[pts.length-1][1], p[2]-pts[pts.length-1][2])); pts.push(p); } if(i>0||true) sKey[i]=cum[i*Ms]; }
+  var lp=P[n-1].eye.slice(); cum.push(cum[cum.length-1]+Math.hypot(lp[0]-pts[pts.length-1][0], lp[1]-pts[pts.length-1][1], lp[2]-pts[pts.length-1][2])); pts.push(lp); sKey[n-1]=cum[cum.length-1];
+  /* look direction at each point, as heading and tilt (heading unwrapped so it never spins the long way round) */
+  var ang=P.map(function(q){ var dx=q.tgt[0]-q.eye[0], dy=q.tgt[1]-q.eye[1], dz=q.tgt[2]-q.eye[2], L=Math.max(1e-4, Math.hypot(dx,dy,dz)); return {h:Math.atan2(dy,dx), v:Math.asin(Math.max(-1, Math.min(1, dz/L))), L:L}; });
+  for(var a=1;a<ang.length;a++){ while(ang[a].h-ang[a-1].h>Math.PI) ang[a].h-=2*Math.PI; while(ang[a].h-ang[a-1].h<-Math.PI) ang[a].h+=2*Math.PI; }
+  /* knots in time: where along the route and which point's view, at each leg start and end */
+  var T=[0], S=[sKey[TL.segs[0].i]], K=[TL.segs[0].i]; TL.segs.forEach(function(sg){ T.push(sg.t1); if(sg.hold){ S.push(S[S.length-1]); K.push(sg.i); } else { S.push(sKey[sg.i+1]); K.push(sg.i+1); } });
+  /* distance: monotone (never goes backwards), standing still at the ends and at stops */
+  var N=T.length, dl=[]; for(var q=0;q<N-1;q++) dl.push((S[q+1]-S[q])/Math.max(1e-6, T[q+1]-T[q]));
+  var MS_=new Array(N).fill(0); for(var q2=1;q2<N-1;q2++){ var a1=dl[q2-1], b1=dl[q2]; MS_[q2]=(a1>0&&b1>0)?2*a1*b1/(a1+b1):0; }
+  /* view: eases between points, turning at a rate that changes gradually */
+  var H=K.map(function(k){ return ang[k].h; }), Vv=K.map(function(k){ return ang[k].v; }), LL=K.map(function(k){ return ang[k].L; }), tan=function(V){ return V.map(function(_, q){ if(q===0||q===N-1) return 0; if(V[q]===V[q-1]||V[q]===V[q+1]) return 0; var s1=(V[q]-V[q-1])/Math.max(1e-6,T[q]-T[q-1]), s2=(V[q+1]-V[q])/Math.max(1e-6,T[q+1]-T[q]); return s1*s2<=0?0:(V[q+1]-V[q-1])/Math.max(1e-6, T[q+1]-T[q-1]); }); };
+  return {pts:pts, cum:cum, T:T, S:S, MS:MS_, H:H, MH:tan(H), V:Vv, MV:tan(Vv), L:LL, ML:tan(LL)}; }
+function wtsKey(TL){ return TL.P.map(function(q){ return q.eye.concat(q.tgt).map(function(v){ return v.toFixed(3); }).join(','); }).join(';')+'|'+TL.segs.map(function(s){ return s.t1.toFixed(3)+(s.hold?'h':''); }).join(','); }
+function wtsAt(TL, t){ var key=wtsKey(TL); if(WTS.key!==key){ WTS.B=wtsBuild(TL); WTS.key=key; } var B=WTS.B; t=Math.max(0, Math.min(TL.T, t));
+  var s=Math.max(0, Math.min(B.cum[B.cum.length-1], wtsHerm(B.T, B.S, B.MS, t))), lo=0, hi=B.cum.length-1; while(hi-lo>1){ var m=(lo+hi)>>1; if(B.cum[m]<s) lo=m; else hi=m; }
+  var u=(s-B.cum[lo])/Math.max(1e-9, B.cum[hi]-B.cum[lo]), a=B.pts[lo], b=B.pts[hi], e=[a[0]+(b[0]-a[0])*u, a[1]+(b[1]-a[1])*u, a[2]+(b[2]-a[2])*u];
+  var h=wtsHerm(B.T, B.H, B.MH, t), v=wtsHerm(B.T, B.V, B.MV, t), L=Math.max(0.05, wtsHerm(B.T, B.L, B.ML, t));
+  return wtCamOf(e, [e[0]+Math.cos(v)*Math.cos(h)*L, e[1]+Math.cos(v)*Math.sin(h)*L, e[2]+Math.sin(v)*L]); }
+sbAround('wtAt', function(next, TL, t){ try{ if(TL&&TL.P&&TL.P.length>=2&&TL.segs&&TL.segs.length&&window.WTS_OFF!==true) return wtsAt(TL, t); }catch(e){ console.warn(e); } return next(TL, t); });
+/* r491: the docked Walk-through panel (point list and side view) was squeezed to nothing in the Prep step by the app's layout; it now gets its column in every step */
+(function(){ var c=document.createElement('style'); c.textContent='body.sbSkin.wtDock #app,body.sbSkin.wtDock[data-step] #app,body.sbSkin.wtDock[data-step=prep] #app{grid-template-columns:84px minmax(0,1fr) 400px!important}body.sbSkin.wtDock.sbPanelOn #app,body.sbSkin.wtDock.sbPanelOn[data-step] #app,body.sbSkin.wtDock.sbPanelOn[data-step=prep] #app{grid-template-columns:384px minmax(0,1fr) 400px!important}body.sbSkin.wtDock[data-step] #right{width:auto!important;visibility:visible!important}'; document.head.appendChild(c); })();
+
 /* ===== r486: Compare, redesigned. One panel down the left walks you through it in four steps:
    1 Scans (add your other scans of the same place, each gets a date and a colour),
    2 Line up (match a few spots in two views, or say it already lines up),
@@ -29086,7 +29121,8 @@ try{ var kst=document.createElement('style'); kst.textContent=
    Every button has words on it. The old floating tabs, captures list and gear menu are hidden; they still work underneath. ===== */
 var MSX={step:1, how:'slider', flickOn:false, flickT:null, fine:true, more:false, adding:false, w:310};
 function msxEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
-function msxName(s){ if(!s) return ''; try{ if(typeof tlpCap==='function') return tlpCap(s); }catch(e){} return s.label||s.name||''; }
+function msxName0(s){ if(!s) return ''; try{ if(typeof tlpCap==='function') return tlpCap(s); }catch(e){} return s.label||s.name||''; }
+function msxName(s){ var n=msxName0(s); if(!s) return n; try{ var S=msS(), k=S.indexOf(s); if(S.filter(function(o){ return msxName0(o)===n; }).length>1) n+=' · '+(k===0?(APP.fileName||'first scan'):(s.name||('scan '+(k+1)))).replace(/\.(ply|lcc2?)$/i,''); }catch(e){} return n; }
 function msxCol(k){ return (typeof TLX_COL!=='undefined'?TLX_COL:['#3b82f6','#f59e0b','#10b981','#ec4899','#8b5cf6'])[k%5]; }
 function msxDate(s){ try{ return s&&s.date&&typeof tlpDate==='function'?tlpDate(s.date):''; }catch(e){ return ''; } }
 /* which camera the timelapse uses, read from the state the old controls left */
@@ -29235,7 +29271,7 @@ function msxFlyZ(TL){ var g=function(x,y){ return (typeof groundAt==='function')
 sbAround('msCamAt', function(next, t){ if(MS.camMode!=='route') return next(t); var TL=msxRoute(); if(!(TL.T>0)) return null; var c=wtAt(TL, t/Math.max(0.01, msTT())*TL.T); if(!c) return null;
   if(MS.routeFly){ var e=wtEyeOf(c), z=msxFlyZ(TL), pt=(MS.flyT==null?30:MS.flyT)*Math.PI/180, hd=c.yaw+Math.PI, sc=(typeof fScale==='function'?fScale():1)||1; e[2]=z; c=wtCamOf(e, [e[0]+Math.cos(hd)*Math.cos(pt)*2*sc, e[1]+Math.sin(hd)*Math.cos(pt)*2*sc, z-Math.sin(pt)*2*sc]); } return c; });
 /* editing: Compare steps aside, the Walk-through tool opens on the Plan with the route; the pill at the top brings you back */
-function msxRouteEdit(){ MSX.routeEd=true; try{ msClose(); }catch(e){} try{ wtOpen(); }catch(e){} setTimeout(function(){ try{ wsView('plan'); if(wtM().keys.length<2){ WT.pick=true; toast('Click on the Plan to lay the route, point by point. Drag the cone at a point to aim the camera.', 6000); } wtDraw(); planDraw(); }catch(e){ console.warn(e); } msxBackPill(); }, 60); }
+function msxRouteEdit(){ MSX.routeEd=true; try{ msClose(); }catch(e){} try{ if(SBP.key) sbPanel(null, true); }catch(e){} try{ wtOpen(); }catch(e){} setTimeout(function(){ try{ wsView('plan'); if(wtM().keys.length<2){ WT.pick=true; toast('Click on the Plan to lay the route, point by point. Drag the cone at a point to aim the camera.', 6000); } wtDraw(); planDraw(); }catch(e){ console.warn(e); } msxBackPill(); }, 60); }
 function msxBackPill(){ var b=document.getElementById('msxBack'); if(!b){ b=document.createElement('button'); b.id='msxBack'; b.type='button'; b.onclick=msxRouteDone; document.body.appendChild(b); } b.innerHTML='✓ Route done: back to Compare'; b.style.display=MSX.routeEd?'block':'none'; }
 function msxRouteDone(){ MSX.routeEd=false; msxBackPill(); try{ WT.pick=false; wtClose(); }catch(e){} MSX.back4=true; msOpen(); }
 
@@ -29301,7 +29337,7 @@ try{ sbAfter('cmpAddPick', function(r){ try{ if(MS.on){ var d=document.getElemen
   '#msx .msxGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}#msx .msxGrid button{border:1px solid var(--sbLn,#cfd5dc);border-radius:8px;padding:5px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}#msx .msxGrid button:hover{border-color:#0b5cd5}'+
   '#msx .msxLink{border:0;background:transparent;color:#0b5cd5;text-decoration:underline;cursor:pointer;font:inherit;padding:0}#msx .msxRen{border:0;border-radius:10px;padding:11px;background:#dc2626;color:#fff;font:inherit;font-weight:700;cursor:pointer;margin-top:6px}#msx .msxRen:disabled{opacity:.5;cursor:default}'+
   '#msUI .msxPL,#msUI .msxCL{position:absolute;z-index:4;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:rgba(15,20,28,.78);color:#fff;font:600 12.5px system-ui,Segoe UI,sans-serif;pointer-events:none}#msUI .msxPL i,#msUI .msxCL i{width:9px;height:9px;border-radius:50%}#msUI .msxCL{top:12px}#msUI .msxCL.l{left:12px}#msUI .msxCL.r{right:12px}'+
-  '#msxBack{display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:9000;border:0;border-radius:20px;padding:9px 18px;background:#16a34a;color:#fff;font:600 14px system-ui,Segoe UI,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3);cursor:pointer}'+
+  '#msxBack{display:none;position:fixed;bottom:40px;left:50%;transform:translateX(-50%);z-index:9000;border:0;border-radius:20px;padding:9px 18px;background:#16a34a;color:#fff;font:600 14px system-ui,Segoe UI,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.3);cursor:pointer}'+
   'body.msxOn #mainClip{display:block!important;z-index:46!important}body.msxOn.view3d #mdlTrimBtn{display:block!important;z-index:46!important}body.msxOn #msUI.msxFlyM label:has(#mwEye),body.msxOn #msUI.msxFlyM .mwPts{display:none!important}'+
   'body.msxOn #msUI #msRenB{background:#dc2626!important;border-color:#b91c1c!important;color:#fff!important;font-weight:700}';
   document.head.appendChild(c); })();
@@ -29383,7 +29419,10 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r490', t:[
+ {d:'18 October 2026', r:'r469 to r491', t:[
+  'Smoother camera routes: the Walk-through video and the Compare Walk and Fly paths no longer speed up, slow down or jerk round at each point. Same video length.',
+  'Walk-through: the point list and side view now show when editing in the Prep step (they were squeezed off screen).',
+  'Compare: two scans with the same date show their file names too, so you can tell them apart.',
   'Timelapse: Walk path and Fly path now use the Walk-through route: Edit route on the Plan opens the same markers, camera zones and side view as the Walk-through video; the green Route done button brings you back to Compare. Fly path keeps one height (set Height and Look down in the panel). Video length sets how long the timelapse runs.',
   'Compare: the height trim bar (and Model: full height) is back on the right of the view.',
   'Compare: Fine tune now starts open in step 3.',

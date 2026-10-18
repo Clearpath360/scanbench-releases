@@ -1,1 +1,1 @@
-r490: Compare timelapse Walk/Fly path use the Walk-through route editor (Plan markers, camera zones, side view).
+r491: smooth camera routes (walk-through + compare paths), walk-through panel visible in Prep, distinct scan names.
