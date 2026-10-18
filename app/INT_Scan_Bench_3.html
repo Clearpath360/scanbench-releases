@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r484';
+var SB_BUILD='2026-10-18 r485';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29016,37 +29016,37 @@ try{ var lst=document.createElement('style'); lst.textContent=
 /* ===== r484: Help > Key features. The nine headline features of Scan Bench on one page, each with a short help page: what it does,
    where to find it and the three steps to use it. Shown once by itself the first time; Help > Key features any time after. ===== */
 var KF=[
- {ic:'📂', t:'Open any scan', s:'PLY, E57, SPZ, SPLAT, SOG, KSPLAT and XGRIDS LCC folders, with your scans as picture cards on the start screen.',
+ {ic:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 7v10a2 2 0 0 0 2 2h13.5a2 2 0 0 0 1.9-1.4L22 11H7.5a2 2 0 0 0-1.9 1.4L3 19"/>', t:'Open any scan', s:'PLY, E57, SPZ, SPLAT, SOG, KSPLAT and XGRIDS LCC folders, with your scans as picture cards on the start screen.',
   pts:['Gaussian splats, point clouds and meshes; LCC opens with its levels of detail','Your scans are kept as picture cards on the start screen: one click opens one again','Nothing is uploaded: everything stays on this computer'],
   where:'Start screen: Choose file, or drag a scan or LCC folder onto the window. File > Open recent.', steps:['Press Choose file (or drop the file on the window).','For an LCC folder, pick the level of detail and whether to bring in the sky.','Next time, click its card under Your scans.']},
- {ic:'🧹', t:'Prepare and clean up', s:'Level, scale and crop the scan, take out cars and clutter, and fill the gaps they leave.',
+ {ic:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>', t:'Prepare and clean up', s:'Level, scale and crop the scan, take out cars and clutter, and fill the gaps they leave.',
   pts:['Level, scale, crop and a work area','Remove object: click a whole car, Delete + fill rebuilds the ground and the space behind it','Trim (box, lasso, brush), Fix holes (fill, clone, repeat, straighten), Looks (ghost, tint)'],
   where:'Left rail: Prepare (level, scale, crop) and Mark up > Clean up (Remove object, Trim, Fix holes, Looks).', steps:['Prepare: level the floor and check the scale.','Clean up > Remove object: click the thing, then Delete + fill.','Trim and Fix holes tidy what is left. Ctrl+Z undoes any step.']},
- {ic:'📏', t:'Measure', s:'Lines, areas and heights that snap to walls and corners, in plan, ceiling, sections and elevations.',
+ {ic:'<path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>', t:'Measure', s:'Lines, areas and heights that snap to walls and corners, in plan, ceiling, sections and elevations.',
   pts:['Measure lines, areas and heights with snapping to walls and corners','Plan, ceiling (RCP), A-A and B-B sections and elevations, side by side','A height-map slice that shows a floor out by 2 to 5 mm'],
   where:'Left rail: Measure. Top bar: Plan, 3D and More views for the ceiling, sections and elevations.', steps:['Pick Measure, then the kind (line, area, height).','Click the points; it snaps to walls, corners and heights.','Read the result on the drawing; it goes into the reports.']},
- {ic:'⛏', t:'Survey tools', s:'Volumes, ponding, floor levels and more, each with its own report.',
+ {ic:'<path d="M2 20h20"/><path d="M4 20l6-10 4 6 2-3 4 7"/>', t:'Survey tools', s:'Volumes, ponding, floor levels and more, each with its own report.',
   pts:['Volume: stockpiles, and cut and fill between two dates, with PDF and CSV reports','Ponding and dips with a rain test, gullies and drains','Floor levels, headroom, roof pitch and CCTV coverage'],
   where:'Left rail: Survey (Volume, Ponding, Floor levels and the others).', steps:['Open Survey and pick the tool.','Draw the area (or leave it for the whole scan) and set what it asks for.','Read the colour map and figures, then press Report for the PDF or CSV.']},
- {ic:'📐', t:'Model and drawings', s:'Trace the building over the scan and turn it into measured drawings.',
+ {ic:'<path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/>', t:'Model and drawings', s:'Trace the building over the scan and turn it into measured drawings.',
   pts:['Trace walls, doors, windows, columns and roofs over the scan','Measured survey PDF: plan, sections, elevations and schedules','DXF, IFC and OBJ for CAD and BIM'],
   where:'Top bar: Model and Drawings. Export for the PDF and the CAD files.', steps:['Model: trace the walls on the plan; add doors, windows and roofs.','Drawings: check the sheets and dimensions.','Export: pick a pack (survey, planning, builder, CAD) and save.']},
- {ic:'🕑', t:'Compare over time', s:'Line up scans of one site from different dates and see what changed.',
+ {ic:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', t:'Compare over time', s:'Line up scans of one site from different dates and see what changed.',
   pts:['Align two scans with matched points','Compare with a slider','Timelapse of the site over time'],
   where:'Top bar: Compare.', steps:['Open the first scan, then add the second in Compare.','Match three or more points in both to line them up.','Drag the slider, or make the timelapse.']},
- {ic:'🌦', t:'Bring it to life', s:'Weather, light, walking and driving: make the scan look and feel real.',
+ {ic:'<path d="M7 16a4 4 0 1 1 .9-7.9A5.5 5.5 0 0 1 18.5 9 3.5 3.5 0 0 1 18 16z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/>', t:'Bring it to life', s:'Weather, light, walking and driving: make the scan look and feel real.',
   pts:['Sky and weather: sun clock, rain, snow, fog, lightning with thunder, fireworks, fire, northern lights, Christmas','Lights: lamps, beams and headlights, from day to night','Walk through it (stairs, jump, torch) or drive the RC car (jumps, gates, lap times); camera paths and video'],
   where:'Left rail: Look (sky, weather, lights). 3D bar: Walk and RC car.', steps:['Look: pick a weather preset or set the sun and sky.','Add lights for dusk or night.','Walk or drive round it, or record a camera path as a video.']},
- {ic:'🎉', t:'Fun', s:'Brick world, paintball, the scanner sweep and 14 looks for the 3D view.',
+ {ic:'<path d="M12 3l2.6 5.6 6 .7-4.5 4 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.5-4 6-.7z"/>', t:'Fun', s:'Brick world, paintball, the scanner sweep and 14 looks for the 3D view.',
   pts:['Brick world: the scan rebuilt as toy bricks','Paintball: click to splat paint; Ctrl+Z takes a splat off','Scanner sweep, and 14 looks from White model and Blueprint to Thermal and Retro VHS'],
   where:'Tools > Fun.', steps:['Open Tools > Fun.','Pick a fun tool or a look (pick it again to turn it off).','Normal at the top of the looks goes back to the scan as it is.']},
- {ic:'📤', t:'Share', s:'Pictures, clips and a page for your client, and a clean view for presenting.',
+ {ic:'<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>', t:'Share', s:'Pictures, clips and a page for your client, and a clean view for presenting.',
   pts:['Copy a picture of the view (F8) to paste into an email','Video clips and a client share page','Focus view for presenting; automatic updates keep every computer on the latest version'],
   where:'Top bar: the picture button (F8), record, Export > Client share, ⛶ for Focus view. Help > Check for updates.', steps:['F8 copies the view; paste it with Ctrl+V.','Export > Client share makes a page to email or open on a phone.','⛶ (Ctrl+Shift+F) hides everything but the scan; Esc brings it back.']}];
 function kfOpen(i){ var o=document.getElementById('kfDlg'); if(o) o.remove(); o=document.createElement('div'); o.id='kfDlg';
   var esc=function(s){ return String(s).replace(/[&<>]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m]; }); };
-  var body=i==null?'<div class="kfG">'+KF.map(function(f, k){ return '<button class="kfC" data-k="'+k+'"><span class="kfI">'+f.ic+'</span><b>'+esc(f.t)+'</b><small>'+esc(f.s)+'</small></button>'; }).join('')+'</div>'
-    :(function(f){ return '<div class="kfP"><div class="kfPH"><span class="kfI">'+f.ic+'</span><div><h3>'+esc(f.t)+'</h3><p>'+esc(f.s)+'</p></div></div>'+
+  var body=i==null?'<div class="kfG">'+KF.map(function(f, k){ return '<button class="kfC" data-k="'+k+'"><span class="kfI"><svg viewBox="0 0 24 24">'+f.ic+'</svg></span><span class="kfTx"><b>'+esc(f.t)+'</b><small>'+esc(f.s)+'</small></span></button>'; }).join('')+'</div>'
+    :(function(f){ return '<div class="kfP"><div class="kfPH"><span class="kfI"><svg viewBox="0 0 24 24">'+f.ic+'</svg></span><div><h3>'+esc(f.t)+'</h3><p>'+esc(f.s)+'</p></div></div>'+
       '<ul>'+f.pts.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('')+'</ul><div class="kfW"><b>Where</b> '+esc(f.where)+'</div>'+
       '<ol>'+f.steps.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('')+'</ol></div>'; })(KF[i]);
   o.innerHTML='<div class="kfBox"><div class="kfHd"><div><b>'+(i==null?'Scan Bench: key features':'Key features')+'</b><span>'+(i==null?'Click one for what it does, where it is and how to use it.':(i+1)+' of '+KF.length)+'</span></div><button class="kfX" title="Close">✕</button></div>'+
@@ -29065,17 +29065,17 @@ try{ sbAfter('sbMenus', function(M){ try{ var H=M.filter(function(m){ return m.i
 (function first(n){ var seen=false; try{ seen=localStorage.getItem('sb_kf_seen')==='1'; }catch(e){} if(seen) return; if(document.getElementById('sbWN')||document.getElementById('sbTour')){ if((n||0)<200) setTimeout(function(){ first((n||0)+1); }, 1500); return; } setTimeout(function(){ try{ if(!document.getElementById('sbWN')) kfOpen(); }catch(e){} }, 1200); })();
 try{ var kst=document.createElement('style'); kst.textContent=
   '#kfDlg{position:fixed;inset:0;z-index:9800;background:rgba(10,14,20,.5);display:flex;align-items:center;justify-content:center;padding:20px;font:14px system-ui,Segoe UI,sans-serif}'+
-  '#kfDlg .kfBox{background:#fffdf8;color:#1d232b;border-radius:16px;width:min(980px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}'+
-  '#kfDlg .kfHd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:linear-gradient(120deg,#0f766e,#155e75);color:#fff}#kfDlg .kfHd b{font-size:19px;display:block}#kfDlg .kfHd span{font-size:12.5px;opacity:.85}'+
+  '#kfDlg .kfBox{background:#f6f8fb;color:#1d232b;border-radius:16px;width:min(980px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}'+
+  '#kfDlg .kfHd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:linear-gradient(120deg,#0b5cd5,#0846a8);color:#fff}#kfDlg .kfHd b{font-size:19px;display:block}#kfDlg .kfHd span{font-size:12.5px;opacity:.85}'+
   '#kfDlg .kfX{border:0;background:rgba(255,255,255,.18);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px}'+
   '#kfDlg .kfBd{overflow:auto;padding:18px 20px}#kfDlg .kfG{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}'+
-  '#kfDlg .kfC{text-align:left;border:1px solid #e3ddd0;background:#fff;border-radius:12px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:border-color .12s,transform .12s}#kfDlg .kfC:hover{border-color:#0f766e;transform:translateY(-2px)}'+
-  '#kfDlg .kfC b{font-size:15px}#kfDlg .kfC small{color:#5b6573;font-size:12.5px;line-height:1.4}#kfDlg .kfI{font-size:24px}'+
-  '#kfDlg .kfPH{display:flex;gap:14px;align-items:flex-start}#kfDlg .kfPH .kfI{font-size:34px}#kfDlg .kfPH h3{margin:0 0 4px;font-size:20px}#kfDlg .kfPH p{margin:0;color:#4b5563}'+
-  '#kfDlg .kfP ul{margin:14px 0;padding-left:20px;line-height:1.55}#kfDlg .kfW{background:#eef7f5;border-radius:10px;padding:10px 12px;margin:10px 0;color:#134e4a}#kfDlg .kfW b{margin-right:6px}'+
+  '#kfDlg .kfC{text-align:left;border:1px solid #dfe5ee;background:#fff;border-radius:14px;padding:16px;cursor:pointer;display:flex;flex-direction:row;align-items:flex-start;gap:14px;transition:border-color .12s,transform .12s,box-shadow .12s}#kfDlg .kfC:hover{border-color:#0b5cd5;transform:translateY(-2px);box-shadow:0 6px 18px rgba(11,92,213,.12)}#kfDlg .kfTx{display:flex;flex-direction:column;gap:3px}'+
+  '#kfDlg .kfC b{font-size:15.5px}#kfDlg .kfC small{color:#5b6573;font-size:12.5px;line-height:1.4}#kfDlg .kfI{flex:0 0 58px;width:58px;height:58px;border-radius:50%;background:#0b5cd5;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(11,92,213,.3)}#kfDlg .kfI svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'+
+  '#kfDlg .kfPH{display:flex;gap:14px;align-items:flex-start}#kfDlg .kfPH .kfI{flex:0 0 66px;width:66px;height:66px}#kfDlg .kfPH .kfI svg{width:34px;height:34px}#kfDlg .kfPH h3{margin:0 0 4px;font-size:20px}#kfDlg .kfPH p{margin:0;color:#4b5563}'+
+  '#kfDlg .kfP ul{margin:14px 0;padding-left:20px;line-height:1.55}#kfDlg .kfW{background:#e7f0fd;border-radius:10px;padding:10px 12px;margin:10px 0;color:#0a3f8f}#kfDlg .kfW b{margin-right:6px}'+
   '#kfDlg .kfP ol{margin:12px 0 0;padding-left:22px;line-height:1.6}'+
-  '#kfDlg .kfFt{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid #ece6da;background:#faf7f0}#kfDlg .kfSp{flex:1}'+
-  '#kfDlg .kfB{border:1px solid #d6cfc0;background:#fff;color:#1d232b;border-radius:9px;padding:7px 14px;cursor:pointer;font:inherit}#kfDlg .kfB.p{background:#0f766e;border-color:#0f766e;color:#fff}';
+  '#kfDlg .kfFt{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid #e3e8ef;background:#fff}#kfDlg .kfSp{flex:1}'+
+  '#kfDlg .kfB{border:1px solid #cfd8e3;background:#fff;color:#1d232b;border-radius:9px;padding:7px 14px;cursor:pointer;font:inherit}#kfDlg .kfB.p{background:#0b5cd5;border-color:#0b5cd5;color:#fff}';
   document.head.appendChild(kst); }catch(e){}
 
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
@@ -29155,7 +29155,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r484', t:[
+ {d:'18 October 2026', r:'r469 to r485', t:[
+  'Key features: bigger drawn icons in blue circles with the text beside them, in the app colours.',
   'Help > Key features: the nine headline features on one page, each with a short help page (what it does, where it is, three steps).',
   'Your scans: the start screen shows the scans you have opened as picture cards (the picture is taken from the 3D view when you open it). Click one to open it again.',
   'Focus view: the scan fills the window with the menus and panels hidden. The ⛶ button at the top right, View > Focus view or Ctrl+Shift+F; Esc brings them back.',

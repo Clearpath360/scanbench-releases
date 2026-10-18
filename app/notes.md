@@ -1,1 +1,1 @@
-r484: Help > Key features with a help page per headline feature.
+r485: Key features restyled (blue circle icons, text beside).
