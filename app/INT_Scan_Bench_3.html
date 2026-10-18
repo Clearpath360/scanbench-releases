@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r476';
+var SB_BUILD='2026-10-18 r477';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28599,9 +28599,9 @@ function rclRearPos(){ return rclLamps().r; }
     heads.forEach(function(l){ l.glowR=0.03; l.haze=0.08; });
     var rear=M.lights.filter(function(l){ return l._rc&&l._rear; }), want=heads.length>0&&rclRearOn();
     if(!want){ if(rear.length){ M.lights=M.lights.filter(function(l){ return !(l._rc&&l._rear); }); } return; }
-    if(!rear.length){ [1,-1].forEach(function(s){ var l=ltMake('lamp'); Object.assign(l, {name:'RC rear light', _rc:true, _rear:true, _side:s, col:'#ff1a10', str:0.5, reach:0.7, glow:true, glowR:0.022, haze:0}); M.lights.push(l); rear.push(l); }); }
+    if(!rear.length){ [1,-1].forEach(function(s){ var l=ltMake('beam'); Object.assign(l, {name:'RC rear light', _rc:true, _rear:true, _side:s, col:'#ff1a10', str:0.5, reach:0.7, cone:90, soft:0.6, glow:true, glowR:0.022, haze:0}); M.lights.push(l); rear.push(l); }); }
     var p=DRV.p, sc=ltSc(), hd=RC.head!=null?RC.head:(p.rot||0)*Math.PI/180, c=Math.cos(hd), s2=Math.sin(hd), F=rclRearPos(), gz=(RC.wz?(RC.wz[2]+RC.wz[3])/2:(p.z||0)), K=DRV.keys||{}, brake=(K.b&&(RC.vx||0)>0.2)||K.hb;
-    rear.forEach(function(l){ var ly=F.y*l._side*sc, lx=F.x*sc; l.x=p.x+c*lx-s2*ly; l.y=p.y+s2*lx+c*ly; l.z=gz+F.z*sc; l.az=Math.round(hd*1800/Math.PI)/10+180; l.el=0; l.str=brake?1.8:0.5; l.on=true; }); }catch(e){} }; })();
+    rear.forEach(function(l){ var ly=F.y*l._side*sc, lx=F.x*sc; l.x=p.x+c*lx-s2*ly; l.y=p.y+s2*lx+c*ly; l.z=gz+F.z*sc; l.az=Math.round(hd*1800/Math.PI)/10+180; l.el=-12; l.str=brake?1.8:0.5; l.on=true; }); }catch(e){} }; })();
 function rclRearBtn(){ var b=document.getElementById('rcRearB'); if(b){ var on=rclRearOn(); b.textContent='Rear: '+(on?'On':'Off'); b.classList.toggle('on', on); } }
 try{ sbAfter('rcHud', function(r){ try{ var h=document.getElementById('rcHud'), lb=h&&h.querySelector('#rcLightB'); if(!lb||h.querySelector('#rcRearB')) return r; var b=document.createElement('button'); b.type='button'; b.id='rcRearB'; b.title='Red rear lights: on with the headlights, brighter when you brake';
   b.onclick=function(){ try{ localStorage.setItem('sb_rc_rear', rclRearOn()?'0':'1'); }catch(e){} rclRearBtn(); rclSync(); try{ requestRender(false); drvFocus(); }catch(e){} }; lb.parentNode.insertBefore(b, lb.nextSibling); rclRearBtn(); }catch(e){ console.warn(e); } return r; }); }catch(e){}
@@ -28611,13 +28611,14 @@ try{ sbAfter('gl_render', function(r){ try{ if(!miniVP&&DRV.on&&DRV.rc){ window.
    daylight, where adding a light turned the whole scene down to night lighting) */
 (function(){ var base=rclSync; rclSync=function(){ base(); try{ var M=APP.model; if(!M) return; if(!M.lights) M.lights=[]; var K=DRV.keys||{}, rev=DRV.on&&DRV.rc&&rclRearOn()&&!!K.b&&(RC.vx||0)<-0.05, L=M.lights.filter(function(l){ return l._rc&&l._rev; });
     if(!rev){ if(L.length){ M.lights=M.lights.filter(function(l){ return !(l._rc&&l._rev); }); try{ requestRender(false); }catch(e){} } return; } if(typeof ltOn==='function'&&!ltOn()) return;
-    if(!L.length){ [1,-1].forEach(function(s){ var l=ltMake('lamp'); Object.assign(l, {name:'RC reverse light', _rc:true, _rev:true, _side:s, col:'#f2f5ff', str:1.2, reach:0.9, glow:true, glowR:0.02, haze:0}); M.lights.push(l); L.push(l); }); }
+    if(!L.length){ [1,-1].forEach(function(s){ var l=ltMake('beam'); Object.assign(l, {name:'RC reverse light', _rc:true, _rev:true, _side:s, col:'#f2f5ff', str:1.4, reach:1.4, cone:70, soft:0.6, glow:true, glowR:0.02, haze:0}); M.lights.push(l); L.push(l); }); }
     var p=DRV.p, sc=ltSc(), hd=RC.head!=null?RC.head:(p.rot||0)*Math.PI/180, c=Math.cos(hd), s2=Math.sin(hd), F=rclRearPos(), gz=(RC.wz?(RC.wz[2]+RC.wz[3])/2:(p.z||0)), yi=Math.max(0.006, F.y*0.45);
-    L.forEach(function(l){ var ly=yi*l._side*sc, lx=F.x*sc; l.x=p.x+c*lx-s2*ly; l.y=p.y+s2*lx+c*ly; l.z=gz+F.z*sc; l.az=Math.round(hd*1800/Math.PI)/10+180; l.el=0; l.on=true; }); }catch(e){} }; })();
+    L.forEach(function(l){ var ly=yi*l._side*sc, lx=F.x*sc; l.x=p.x+c*lx-s2*ly; l.y=p.y+s2*lx+c*ly; l.z=gz+F.z*sc; l.az=Math.round(hd*1800/Math.PI)/10+180; l.el=-18; l.on=true; }); }catch(e){} }; })();
 /* r475: the car's own lights never darken the scene. With no lights of your own the scan shows as scanned; adding the first light used to
    switch it to lit mode at the default room light, so the whole scene went darker the moment a car light came on */
 try{ sbAround('ltAmb', function(next){ var v=next(); try{ var M=ltM(); if(!M||!M.lights||!M.lights.length) return v; if(typeof M.lightAmb==='number') return v; if(typeof wxOn==='function'&&wxOn()) return v; if(typeof ltTodSun==='function'&&ltTodSun()) return v;
   if(M.lights.every(function(l){ return l._rc; })) return Math.max(v, 1); }catch(e){} return v; }); }catch(e){}
+/* r477: the red and reverse lights are small beams pointing back and slightly down, so they light the ground behind the car only, not under it */
 
 /* ===== r464: drive your own car model. Car on the RC bar now also offers "Your model": load a 3D model file (GLB) of any car and it
    becomes the RC car, scaled to toy size (45 cm long), standing on the ground, with its own colours and textures and the same
@@ -28698,7 +28699,7 @@ try{ sbAround('ltAmb', function(next){ var v=next(); return (typeof WKV!=='undef
    stay at the left. Walk and the RC car no longer run at the same time: starting one stops the other. ===== */
 var RCH_ROWS=[['rcCarB','rcColB','|','rcLightB','rcRearB','rcSndB','rcOccB'], ['rcPlaceB','|','rcGateB','rcGateC','|','rcCamB','rcResB','~','rcStopB']];
 function rchArrange(){ var h=document.getElementById('rcHud'); if(!h) return; var b=h.querySelector('.rcB'); if(!b) return; b.classList.add('rchCard');
-  var k=h.querySelector('.rcK'); var rows=RCH_ROWS.map(function(ids, ri){ var row=b.querySelector('.rchRow[data-r="'+ri+'"]'); if(!row){ row=document.createElement('div'); row.className='rchRow'; row.dataset.r=ri; b.appendChild(row); } row.innerHTML='';
+  var k=h.querySelector('.rcK'); var rows=RCH_ROWS.map(function(ids, ri){ var row=b.querySelector('.rchRow[data-r="'+ri+'"]'); if(!row){ row=document.createElement('div'); row.className='rchRow'; row.dataset.r=ri; b.appendChild(row); } /* r477: keep the buttons (clearing the row threw them away, so the bar came back empty the second time) */ [].slice.call(row.children).forEach(function(ch){ if(ch.tagName!=='BUTTON') ch.remove(); else b.appendChild(ch); });
     if(ri===0){ var t=document.createElement('b'); t.className='rchT'; t.textContent='RC car'; row.appendChild(t); }
     ids.forEach(function(id){ if(id==='|'){ var s=document.createElement('span'); s.className='rchSep'; row.appendChild(s); return; } if(id==='~'){ var f=document.createElement('span'); f.className='rchFill'; row.appendChild(f); return; } var el=document.getElementById(id); if(el) row.appendChild(el); }); return row; });
   /* anything added that is not in the plan still shows, before Stop */ [].slice.call(b.children).forEach(function(el){ if(el.tagName==='BUTTON'){ var stop=document.getElementById('rcStopB'); rows[1].insertBefore(el, stop&&stop.parentNode===rows[1]?stop:null); } });
@@ -28717,6 +28718,9 @@ try{ sbBefore('rcStart', function(){ try{ if(typeof WKV!=='undefined'&&WKV.on) w
 /* r475: the RC bar really goes when the car stops (its own display rule beat the hidden flag), and the Walk bar likewise */
 try{ var rch2=document.createElement('style'); rch2.textContent='#rcHud[hidden],#wkvHud[hidden],#drvHud[hidden]{display:none!important}'; document.head.appendChild(rch2); }catch(e){}
 try{ setInterval(function(){ try{ var h=document.getElementById('rcHud'); if(h&&!h.hidden&&!(DRV.on&&DRV.rc)) h.hidden=true; }catch(e){} }, 500); }catch(e){}
+/* r477: the lap times only show once there are gates to race through */
+try{ sbAfter('rcHud', function(r){ try{ var h=document.getElementById('rcHud'), l=h&&h.querySelector('.rcL'); if(l){ var g=(typeof rcGates==='function')?rcGates().length:0; l.style.display=g?'':'none'; } }catch(e){} return r; }); }catch(e){}
+try{ setInterval(function(){ try{ var h=document.getElementById('rcHud'), l=h&&h.querySelector('.rcL'); if(l&&!h.hidden){ var g=(typeof rcGates==='function')?rcGates().length:0; var want=g?'':'none'; if(l.style.display!==want) l.style.display=want; } }catch(e){} }, 400); }catch(e){}
 
 /* ===== r467: after you delete something in Clean up, the RC car and Walk see it gone: their maps of the ground and walls are made
    again when they start if anything has been deleted, put back or filled since they were last made. ===== */
@@ -28995,7 +28999,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r476', t:[
+ {d:'18 October 2026', r:'r469 to r477', t:[
+  'RC bar: the buttons are all there when you start the car a second time. Lap times only show once you add gates. The red and reverse lights now light the ground behind the car, not underneath it.',
   'RC car: invisible walls on wet or shiny car parks fixed. Those scans have a ghost layer of reflection under the real ground; the car now reads the floor from the real ground, so the open tarmac no longer counts as a kerb (tested on the Hi Res car park: phantom hits down from about half of all bumps to 2 in 120 drives).',
   'RC car: no more getting stuck in the open. A few stray dots on their own no longer count as solid, and if the car ends up inside something it can always drive out.',
   'RC car lights no longer turn the whole scene darker (the reverse lights in daylight did).',
