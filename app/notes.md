@@ -1,1 +1,1 @@
-r473: rain and snow seen outside through windows from inside a building.
+r474: Tools > Fun trials: Scanner sweep, Brick world, Paintball.

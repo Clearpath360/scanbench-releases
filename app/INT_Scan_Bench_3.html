@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r473';
+var SB_BUILD='2026-10-18 r474';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28815,6 +28815,90 @@ lodfxReady=function(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.
 /* a new or removed fill also remakes the lighter level */
 try{ sbAfter('patchRebuild', function(r){ try{ LODFX.ver++; }catch(e){} return r; }); }catch(e){}
 
+/* ===== r474: three fun trials (Tools > Fun). Scanner sweep: a laser plane rises through the scene and builds the scan as it goes.
+   Brick world: the scan rebuilt as toy bricks, each the colour of the scan where it sits. Paintball: click the scan to splat paint
+   on it; each splat sits flat on the wall or floor it hits, drips on walls, and Ctrl+Z takes it off. Trials only: easy to remove. ===== */
+var FUN={sweep:null, brick:null, paint:false, pcol:0};
+function funBounds(){ var R=APP.res; if(!R||!R.robust) return null; var rb=R.robust; return rb; }
+/* ---------- 1. scanner sweep ---------- */
+function funSweep(){ if(!APP.res){ toast('Open a scan first.', 2000); return; } if(APP.view!=='3d') wsView('3d'); var rb=funBounds(), z0=rb.z[0]-0.05, z1=rb.z[1]+0.1, dur=Math.min(9, Math.max(3.5, (z1-z0)*0.9))*1000;
+  FUN.sweep={t0:performance.now(), z0:z0, z1:z1, dur:dur, z:z0}; var step=function(){ var S=FUN.sweep; if(!S) return; var k=(performance.now()-S.t0)/S.dur; if(k>=1){ FUN.sweep=null; try{ requestRender(false); }catch(e){} return; }
+    var e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2; S.z=S.z0+(S.z1-S.z0)*e; try{ requestRender(true); }catch(e2){} requestAnimationFrame(step); }; requestAnimationFrame(step); }
+try{ sbAround('zCutValue', function(next){ var v=next(); return FUN.sweep?Math.min(v, FUN.sweep.z):v; }); }catch(e){}
+var FUNG={prog:null};
+function funLineProg(){ if(FUNG.prog) return FUNG.prog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec4 aC; uniform mat4 uMVP; out vec4 vC; void main(){ vC=aC; gl_Position=uMVP*vec4(aP,1.0); }';
+  var FS='#version 300 es\nprecision highp float; in vec4 vC; out vec4 o; void main(){ o=vec4(vC.rgb*vC.a, vC.a); }';
+  FUNG.prog=program(gl, VS, FS); FUNG.buf=gl.createBuffer(); FUNG.vao=gl.createVertexArray(); gl.bindVertexArray(FUNG.vao); gl.bindBuffer(gl.ARRAY_BUFFER, FUNG.buf);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,28,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,4,gl.FLOAT,false,28,12); gl.bindVertexArray(null); return FUNG.prog; }
+function funSweepDraw(){ var S=FUN.sweep; if(!S||miniVP||APP.view!=='3d') return; var gl=GL, pr=funLineProg(); if(!pr) return; var rb=funBounds(), z=S.z, pad=0.3, x0=rb.x[0]-pad, x1=rb.x[1]+pad, y0=rb.y[0]-pad, y1=rb.y[1]+pad, V=[];
+  var q=function(a,b,c,d,col,al){ [a,b,c,a,c,d].forEach(function(p){ V.push(p[0],p[1],p[2], col[0],col[1],col[2], al); }); };
+  q([x0,y0,z],[x1,y0,z],[x1,y1,z],[x0,y1,z],[0.1,0.85,1.0],0.10); /* the laser plane, faint */
+  var n=24, w=0.012; for(var i=0;i<=n;i++){ var x=x0+(x1-x0)*i/n, y=y0+(y1-y0)*i/n; q([x-w,y0,z],[x+w,y0,z],[x+w,y1,z],[x-w,y1,z],[0.3,0.95,1.0],0.35); q([x0,y-w,z],[x1,y-w,z],[x1,y+w,z],[x0,y+w,z],[0.3,0.95,1.0],0.35); }
+  var e=0.03; q([x0,y0-e,z],[x1,y0-e,z],[x1,y0+e,z],[x0,y0+e,z],[0.8,1,1],0.9); q([x0,y1-e,z],[x1,y1-e,z],[x1,y1+e,z],[x0,y1+e,z],[0.8,1,1],0.9); q([x0-e,y0,z],[x0+e,y0,z],[x0+e,y1,z],[x0-e,y1,z],[0.8,1,1],0.9); q([x1-e,y0,z],[x1+e,y0,z],[x1+e,y1,z],[x1-e,y1,z],[0.8,1,1],0.9);
+  gl.bindVertexArray(FUNG.vao); gl.bindBuffer(gl.ARRAY_BUFFER, FUNG.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.DYNAMIC_DRAW); gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uMVP'), false, new Float32Array(camMVP()));
+  gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.drawArrays(gl.TRIANGLES, 0, V.length/7); gl.disable(gl.BLEND); gl.depthMask(true); gl.bindVertexArray(null); }
+/* ---------- 2. brick world ---------- */
+function funBrickBuild(size){ var R=APP.res, P=R.pos, C=R.col, O=R.opa, D=R.del, n=R.n, rb=funBounds(), sc=fScale(), c=size*sc, M=new Map(), x0=rb.x[0]-1, y0=rb.y[0]-1, z0=rb.z[0]-1, st=Math.max(1, Math.floor(n/3000000));
+  var key=function(i,j,k){ return (i*4096+j)*4096+k; };
+  for(var t=0;t<2;t++){ M.clear(); for(var i=0;i<n;i+=st){ if(D&&D[i]) continue; if(O&&O[i]<90) continue; var z=P[i*3+2]; if(z<-9000) continue; var X=Math.floor((P[i*3]-x0)/c), Y=Math.floor((P[i*3+1]-y0)/c), Z=Math.floor((z-z0)/c); if(X<0||Y<0||Z<0||X>4095||Y>4095||Z>4095) continue;
+      var kk=key(X,Y,Z), a=M.get(kk); if(!a){ a=[0,0,0,0]; M.set(kk,a); } a[0]+=C[i*3]; a[1]+=C[i*3+1]; a[2]+=C[i*3+2]; a[3]++; }
+    if(M.size<=450000) break; c*=Math.sqrt(M.size/400000); }
+  var minN=st>1?1:2, cubes=[], studs=[];
+  M.forEach(function(a, kk){ if(a[3]<minN) return; var Z=kk%4096, Y=Math.floor(kk/4096)%4096, X=Math.floor(kk/4096/4096); var r=a[0]/a[3]/255, g=a[1]/a[3]/255, b=a[2]/a[3]/255, m=(r+g+b)/3; r=Math.min(1, m+(r-m)*1.35); g=Math.min(1, m+(g-m)*1.35); b=Math.min(1, m+(b-m)*1.35);
+    var cx=x0+(X+0.5)*c, cy=y0+(Y+0.5)*c, cz=z0+(Z+0.5)*c; cubes.push(cx,cy,cz,r,g,b); var up=M.get(key(X,Y,Z+1)); if(!up||up[3]<minN) studs.push(cx,cy,cz,r,g,b); });
+  return {c:c, cubes:new Float32Array(cubes), studs:new Float32Array(studs)}; }
+function funMesh(kind){ var V=[], f=function(a,b,c,d,n){ [a,b,c,a,c,d].forEach(function(p){ V.push(p[0],p[1],p[2], n[0],n[1],n[2]); }); };
+  if(kind==='cube'){ var h=0.47; f([-h,-h,h],[h,-h,h],[h,h,h],[-h,h,h],[0,0,1]); f([-h,-h,-h],[-h,h,-h],[h,h,-h],[h,-h,-h],[0,0,-1]); f([-h,-h,-h],[h,-h,-h],[h,-h,h],[-h,-h,h],[0,-1,0]); f([-h,h,-h],[-h,h,h],[h,h,h],[h,h,-h],[0,1,0]); f([-h,-h,-h],[-h,-h,h],[-h,h,h],[-h,h,-h],[-1,0,0]); f([h,-h,-h],[h,h,-h],[h,h,h],[h,-h,h],[1,0,0]); }
+  else { var r=0.3, z0=0.47, z1=0.68, N=12; for(var i=0;i<N;i++){ var a0=i/N*6.2832, a1=(i+1)/N*6.2832, p0=[Math.cos(a0)*r, Math.sin(a0)*r], p1=[Math.cos(a1)*r, Math.sin(a1)*r], nm=[Math.cos((a0+a1)/2), Math.sin((a0+a1)/2), 0];
+      f([p0[0],p0[1],z0],[p1[0],p1[1],z0],[p1[0],p1[1],z1],[p0[0],p0[1],z1],nm); [[0,0,z1],[p0[0],p0[1],z1],[p1[0],p1[1],z1]].forEach(function(p){ V.push(p[0],p[1],p[2],0,0,1); }); } }
+  return new Float32Array(V); }
+function funBrickProg(){ if(FUNG.bprog) return FUNG.bprog; var gl=GL;
+  var VS='#version 300 es\nlayout(location=0) in vec3 aP; layout(location=1) in vec3 aN; layout(location=2) in vec3 aO; layout(location=3) in vec3 aC; uniform mat4 uMVP; uniform float uS; uniform vec3 uEye; out vec3 vC; out vec3 vN; out vec3 vW; void main(){ vec3 w=aO+aP*uS; vC=aC; vN=aN; vW=w; gl_Position=uMVP*vec4(w,1.0); }';
+  var FS='#version 300 es\nprecision highp float; in vec3 vC; in vec3 vN; in vec3 vW; uniform vec3 uEye; out vec4 o; void main(){ vec3 L=normalize(vec3(0.45,0.3,0.85)); float d=max(dot(vN,L),0.0); vec3 V=normalize(uEye-vW); vec3 H=normalize(L+V); float s=pow(max(dot(vN,H),0.0),40.0)*0.35; vec3 c=vC*(0.42+0.68*d)+vec3(s); o=vec4(c,1.0); }';
+  FUNG.bprog=program(gl, VS, FS); return FUNG.bprog; }
+function funBrickVao(mesh, inst){ var gl=GL, vao=gl.createVertexArray(), vb=gl.createBuffer(), ib=gl.createBuffer(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,24,0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1,3,gl.FLOAT,false,24,12);
+  gl.bindBuffer(gl.ARRAY_BUFFER, ib); gl.bufferData(gl.ARRAY_BUFFER, inst, gl.STATIC_DRAW); gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2,3,gl.FLOAT,false,24,0); gl.vertexAttribDivisor(2,1); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3,3,gl.FLOAT,false,24,12); gl.vertexAttribDivisor(3,1);
+  gl.bindVertexArray(null); return {vao:vao, vb:vb, ib:ib, n:mesh.length/6, ni:inst.length/6}; }
+function funBrickFree(){ var B=FUN.brick; if(!B) return; var gl=GL; [B.cv, B.sv].forEach(function(v){ if(!v) return; try{ gl.deleteVertexArray(v.vao); gl.deleteBuffer(v.vb); gl.deleteBuffer(v.ib); }catch(e){} }); }
+function funBrick(size){ if(!APP.res){ toast('Open a scan first.', 2000); return; } if(FUN.brick&&!size){ funBrickFree(); APP.showPoints=FUN.brick.keepPts; FUN.brick=null; toast('Back to the scan.', 1500); try{ requestRender(false); }catch(e){} return; }
+  if(FUN.brick) funBrickFree(); if(APP.view!=='3d') wsView('3d'); setStatus('Building bricks'); var keep=FUN.brick?FUN.brick.keepPts:APP.showPoints;
+  setTimeout(function(){ try{ var s=size||0.08, B=funBrickBuild(s); B.cv=funBrickVao(funMesh('cube'), B.cubes); B.sv=funBrickVao(funMesh('stud'), B.studs); B.keepPts=keep; B.size=s; FUN.brick=B; APP.showPoints=false;
+      toast('Brick world: '+(B.cubes.length/6).toLocaleString()+' bricks of '+Math.round(B.c/fScale()*100)+' cm. Tools > Fun > Brick world again to go back.', 4000); }catch(e){ console.warn(e); toast('Could not build the bricks on this scan.', 3000); } setStatus('Ready'); try{ requestRender(false); }catch(e2){} }, 30); }
+function funBrickDraw(){ var B=FUN.brick; if(!B||miniVP||APP.view!=='3d') return; var gl=GL, pr=funBrickProg(); if(!pr) return; gl.useProgram(pr); gl.uniformMatrix4fv(gl.getUniformLocation(pr,'uMVP'), false, new Float32Array(camMVP())); gl.uniform1f(gl.getUniformLocation(pr,'uS'), B.c); var e=camBasis().eye; gl.uniform3f(gl.getUniformLocation(pr,'uEye'), e[0],e[1],e[2]);
+  gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+  [B.cv, B.sv].forEach(function(v){ if(!v||!v.ni) return; gl.bindVertexArray(v.vao); gl.drawArraysInstanced(gl.TRIANGLES, 0, v.n, v.ni); }); gl.bindVertexArray(null); }
+/* ---------- 3. paintball ---------- */
+var FUN_PAINT=[[255,40,140],[120,230,40],[255,140,20],[30,200,255],[255,225,30],[160,70,255],[255,60,50]];
+function funPaintOn(on){ FUN.paint=on; try{ glCv.style.cursor=on?'crosshair':''; }catch(e){} toast(on?'Paintball: click the scan to splat paint. Drag still turns the view. Esc stops, Ctrl+Z takes a splat off.':'Paintball off.', on?4000:1500); }
+function funSplatSound(){ try{ var A=window.AudioContext||window.webkitAudioContext; if(!A) return; var c=FUN.ac||(FUN.ac=new A()), n=Math.floor(c.sampleRate*0.18), b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0); for(var i=0;i<n;i++){ var t=i/n; d[i]=(Math.random()*2-1)*Math.pow(1-t,3)*(t<0.02?t/0.02:1); }
+  var s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain(); f.type='lowpass'; f.frequency.value=1400; g.gain.value=0.5; s.buffer=b; s.connect(f); f.connect(g); g.connect(c.destination); s.start(); }catch(e){} }
+function funSplat(cx, cy){ var R=APP.res, ray=pickRay(cx, cy), h=stScanHit(ray); if(!h){ return false; } var hp=h.p, sc=fScale(), P=R.pos, idx=[], rad=0.18*sc;
+  qCells(hp[0], hp[1], rad, function(i){ if(R.del&&R.del[i]) return; var dx=P[i*3]-hp[0], dy=P[i*3+1]-hp[1], dz=P[i*3+2]-hp[2]; if(dx*dx+dy*dy+dz*dz<rad*rad) idx.push(i); });
+  var pl=null; try{ pl=fRansac(P, idx, {through:hp}); }catch(e){} var nrm=pl?pl.n.slice():[-ray.d[0],-ray.d[1],-ray.d[2]]; var eye=camBasis().eye; if((eye[0]-hp[0])*nrm[0]+(eye[1]-hp[1])*nrm[1]+(eye[2]-hp[2])*nrm[2]<0) nrm=nrm.map(function(v){ return -v; });
+  var F=fFrame({n:nrm, m:hp, th:0.02}), u=F.u, v=F.v, wall=Math.abs(nrm[2])<0.55, base=FUN_PAINT[FUN.pcol++%FUN_PAINT.length], seed=Math.random()*1000, rnd=function(){ seed=(seed*16807)%2147483647; return (seed%100000)/100000; };
+  var pos=[], col=[], opa=[], cov=[], add=function(a, b, s, al, lt){ var p=F.to3(a, b, 0.004*sc); pos.push(p[0],p[1],p[2]); var k=0.9+0.2*rnd()+(lt||0); col.push(Math.min(255,base[0]*k), Math.min(255,base[1]*k), Math.min(255,base[2]*k)); opa.push(al);
+      var s2=s*s, t2=Math.pow(0.0015*sc,2), M=function(i,j){ return s2*(u[i]*u[j]+v[i]*v[j])+t2*nrm[i]*nrm[j]; }; cov.push(M(0,0),M(0,1),M(0,2),M(1,1),M(1,2),M(2,2)); };
+  var Rb=(0.07+0.07*rnd())*sc, ph=[rnd()*6.28, rnd()*6.28, rnd()*6.28], blob=function(a){ return 1+0.22*Math.sin(3*a+ph[0])+0.14*Math.sin(5*a+ph[1])+0.1*Math.sin(8*a+ph[2]); };
+  for(var i=0;i<420;i++){ var a=rnd()*6.2832, r=Math.sqrt(rnd())*Rb*blob(a); add(Math.cos(a)*r, Math.sin(a)*r, 0.011*sc, 235, r<Rb*0.35?0.08:0); }
+  for(var j=0;j<14;j++){ var a2=rnd()*6.2832, d=Rb*(1.25+1.3*rnd()), rr=(0.006+0.012*rnd())*sc, m=6+Math.floor(rnd()*8); for(var q=0;q<m;q++){ var aa=rnd()*6.2832, r2=Math.sqrt(rnd())*rr; add(Math.cos(a2)*d+Math.cos(aa)*r2, Math.sin(a2)*d+Math.sin(aa)*r2, 0.006*sc, 230); } }
+  if(wall){ var gd=[-(u[2]), -(v[2])], gl0=Math.hypot(gd[0],gd[1])||1; gd=[gd[0]/gl0, gd[1]/gl0]; for(var k=0;k<3+Math.floor(rnd()*3);k++){ var sa=(rnd()-0.5)*Rb*1.4, len=(0.05+0.22*rnd())*sc, sx=-gd[1]*sa, sy=gd[0]*sa, steps=Math.floor(len/(0.006*sc));
+      for(var s3=0;s3<steps;s3++){ var tt=s3/steps, w=(0.006*(1-tt*0.5))*sc, dd=Rb*0.6+s3*0.006*sc; add(sx+gd[0]*dd, sy+gd[1]*dd, w, 230); } add(sx+gd[0]*(Rb*0.6+len), sy+gd[1]*(Rb*0.6+len), 0.011*sc, 235); } }
+  rpPatch('Paint splat', 'paint', Float32Array.from(pos), Uint8Array.from(col), Uint8Array.from(opa), Float32Array.from(cov), nrm, null); funSplatSound(); return true; }
+(function hookPaint(){ if(typeof glCv==='undefined'||!glCv){ setTimeout(hookPaint, 400); return; } var down=null;
+  glCv.addEventListener('pointerdown', function(e){ if(!FUN.paint||e.button!==0) return; down={x:e.clientX, y:e.clientY}; }, true);
+  glCv.addEventListener('pointerup', function(e){ if(!FUN.paint||!down||e.button!==0) return; var mv=Math.hypot(e.clientX-down.x, e.clientY-down.y); down=null; if(mv>5) return; FUN.skipClick=true; if(!funSplat(e.clientX, e.clientY)) toast('Click on the scan itself.', 1500); }, true);
+  glCv.addEventListener('click', function(e){ if(FUN.skipClick){ FUN.skipClick=false; e.stopImmediatePropagation(); e.preventDefault(); } }, true); })();
+document.addEventListener('keydown', function(e){ if(FUN.paint&&e.key==='Escape'){ funPaintOn(false); } }, true);
+/* ---------- drawing and menu ---------- */
+try{ sbAfter('gl_render', function(r){ try{ funBrickDraw(); funSweepDraw(); }catch(e){ console.warn(e); } return r; }); }catch(e){}
+try{ sbAfter('sbMenus', function(M){ try{ var T=M.filter(function(m){ return m.id==='tools'; })[0]; if(T&&!T.items.some(function(x){ return x&&x.fun; })){
+    T.items.push({fun:1, t:'Fun: Scanner sweep (a laser builds the scan)', fn:function(){ funSweep(); }});
+    T.items.push({fun:1, t:'Fun: Brick world (on / off)', fn:function(){ funBrick(); }});
+    T.items.push({fun:1, t:'Fun: Bigger bricks (16 cm)', fn:function(){ funBrick(0.16); }});
+    T.items.push({fun:1, t:'Fun: Paintball (click to splat)', fn:function(){ funPaintOn(!FUN.paint); }}); } }catch(e){} return M; }); }catch(e){}
+
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
    the motor; the Monster is pitched a little lower and the Sports car higher. A soft thump when it lands a jump and a light plastic
    knock when it hits something, louder the harder the hit. Sound on the RC bar still loads your own file; Shift+click goes back to this. ===== */
@@ -28892,7 +28976,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r473', t:[
+ {d:'18 October 2026', r:'r469 to r474', t:[
+  'Fun trials in Tools > Fun: Scanner sweep (a laser plane rises and builds the scan), Brick world (the scan rebuilt as toy bricks), and Paintball (click to splat paint on walls and floors; Ctrl+Z takes it off).',
   'Rain and snow from inside: looking out of a window or door of a scanned building you now see it falling outside, while none falls under the roof.',
   'Delete + fill fills only the real hole: the ground round the removed object is checked, and only the missing part is filled, so good ground near the edge stays as scanned and the fill fades into it.',
   'RC car reverse lights: two small white lights on the back while reversing (Rear on the RC bar turns them off with the red lights).',
