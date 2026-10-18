@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r475';
+var SB_BUILD='2026-10-18 r476';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28318,10 +28318,15 @@ rcGridBuild=function(){ var R=APP.res; if(!R||!R.pos) return null; var sc=ltSc()
   for(var cy2=0;cy2<NY;cy2++) for(var cx2=0;cx2<NX;cx2++){ var k=cy2*NX+cx2, g=null; if(isNaN(F[k])||F[k]<(g=ltGround(x0+(cx2+0.5)*cell, y0+(cy2+0.5)*cell))-0.25*sc) F[k]=g!=null?g:ltGround(x0+(cx2+0.5)*cell, y0+(cy2+0.5)*cell); }
   /* a 3 x 3 median smooths the floor without rounding off real steps */
   var Fm=new Float32Array(N), w=[]; for(var y2=0;y2<NY;y2++) for(var x2=0;x2<NX;x2++){ w.length=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var X=x2+dx, Y=y2+dy; if(X>=0&&Y>=0&&X<NX&&Y<NY) w.push(F[Y*NX+X]); } w.sort(function(a,b){ return a-b; }); Fm[y2*NX+x2]=w[w.length>>1]; }
-  /* r469: the floor is the middle of the ground's own thickness, not its underside. On a dense scan the ground is a few cm thick and
-     the third lowest dot sits under it, so the top of the ground (a painted line, a smudge) counted as a kerb: an invisible wall */
-  var S=new Float32Array(N), K=new Uint16Array(N), band=0.08*sc; for(var i1=0;i1<n;i1+=st){ if(!ok(i1)) continue; var x1=P[i1*3], y1=P[i1*3+1], z1=P[i1*3+2], cx1=Math.floor((x1-x0)/cell), cy1=Math.floor((y1-y0)/cell); if(cx1<0||cy1<0||cx1>=NX||cy1>=NY) continue; var c1=cy1*NX+cx1, dz1=z1-Fm[c1]; if(dz1>=-0.02*sc&&dz1<=band&&K[c1]<65535){ S[c1]+=dz1; K[c1]++; } }
-  for(var c4=0;c4<N;c4++) if(K[c4]>=4) Fm[c4]+=S[c4]/K[c4];
+  /* r475: the floor is the densest layer of ground near the bottom, not the bottom itself. A wet or shiny car park has a ghost layer of
+     reflection 8 to 15 cm under the real ground; reading the floor from it made the real ground count as a kerb all over the open tarmac */
+  var NB=N>3e6?8:16, bw=0.30*sc/NB, H=new Uint16Array(N*NB), S=new Float32Array(N*NB);
+  for(var i1=0;i1<n;i1+=st){ if(!ok(i1)) continue; var x1=P[i1*3], y1=P[i1*3+1], z1=P[i1*3+2], cx1=Math.floor((x1-x0)/cell), cy1=Math.floor((y1-y0)/cell); if(cx1<0||cy1<0||cx1>=NX||cy1>=NY) continue; var c1=cy1*NX+cx1, bb=Math.floor((z1-Fm[c1]+0.02*sc)/bw); if(bb<0||bb>=NB) continue; var q1=c1*NB+bb; if(H[q1]<65535){ H[q1]++; S[q1]+=z1; } }
+  var K=new Uint16Array(N); for(var c4=0;c4<N;c4++){ var best=-1, bc=0; for(var b4=0;b4<NB;b4++){ var v4=H[c4*NB+b4]+(b4>0?H[c4*NB+b4-1]*0.5:0)+(b4<NB-1?H[c4*NB+b4+1]*0.5:0); if(v4>bc){ bc=v4; best=b4; } }
+    /* where the app's own floor sits in this square: a layer there that holds a fair share of the dots wins over a ghost layer below */
+    var gq=ltGround(x0+(c4%NX+0.5)*cell, y0+(Math.floor(c4/NX)+0.5)*cell), gb=Math.floor((gq-Fm[c4]+0.02*sc)/bw);
+    if(best>=0&&gb>best&&gb<NB+1){ for(var g4=Math.min(NB-1,gb+1);g4>=Math.max(best+1,gb-1);g4--){ if(H[c4*NB+g4]>=0.4*H[c4*NB+best]&&H[c4*NB+g4]>=2){ best=g4; break; } } }
+    var tot=H[c4*NB+best]; K[c4]=Math.min(65535, tot); if(best>=0&&tot>=2) Fm[c4]=S[c4*NB+best]/tot; }
   /* pass 2: points standing above their own square's floor are walls; how many it takes goes up with how dense the scan is, so a few stray dots are not a wall */
   var C=new Uint8Array(N); for(var i2=0;i2<n;i2+=st){ if(!ok(i2)) continue; var x3=P[i2*3], y3=P[i2*3+1], z3=P[i2*3+2], cx3=Math.floor((x3-x0)/cell), cy3=Math.floor((y3-y0)/cell); if(cx3<0||cy3<0||cx3>=NX||cy3>=NY) continue; var c3=cy3*NX+cx3, h=(z3-Fm[c3])/sc; if(h>0.09&&h<0.45&&C[c3]<255) C[c3]++; }
   var ks=[]; for(var c5=0;c5<N;c5+=7) if(K[c5]>=4) ks.push(K[c5]); ks.sort(function(a,b){ return a-b; }); var thr=Math.max(3, Math.min(40, Math.round(0.2*(ks[ks.length>>1]||0))));
@@ -28990,7 +28995,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r475', t:[
+ {d:'18 October 2026', r:'r469 to r476', t:[
+  'RC car: invisible walls on wet or shiny car parks fixed. Those scans have a ghost layer of reflection under the real ground; the car now reads the floor from the real ground, so the open tarmac no longer counts as a kerb (tested on the Hi Res car park: phantom hits down from about half of all bumps to 2 in 120 drives).',
   'RC car: no more getting stuck in the open. A few stray dots on their own no longer count as solid, and if the car ends up inside something it can always drive out.',
   'RC car lights no longer turn the whole scene darker (the reverse lights in daylight did).',
   'The RC bar now goes away when you stop the car.',

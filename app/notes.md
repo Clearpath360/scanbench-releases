@@ -1,1 +1,1 @@
-r475: RC no longer stuck in the open, car lights no longer darken the scene, RC bar hides when stopped.
+r476: RC floor read past reflection ghost layer; no invisible walls on wet car parks.
