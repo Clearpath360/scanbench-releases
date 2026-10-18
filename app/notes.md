@@ -1,1 +1,1 @@
-r479: fun looks (tilt-shift, night vision, thermal, comic, VHS, old film); finer bricks.
+r480: Tools > Fun submenu with all fun tools and looks; Style button removed from 3D bar.
