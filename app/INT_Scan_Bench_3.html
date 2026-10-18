@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r472';
+var SB_BUILD='2026-10-18 r473';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -27016,8 +27016,16 @@ document.addEventListener('pointerdown', function(){ try{ if(WXL.ctx&&WXL.ctx.st
 try{ if(typeof SKP_LBL!=='undefined') SKP_LBL['Thunder sound']='lightning'; if(typeof SKP_KEYS!=='undefined'&&SKP_KEYS.indexOf('liveThunder')<0) SKP_KEYS.push('liveThunder'); }catch(e){}
 /* r464: no rain or snow indoors. When there is a roof or ceiling over where you are looking from, the falling rain and snow are not
    drawn (they used to fall through the ceiling of an indoor scan). Outside, looking at a building, they still fall onto its roof. */
-function wxUnderCover(){ try{ var b=camBasis(), e=b.eye, sc=wxSc(), t=wxTopAt(e[0], e[1]); return t>-1e8&&t>e[2]+0.25*sc; }catch(x){ return false; } }
-try{ sbAround('wxPartDraw', function(next){ if(wxUnderCover()) return; return next.apply(this, arguments); }); }catch(e){}
+function wxUnderCover(){ try{ var b=camBasis(), e=b.eye, sc=wxSc(), T=wxTop(); if(!T) return false; var W=wxTopWide(T), cx=Math.floor((e[0]-W.x0)/W.cell), cy=Math.floor((e[1]-W.y0)/W.cell); if(cx<0||cy<0||cx>=W.nx||cy>=W.ny) return false; var t=W.top[cy*W.nx+cx]; return t>-1e8&&t>e[2]+0.25*sc; }catch(x){ return false; } }
+/* r473: from inside you see the rain outside. Indoors the rain and snow still fall, but only where there is open sky: the roof is
+   widened by about a metre each way (so a gap in a scanned ceiling does not let rain in), nothing falls under it, and the grey rain
+   veil is left off. Through a window or an open door you see it coming down outside; the walls hide the rest. */
+function wxTopWide(T){ if(T._wide) return T._wide; var sc=wxSc(), r=Math.max(1, Math.round(1.0*sc/T.cell)), nx=T.nx, ny=T.ny, A=T.top, H=new Float32Array(nx*ny), W=new Float32Array(nx*ny);
+  for(var y=0;y<ny;y++) for(var x=0;x<nx;x++){ var m=-1e9; for(var d=-r;d<=r;d++){ var X=x+d; if(X<0||X>=nx) continue; var v=A[y*nx+X]; if(v>m) m=v; } H[y*nx+x]=m; }
+  for(var y2=0;y2<ny;y2++) for(var x2=0;x2<nx;x2++){ var m2=-1e9; for(var d2=-r;d2<=r;d2++){ var Y=y2+d2; if(Y<0||Y>=ny) continue; var v2=H[Y*nx+x2]; if(v2>m2) m2=v2; } W[y2*nx+x2]=m2; }
+  T._wide={res:T.res, x0:T.x0, y0:T.y0, cell:T.cell, nx:nx, ny:ny, top:W, tex:null}; return T._wide; }
+try{ sbAround('wxPartDraw', function(next){ if(!wxUnderCover()) return next.apply(this, arguments); var T=wxTop(); if(!T) return; var keep=WX.top;
+  try{ WX.top=wxTopWide(T); return next.apply(this, arguments); } finally{ WX.top=keep; WX.rainVeil=0; } }); }catch(e){}
 
 /* ===== r417: settings for each placed thing. Pick one (in the list or in 3D) and its own sliders show under the list:
    fires, smoke, fireworks, sunbeam windows, pigeons, Christmas tree, string lights and confetti. Unset values use the defaults. ===== */
@@ -28884,7 +28892,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r472', t:[
+ {d:'18 October 2026', r:'r469 to r473', t:[
+  'Rain and snow from inside: looking out of a window or door of a scanned building you now see it falling outside, while none falls under the roof.',
   'Delete + fill fills only the real hole: the ground round the removed object is checked, and only the missing part is filled, so good ground near the edge stays as scanned and the fill fades into it.',
   'RC car reverse lights: two small white lights on the back while reversing (Rear on the RC bar turns them off with the red lights).',
   'RC car: the headlight glow is now lens sized and sits on the front of the car, instead of a big light floating in front of it.',
