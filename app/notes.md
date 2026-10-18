@@ -1,1 +1,1 @@
-r486: Compare redesigned: left panel with four steps (Scans, Line up, Compare, Timelapse), labelled buttons, add a scan from the panel, timelapse camera Still / Slow move / Orbit / My keyframes / Walk path.
+r487: Compare: drop screen no longer stays over the left view after dragging a scan in; PLY dropped while comparing is added to Compare.

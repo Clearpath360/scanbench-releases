@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r486';
+var SB_BUILD='2026-10-18 r487';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29224,7 +29224,7 @@ function msxAddMenu(){ var p=document.getElementById('msx'), b=document.getEleme
     if(a==='dir'){ LCCI.toCmp=true; lccPickDir(); } else { LCCI.toCmp=false; var fi=document.getElementById('msFile'); if(fi) fi.click(); } }; }); }
 /* while a scan is being added, the button says so; when it is in, step 2 opens on it */
 function msxWatch(n0){ var t0=performance.now(), cancelled=false; window.addEventListener('focus', function(){ setTimeout(function(){ if(msS().length===n0&&!SB_busy()&&!document.querySelector('#lcDlg:not([hidden])')) cancelled=true; }, 1500); }, {once:true});
-  (function chk(){ if(msS().length>n0||!MSX.adding){ MSX.adding=false; return; } if(cancelled||performance.now()-t0>600000){ MSX.adding=false; msDraw(); return; } msxBtn(); setTimeout(chk, 300); })(); }
+  (function chk(){ if(msS().length>n0){ MSX.adding=false; setTimeout(function(){ msDraw(); }, 300); return; } if(!MSX.adding) return; if(cancelled||performance.now()-t0>600000){ MSX.adding=false; msDraw(); return; } msxBtn(); setTimeout(chk, 300); })(); }
 function SB_busy(){ var s=document.getElementById('status'); return !!(s&&/Reading|Loading|%/.test(s.textContent||'')); }
 function msxBtn(){ var b=document.getElementById('msxAdd'); if(b&&MSX.adding){ var s=document.getElementById('status'), t=(s&&s.textContent||'').trim(); b.innerHTML='Adding the scan…'+(t&&!/^Ready/.test(t)?' <small>'+msxEsc(t.slice(0,60))+'</small>':''); b.disabled=true; } }
 /* names on the views while lining up */
@@ -29234,12 +29234,17 @@ function msxPaneLabels(){ var u=document.getElementById('msUI'); if(!u) return; 
 function msxCmpLabels(){ var u=document.getElementById('msUI'); if(!u) return; u.querySelectorAll('.msxCL').forEach(function(x){ x.remove(); }); if(!(MS.on&&MS.tab==='compare'&&msS().length>1)) return; var S=msS();
   if(MSX.how==='slider'){ [['l',MS.cmpL],['r',MS.cmpR]].forEach(function(o){ var d=document.createElement('div'); d.className='msxCL '+o[0]; d.innerHTML='<i style="background:'+msxCol(o[1])+'"></i>'+msxEsc(msxName(S[o[1]])); u.appendChild(d); }); } }
 /* hook into the old drawing: build the panel after it, and keep the canvas to the right of the panel */
-sbAfter('msDraw', function(r){ try{ msxDraw(); msxCmpLabels(); var u=document.getElementById('msUI'); if(u){ u.classList.toggle('msxFl', MSX.how==='flick'); u.classList.toggle('msxWalk', MS.camMode==='walk'); var A2=msAligned(); u.querySelectorAll('.msBand').forEach(function(b, i){ if(A2[i]) b.textContent=msxName(A2[i].s); }); var rn=document.getElementById('msRenB'); if(rn) rn.textContent='● Render video'; } }catch(e){ console.warn(e); } return r; });
+sbAfter('msDraw', function(r){ try{ var dp=document.getElementById('drop'); if(MS.on&&dp&&!dp.classList.contains('over')) msxHideDrop(); msxDraw(); msxCmpLabels(); var u=document.getElementById('msUI'); if(u){ u.classList.toggle('msxFl', MSX.how==='flick'); u.classList.toggle('msxWalk', MS.camMode==='walk'); var A2=msAligned(); u.querySelectorAll('.msBand').forEach(function(b, i){ if(A2[i]) b.textContent=msxName(A2[i].s); }); var rn=document.getElementById('msRenB'); if(rn) rn.textContent='● Render video'; } }catch(e){ console.warn(e); } return r; });
 sbAfter('msOpen', function(r){ try{ var S=msS(); MSX.step=S.length<2?1:S.some(function(s,k){ return k&&!s.msAligned; })?2:3; var t=MSX.step===2?'align':'compare'; document.body.classList.add('msxOn'); msxFit(); window.dispatchEvent(new Event('resize')); if(S.length>1&&MS.tab!==t) msTab(t); else msDraw(); }catch(e){ console.warn(e); } return r; });
 sbAfter('msClose', function(r){ try{ msxFlick(false); document.body.classList.remove('msxOn'); var p=document.getElementById('msx'); if(p) p.style.display='none'; msxFit(); window.dispatchEvent(new Event('resize')); }catch(e){} return r; });
 /* the 3D view's drawing size follows the narrower canvas */
 function msxFit(){ try{ resizeCanvases(); }catch(e){} if(!(MS.on&&document.body.classList.contains('msxOn'))) return; var dpr=Math.min(2, window.devicePixelRatio||1), w=Math.max(1, glCv.clientWidth), h=Math.max(1, glCv.clientHeight), W=Math.round(w*dpr), H=Math.round(h*dpr); if(glCv.width!==W||glCv.height!==H){ glCv.width=W; glCv.height=H; MS.snap=[]; try{ gl_resize(); }catch(e){} } }
 window.addEventListener('resize', function(){ if(MS.on) setTimeout(msxFit, 0); });
+/* r487: the drop screen never stays up over an open scan once a drag ends; and a PLY dropped while comparing is added to Compare, not opened in place of the first scan */
+function msxHideDrop(){ var d=document.getElementById('drop'); if(d&&APP.res){ d.classList.remove('over'); d.classList.add('hide'); } }
+window.addEventListener('drop', function(e){ setTimeout(msxHideDrop, 0); setTimeout(msxHideDrop, 400); try{ if(!(MS.on&&APP.res)) return; var fl=Array.prototype.slice.call((e.dataTransfer&&e.dataTransfer.files)||[]), ply=fl.filter(function(f){ return /\.ply$/i.test(f.name); });
+  if(ply.length&&ply.length===fl.length){ e.preventDefault(); e.stopImmediatePropagation(); MSX.adding=true; msxWatch(msS().length); ply.forEach(function(f, i){ setTimeout(function(){ cmpAddFile(f); }, i*300); }); } }catch(er){ console.warn(er); } }, true);
+window.addEventListener('dragleave', function(){ setTimeout(function(){ var d=document.getElementById('drop'); if(d&&!d.classList.contains('over')) msxHideDrop(); }, 50); }, true);
 /* Space flicks in Flick mode */
 window.addEventListener('keydown', function(e){ if(!(MS.on&&MS.tab==='compare'&&MSX.how==='flick')||e.key!==' ') return; var t=e.target; if(t&&/INPUT|TEXTAREA|SELECT/.test(t.tagName)) return; e.preventDefault(); msxFlick(false); MS.sx=MS.sx>0.5?0:1; requestRender(false); msxFlickLab(); }, true);
 /* the old add dialog never stays open once a choice is made, and a fresh scan added from anywhere lands in step 2 */
@@ -29351,7 +29356,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r486', t:[
+ {d:'18 October 2026', r:'r469 to r487', t:[
+  'Compare: dragging a scan in no longer leaves the start screen showing over the left view. A PLY dropped while comparing is added to Compare instead of replacing your first scan.',
   'Compare redesigned: one panel on the left with four steps (Scans, Line up, Compare, Timelapse). Every button has words on it. Add a scan from the panel, it opens straight in Line up. Timelapse camera: Still, Slow move, Orbit, My keyframes or Walk path (Still stops the orbit).',
   'Key features: bigger drawn icons in blue circles with the text beside them, in the app colours.',
   'Help > Key features: the nine headline features on one page, each with a short help page (what it does, where it is, three steps).',
