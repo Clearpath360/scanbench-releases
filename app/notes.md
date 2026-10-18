@@ -1,1 +1,1 @@
-r485: Key features restyled (blue circle icons, text beside).
+r486: Compare redesigned: left panel with four steps (Scans, Line up, Compare, Timelapse), labelled buttons, add a scan from the panel, timelapse camera Still / Slow move / Orbit / My keyframes / Walk path.
