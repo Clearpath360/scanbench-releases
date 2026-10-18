@@ -1,1 +1,1 @@
-r488: Compare: Fine tune starts open in step 3.
+r489: Compare: height trim bar back; Timelapse Fly path camera (fixed height, smooth curve).
