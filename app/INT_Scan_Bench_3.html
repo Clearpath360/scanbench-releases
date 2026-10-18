@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r487';
+var SB_BUILD='2026-10-18 r488';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29084,7 +29084,7 @@ try{ var kst=document.createElement('style'); kst.textContent=
    3 Compare (slider or flick between any two dates),
    4 Timelapse (pick a camera: Still, Slow move, Orbit, My keyframes or Walk path; timing; render).
    Every button has words on it. The old floating tabs, captures list and gear menu are hidden; they still work underneath. ===== */
-var MSX={step:1, how:'slider', flickOn:false, flickT:null, fine:false, more:false, adding:false, w:310};
+var MSX={step:1, how:'slider', flickOn:false, flickT:null, fine:true, more:false, adding:false, w:310};
 function msxEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
 function msxName(s){ if(!s) return ''; try{ if(typeof tlpCap==='function') return tlpCap(s); }catch(e){} return s.label||s.name||''; }
 function msxCol(k){ return (typeof TLX_COL!=='undefined'?TLX_COL:['#3b82f6','#f59e0b','#10b981','#ec4899','#8b5cf6'])[k%5]; }
@@ -29356,7 +29356,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r487', t:[
+ {d:'18 October 2026', r:'r469 to r488', t:[
+  'Compare: Fine tune now starts open in step 3.',
   'Compare: dragging a scan in no longer leaves the start screen showing over the left view. A PLY dropped while comparing is added to Compare instead of replacing your first scan.',
   'Compare redesigned: one panel on the left with four steps (Scans, Line up, Compare, Timelapse). Every button has words on it. Add a scan from the panel, it opens straight in Line up. Timelapse camera: Still, Slow move, Orbit, My keyframes or Walk path (Still stops the orbit).',
   'Key features: bigger drawn icons in blue circles with the text beside them, in the app colours.',
