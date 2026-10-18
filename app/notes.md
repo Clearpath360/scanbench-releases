@@ -1,1 +1,1 @@
-r492: auto line-up in step 2, date start places on route, one point editor, fly path side view.
+r493: coloured cut edge where the height trim slices the scan.
