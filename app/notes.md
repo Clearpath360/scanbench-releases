@@ -1,1 +1,1 @@
-r481: side menus fit on screen.
+r482: Plan view Photo / Points switch works.

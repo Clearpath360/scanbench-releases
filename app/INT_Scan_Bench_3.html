@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r481';
+var SB_BUILD='2026-10-18 r482';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28957,6 +28957,19 @@ try{ sbAfter('sbMenus', function(M){ try{ var T=M.filter(function(m){ return m.i
 try{ sbAfter('sbItems', function(r, box){ try{ if(!box||box.id!=='mbSub') return r; box.style.maxHeight=(window.innerHeight-16)+'px'; box.style.overflowY='auto'; var rc=box.getBoundingClientRect(), over=rc.bottom-(window.innerHeight-8); if(over>0) box.style.top=Math.max(8, rc.top-over)+'px';
   if(rc.right>window.innerWidth-8){ var par=box._for&&box._for.getBoundingClientRect(); if(par) box.style.left=Math.max(8, par.left-rc.width+2)+'px'; } }catch(e){} return r; }); }catch(e){}
 
+/* ===== r482: Photo and Points work in the Plan view. The Scan box at the bottom left (Photo / Points) only changed the 3D view, so
+   in Plan clicking either did nothing. In Plan they now switch the plan picture: Photo is a straight-down colour picture of the scan,
+   Points is the usual grey plan slice (the default, best for tracing walls). The 3D view keeps its own choice. ===== */
+var PLK={look:(function(){ try{ return localStorage.getItem('sb_plan_look')||'points'; }catch(e){ return 'points'; } })()};
+function plkInPlan(){ return APP.view!=='3d'&&(typeof CEI==='undefined'||!CEI.view||CEI.view==='plan'); }
+function plkSync(){ if(!plkInPlan()) return; document.querySelectorAll('#tools [data-fl]').forEach(function(b){ b.classList.toggle('on', (PLK.look==='photo'?'splat':'points')===b.dataset.fl); b.disabled=b.dataset.fl==='splat'&&!APP.canSplat; }); }
+document.addEventListener('click', function(e){ var b=e.target&&e.target.closest&&e.target.closest('#tools [data-fl]'); if(!b||!plkInPlan()) return; e.stopImmediatePropagation(); e.preventDefault();
+  if(b.dataset.fl==='splat'&&!APP.canSplat){ toast('This scan has no photo colours from splats'); return; } PLK.look=b.dataset.fl==='splat'?'photo':'points'; try{ localStorage.setItem('sb_plan_look', PLK.look); }catch(x){}
+  if(PLK.look==='photo') toast('Plan: colour picture from above. Points goes back to the plan slice.', 2500); plkSync(); planDraw(); }, true);
+try{ sbAround('planDraw', function(next){ var keep=planBmp; try{ if(PLK.look==='photo'&&APP.view!=='3d'&&typeof secPlanPhoto==='function'){ var ph=secPlanPhoto(); if(ph) planBmp=ph; } }catch(e){ console.warn(e); } try{ return next(); } finally{ planBmp=keep; } }); }catch(e){}
+try{ sbAfter('sb3dSync', function(r){ try{ plkSync(); }catch(e){} return r; }); }catch(e){}
+try{ sbAfter('wsView', function(r){ try{ if(plkInPlan()) plkSync(); else if(typeof sb3dSync==='function') sb3dSync(); }catch(e){} return r; }); }catch(e){}
+
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
    the motor; the Monster is pitched a little lower and the Sports car higher. A soft thump when it lands a jump and a light plastic
    knock when it hits something, louder the harder the hit. Sound on the RC bar still loads your own file; Shift+click goes back to this. ===== */
@@ -29034,7 +29047,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r481', t:[
+ {d:'18 October 2026', r:'r469 to r482', t:[
+  'Plan view: Photo and Points at the bottom left now work. Photo shows a colour picture of the scan from above, Points the grey plan slice (still the default).',
   'Side menus (like Tools > Fun) move up to fit on the screen instead of running off the bottom.',
   'Tools > Fun is now one submenu: Scanner sweep, Brick world, Paintball, and every look (White model, Clay, Watercolour, Miniature, Cartoon, Blueprint, Pencil, Thermal, Cel shaded, Painterly, Retro pixel, Night vision, Retro VHS, Old film). The Style button is gone from the 3D bar, and the duplicate Thermal is gone.',
   'Fun looks in Tools: tilt-shift miniature, night vision, thermal camera, comic book, retro VHS and old film (on screen only for now). Brick world now builds finer bricks on big scans.',
