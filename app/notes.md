@@ -1,1 +1,1 @@
-r469: RC car no longer hits invisible walls on dense scans (floor read from middle of ground; density-aware solid threshold).
+r470: Delete + fill clears the space behind (ground to wall, brown blur); no rim round deletes/fills while turning LCC scans.
