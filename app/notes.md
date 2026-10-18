@@ -1,1 +1,1 @@
-r470: Delete + fill clears the space behind (ground to wall, brown blur); no rim round deletes/fills while turning LCC scans.
+r471: RC headlight glow lens sized and on the car; red rear lights (brighter when braking), Rear button.
