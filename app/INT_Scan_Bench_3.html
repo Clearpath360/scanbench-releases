@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-18 r480';
+var SB_BUILD='2026-10-18 r481';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -28953,6 +28953,9 @@ try{ sbAround('sbSub', function(next, kind, cb){ if(kind!=='fun') return next.ap
 try{ sbAfter('sbMenus', function(M){ try{ var T=M.filter(function(m){ return m.id==='tools'; })[0]; if(T&&!T.items.some(function(x){ return x&&x.sub==='fun'; })) T.items.push({t:'Fun', sub:'fun'}); }catch(e){} return M; }); }catch(e){}
 /* the Style button leaves the 3D bar (its looks are in Tools > Fun) */
 (function rmStyle(n){ var b=document.getElementById('gStyle'); if(b){ var g=b.closest('.grp3'); (g||b).style.display='none'; return; } if((n||0)<20) setTimeout(function(){ rmStyle((n||0)+1); }, 300); })();
+/* r481: a side menu that would run off the bottom of the screen moves up to fit (and scrolls if it is taller than the screen) */
+try{ sbAfter('sbItems', function(r, box){ try{ if(!box||box.id!=='mbSub') return r; box.style.maxHeight=(window.innerHeight-16)+'px'; box.style.overflowY='auto'; var rc=box.getBoundingClientRect(), over=rc.bottom-(window.innerHeight-8); if(over>0) box.style.top=Math.max(8, rc.top-over)+'px';
+  if(rc.right>window.innerWidth-8){ var par=box._for&&box._for.getBoundingClientRect(); if(par) box.style.left=Math.max(8, par.left-rc.width+2)+'px'; } }catch(e){} return r; }); }catch(e){}
 
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
    the motor; the Monster is pitched a little lower and the Sports car higher. A soft thump when it lands a jump and a light plastic
@@ -29031,7 +29034,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'18 October 2026', r:'r469 to r480', t:[
+ {d:'18 October 2026', r:'r469 to r481', t:[
+  'Side menus (like Tools > Fun) move up to fit on the screen instead of running off the bottom.',
   'Tools > Fun is now one submenu: Scanner sweep, Brick world, Paintball, and every look (White model, Clay, Watercolour, Miniature, Cartoon, Blueprint, Pencil, Thermal, Cel shaded, Painterly, Retro pixel, Night vision, Retro VHS, Old film). The Style button is gone from the 3D bar, and the duplicate Thermal is gone.',
   'Fun looks in Tools: tilt-shift miniature, night vision, thermal camera, comic book, retro VHS and old film (on screen only for now). Brick world now builds finer bricks on big scans.',
   'Clean up tiles no longer have numbers: Remove object, Trim, Fix holes, Looks.',
