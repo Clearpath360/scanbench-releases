@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-17 r466';
+var SB_BUILD='2026-10-17 r467';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -20473,20 +20473,16 @@ function cmpOpen(on){ CMPV.on=on; if(on){ if(!APP.res){ toast('Open the first sc
 
 /* ===== Clean up, task first: pick the job (remove an object, fill, trim box, tidy floaters, looks, repair), see only its tools and the steps.
    The tools are the same buttons as before, moved into the job they belong to; Undo, Redo, Before and Done stay along the bottom. ===== */
-var CUI={task:null, tasks:[
-  {k:'remove', t:'Remove an object', sh:'Remove object', ic:'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', steps:'Click the thing to remove: it turns red. Shift+click adds more, Alt+click takes one off. Then <b>Delete + fill</b> removes it and fills the ground it stood on.',
-    els:['[data-cm="obj"]','#delFill','#clnDel','#fillFoot','#clnHide','#clnGhost','#clnClr','#clnInv'], mode:'obj'},
-  {k:'fill', t:'Fill a hole or patch', sh:'Fill hole', ic:'M4 16c4-6 12-6 16 0M7 12l1-4h8l1 4', steps:'Click inside a hole or dark patch, or draw round a mark. Drag the teal outline to copy from a better place. <b>Clone brush</b>: Alt+click good floor, then paint.',
-    els:['[data-cm="fill"]','#fillOpts','[data-cm="clone"]','#clbOpts','LBL:size','#fillFoot'], mode:'fill'},
-  {k:'trim', t:'Trim with a box', sh:'Trim box', ic:'M5 8l7-4 7 4v8l-7 4-7-4zM5 8l7 4 7-4M12 12v8', steps:'Place the box over what you want gone: arrows move it, white squares size it, round handles turn and tilt it. Orange shows what is inside. Then <b>Delete inside</b>.',
-    els:['#tbxBtn'], mode:null},
-  {k:'tidy', t:'Tidy stray splats', sh:'Tidy floaters', ic:'M5 19l14-14M8 5l2 2M5 8l2 2M16 17l2 2M14 19l2-2', steps:'Draw round floaters with <b>Lasso</b>, drag a <b>Box</b>, or paint with <b>Brush</b>: they turn red. <b>Delete selected</b> removes them. <b>Lonely splats</b> finds floaters for you.',
-    els:['[data-cm="lasso"]','[data-cm="box"]','[data-cm="brush"]','[data-cm="poly"]','#clnDel','#clnClr','#clnInv','#clnLonely','LBL:size','#clnKeepL','#clnFrontL'], mode:'lasso'},
-  {k:'look', t:'Change how it looks', sh:'Looks', ic:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6', steps:'Click an object, then <b>Look</b>: ghost, point cloud, colour, tint, outline or isolate. <b>Hide</b> takes it out of view; it can come back from Hidden &amp; fills.',
-    els:['[data-cm="obj"]','#styBtn','#clnHide','#clnClr'], mode:'obj'},
-  {k:'repair', t:'Repair the scan', sh:'Repair', ic:'M14 6l4 4-8 8H6v-4zM13 7l4 4', steps:'<b>Find holes</b> outlines gaps in the ground to fill. <b>Repeat</b> copies a good window bay or railing along. <b>Straighten wall</b> flattens a wobbly wall. Rarely needed tools are at the end.',
-    els:['BTN:Find holes','[data-cm="repeat"]','#rptOpts','[data-cm="straight"]','[data-cm="erase"]','[data-cm="flat"]','[data-cm="shadow"]','#photoOut','#photoIn'], mode:null}
-], modeTask:{obj:'remove', fill:'fill', clone:'fill', lasso:'tidy', box:'tidy', brush:'tidy', poly:'tidy', repeat:'repair', straight:'repair', erase:'repair', flat:'repair', shadow:'repair'}};
+var CUI={task:null, tasks:[ /* r467: four jobs in the order you do them */
+  {k:'remove', t:'Remove an object', sh:'1 Remove object', ic:'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', steps:'Click the thing to remove: it turns red. Shift+click adds more, Alt+click takes one off. Then <b>Delete + fill</b> removes it and fills the space it leaves.',
+    els:['[data-cm="obj"]','#delFill','#clnDel','#fillFoot','#clnHide','#clnClr','#clnInv'], mode:'obj'},
+  {k:'trim', t:'Trim and tidy', sh:'2 Trim', ic:'M5 8l7-4 7 4v8l-7 4-7-4zM5 8l7 4 7-4M12 12v8', steps:'<b>Trim box</b>: place a box over what should go, then <b>Delete inside</b>. Or pick a way to select (Lasso, Box, Brush, Lines), mark the stray splats red and <b>Delete selected</b>. <b>Lonely splats</b> finds floaters for you.',
+    els:['#tbxBtn','[data-cm="lasso"]','[data-cm="box"]','[data-cm="brush"]','[data-cm="poly"]','#clnDel','#clnClr','#clnInv','#clnLonely','LBL:size','#clnKeepL','#clnFrontL'], mode:null},
+  {k:'holes', t:'Fix holes', sh:'3 Fix holes', ic:'M4 16c4-6 12-6 16 0M7 12l1-4h8l1 4', steps:'Click inside a hole or dark patch to fill it from the surface beside it, or <b>Find holes</b> to list them all. Drag the teal outline to copy from a better place. <b>Clone brush</b>, <b>Repeat</b> and <b>Straighten wall</b> are here too.',
+    els:['[data-cm="fill"]','#fillOpts','BTN:Find holes','#fillFoot','[data-cm="clone"]','#clbOpts','LBL:size','[data-cm="repeat"]','#rptOpts','[data-cm="straight"]','[data-cm="erase"]','[data-cm="flat"]','[data-cm="shadow"]','#photoOut','#photoIn'], mode:'fill'},
+  {k:'look', t:'Change how it looks', sh:'4 Looks', ic:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6', steps:'Click an object, then <b>Look</b>: ghost, point cloud, colour, tint, outline or isolate. <b>Hide</b> takes it out of view; it can come back from Hidden &amp; fills.',
+    els:['[data-cm="obj"]','#styBtn','#clnHide','#clnGhost','#clnClr'], mode:'obj'}
+], modeTask:{obj:'remove', fill:'holes', clone:'holes', lasso:'trim', box:'trim', brush:'trim', poly:'trim', repeat:'holes', straight:'holes', erase:'holes', flat:'holes', shadow:'holes'}};
 function cuiFind(bar, sel){ if(sel==='LBL:size'){ var si=bar.querySelector('#clnSize'); return si?(si.closest('label')||si.parentNode):null; }
   if(sel.indexOf('BTN:')===0){ var t=sel.slice(4); return Array.from(bar.querySelectorAll('button')).filter(function(b){ return b.textContent.trim()===t; })[0]||null; } return bar.querySelector(sel); }
 function cuiShow(k, quiet){ var bar=document.getElementById('clnBar'), panel=document.getElementById('cuiPanel'), store=document.getElementById('cuiStore'); if(!bar||!panel) return; CUI.task=k; try{ localStorage.setItem('sb_cln_task', k||''); }catch(e){}
@@ -27643,15 +27639,14 @@ try{ sbAfter('levPanel', function(r){ try{ if(typeof PND!=='undefined'&&PND.inLe
 /* ===== r442: Clean up laid out like Sky, light & weather. The six jobs are tiles (icon, name, what it is doing), three to a row.
    Tap a tile to open its settings under its row, tap again to close. The ways to select (Lasso, Box, Brush, Lines) are one switch.
    Every button for the job shows (no ⋯ menu). The same buttons as before: only where they sit has changed. ===== */
-var CLT_COL={remove:'#dc2626', fill:'#0d9488', trim:'#ea580c', tidy:'#7c3aed', look:'#2563eb', repair:'#b45309'};
+var CLT_COL={remove:'#dc2626', trim:'#ea580c', holes:'#0d9488', look:'#2563eb'};
 var CLT_SEL=['lasso','box','brush','poly'], CLT_SELN={lasso:'Lasso', box:'Box', brush:'Brush', poly:'Lines'};
 function cltStatus(k){ try{ var on=CUI.task===k;
   if(k==='remove') return (on&&CLN.selN)?CLN.selN.toLocaleString()+' picked':'click it';
-  if(k==='fill') return (typeof PATCH!=='undefined'&&PATCH.list.length)?PATCH.list.length+' fill'+(PATCH.list.length===1?'':'s'):'click a hole';
-  if(k==='trim') return (typeof TBX!=='undefined'&&TBX.on)?'box shown':'drag a box';
-  if(k==='tidy') return on&&CLT_SELN[CLN.mode]?CLT_SELN[CLN.mode]:'lasso, brush';
+  if(k==='holes') return (typeof PATCH!=='undefined'&&PATCH.list.length)?PATCH.list.length+' fill'+(PATCH.list.length===1?'':'s'):'click a hole';
+  if(k==='trim') return (typeof TBX!=='undefined'&&TBX.on)?'box shown':(on&&CLT_SELN[CLN.mode]?CLT_SELN[CLN.mode]:'box, lasso, brush');
   if(k==='look') return 'ghost, tint';
-  if(k==='repair') return 'holes, walls'; }catch(e){} return ''; }
+  }catch(e){} return ''; }
 function cltPaint(){ var G=document.getElementById('cuiTiles'); if(!G) return; G.querySelectorAll('.cuiTile').forEach(function(b){ var k=b.dataset.task, T=CUI.tasks.filter(function(t){ return t.k===k; })[0]; if(!T) return;
     if(!b.querySelector('.cltI')) b.innerHTML='<svg viewBox="0 0 24 24" style="color:'+(CLT_COL[k]||'currentColor')+'"><path d="'+T.ic+'"/></svg><b>'+(T.sh||T.t)+'</b><i class="cltI"></i>';
     b.querySelector('.cltI').textContent=cltStatus(k); b.classList.toggle('open', CUI.task===k); });
@@ -27659,7 +27654,7 @@ function cltPaint(){ var G=document.getElementById('cuiTiles'); if(!G) return; G
   var P=document.getElementById('cuiPanel'), tiles=Array.from(G.querySelectorAll('.cuiTile')); if(!P) return;
   var i=tiles.findIndex(function(b){ return b.dataset.task===CUI.task; });
   if(i<0){ P.style.display='none'; if(P.parentNode!==G) G.appendChild(P); return; }
-  P.style.display=''; var last=tiles[Math.min(tiles.length-1, Math.floor(i/3)*3+2)]; if(last.nextSibling!==P) last.after(P);
+  P.style.display=''; var last=tiles[Math.min(tiles.length-1, Math.floor(i/2)*2+1)]; /* r467: two to a row */ if(last.nextSibling!==P) last.after(P);
   /* the ways to select as one switch */
   var tools=P.querySelector('.cuiTools'); if(!tools) return; var bs=CLT_SEL.map(function(m){ return document.querySelector('#clnBar [data-cm="'+m+'"]'); }).filter(function(b){ return b&&tools.contains(b); });
   var seg=document.getElementById('cltSeg'); if(bs.length){ if(!seg){ seg=document.createElement('div'); seg.id='cltSeg'; seg.innerHTML='<span class="cltL">Select with</span><span class="cltS"></span>'; }
@@ -27674,7 +27669,7 @@ try{ sbBefore('cuiShow', function(){ try{ var seg=document.getElementById('cltSe
   if(!document.getElementById('cltH')){ var h=document.createElement('div'); h.id='cltH'; h.className='skH'; h.innerHTML='Tools <span>· tap one for its settings, tap again to close</span>'; G.before(h); }
   var c=document.createElement('style'); c.textContent=
    '#cltH{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--sbTx2);margin:6px 0 2px}#cltH span{text-transform:none;letter-spacing:0;font-weight:400}'+
-   'body #cuiTiles,body.sbSkin #cuiTiles{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;border:0!important;padding:0!important;overflow:visible!important;flex-wrap:initial!important}'+
+   'body #cuiTiles,body.sbSkin #cuiTiles{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;border:0!important;padding:0!important;overflow:visible!important;flex-wrap:initial!important}'+
    'body #cuiTiles .cuiTile,body.sbSkin #cuiTiles .cuiTile{position:relative;display:flex!important;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--sbLn)!important;background:var(--sbBg,#fff)!important;color:inherit!important;border-radius:12px!important;padding:9px 2px 6px!important;min-height:74px;margin:0!important;white-space:normal!important;outline:0!important;font:inherit}'+
    '#cuiTiles .cuiTile svg{width:26px!important;height:26px!important;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}'+
    '#cuiTiles .cuiTile b{font-size:11.5px;font-weight:600;text-align:center;line-height:1.15}#cuiTiles .cuiTile i{font-style:normal;font-size:10.5px;color:var(--sbTx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}'+
@@ -27692,7 +27687,7 @@ try{ sbBefore('cuiShow', function(){ try{ var seg=document.getElementById('cltSe
 /* r444: clicks in the view only select when the open job selects. With Trim box (or Repair before one of its tools is on, or no job
    open) a left drag turns the view, and nothing is lassoed, picked or filled. The Trim box's own handles still work. */
 var CLT_REPAIR=['repeat','straight','erase','flat','shadow'];
-function cltNoPick(){ if(typeof CUI==='undefined') return false; var k=CUI.task; if(!k) return true; if(k==='trim') return true; if(k==='repair') return CLT_REPAIR.indexOf(CLN.mode)<0; return false; }
+function cltNoPick(){ if(typeof CUI==='undefined') return false; var k=CUI.task; if(!k) return true; if(k==='trim') return CLT_SEL.indexOf(CLN.mode)<0; /* r467: Trim selects only once you pick Lasso, Box, Brush or Lines */ if(k==='holes') return CLT_REPAIR.indexOf(CLN.mode)<0&&CLN.mode!=='fill'&&CLN.mode!=='clone'; return false; }
 (function(){ if(typeof clnDown!=='function') return; var cd=clnDown; clnDown=function(w, alt, scr){ if(APP.tool==='clean'&&cltNoPick()){ CLN.gl=false; CLN.path=null; CLN.box=null; return false; } return cd.apply(this, arguments); }; })();
 /* r445: opening Trim box (or Repair, or closing the job) puts the select tool down, so the panel cannot flip itself back to
    Tidy floaters because a lasso was still set, and the next drag cannot draw one */
@@ -28662,6 +28657,26 @@ try{ var rcs=document.createElement('style'); rcs.textContent=
 try{ sbBefore('wkvStart', function(){ try{ if(DRV.on&&DRV.rc) drvStop(); }catch(e){} }); }catch(e){}
 try{ sbBefore('rcStart', function(){ try{ if(typeof WKV!=='undefined'&&WKV.on) wkvStop(); }catch(e){} }); }catch(e){}
 
+/* ===== r467: after you delete something in Clean up, the RC car and Walk see it gone: their maps of the ground and walls are made
+   again when they start if anything has been deleted, put back or filled since they were last made. ===== */
+function clfSig(){ var R=APP.res; if(!R) return ''; var d=0, D=R.del; if(D){ for(var i=0;i<R.n;i++) if(D[i]) d++; } return R.n+'|'+d+'|'+((typeof PATCH!=='undefined'&&PATCH.list)?PATCH.list.length:0); }
+try{ sbBefore('rcStart', function(){ try{ var s=clfSig(); if(RC.gridSig!==s){ RC.grid=null; RC.gridSig=s; } }catch(e){} }); }catch(e){}
+try{ sbBefore('wkvStart', function(){ try{ var s=clfSig(); if(WKV.gridSig!==s){ WKV.grid=null; WKV.gridSig=s; } }catch(e){} }); }catch(e){}
+/* ===== r467: cleaner removals. Deleting a picked object also takes the faint fringe it leaves behind: splats in the same small
+   space as the object (6 cm cubes round its points) that are see-through or dark smudge, which used to stay as a ghostly edge.
+   They go in the same step, so one Undo puts everything back. ===== */
+function clfFringe(idx){ var R=APP.res; if(!R||!idx||!idx.length||idx.length>2e6) return []; var P=R.pos, sc=fScale(), v=0.06*sc, vox=new Set(), core=new Set(), sel=CLN.sel, D=R.del;
+  var key=function(x,y,z){ return Math.floor(x/v)+','+Math.floor(y/v)+','+Math.floor(z/v); };
+  for(var q=0;q<idx.length;q++){ var i=idx[q], x=P[i*3], y=P[i*3+1], z=P[i*3+2], X=Math.floor(x/v), Y=Math.floor(y/v), Z=Math.floor(z/v); core.add(X+','+Y+','+Z);
+    for(var dz=-1;dz<=1;dz++) for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) vox.add((X+dx)+','+(Y+dy)+','+(Z+dz)); }
+  var bx=[1e30,1e30,1e30,-1e30,-1e30,-1e30]; for(var q2=0;q2<idx.length;q2++){ var j=idx[q2]; for(var a=0;a<3;a++){ var c=P[j*3+a]; if(c<bx[a]) bx[a]=c; if(c>bx[a+3]) bx[a+3]=c; } }
+  var out=[]; for(var k=0;k<R.n;k++){ if((D&&D[k])||(sel&&sel[k])) continue; var x2=P[k*3], y2=P[k*3+1], z2=P[k*3+2]; if(x2<bx[0]-v||y2<bx[1]-v||z2<bx[2]-v||x2>bx[3]+v||y2>bx[4]+v||z2>bx[5]+v) continue;
+    var kk=key(x2,y2,z2); if(!vox.has(kk)) continue; var g=(typeof groundAt==='function')?groundAt(x2,y2):NaN; if(isFinite(g)&&z2-g<0.05*sc) continue; /* never the ground it stood on */
+    var op=R.opa?R.opa[k]:255, lum=(R.col[k*3]+R.col[k*3+1]+R.col[k*3+2])/3; if(op<110||(core.has(kk)&&op<150)) out.push(k); }
+  return out; }
+try{ sbAround('clnDeleteSel', function(next){ var I=null; try{ if(CLN.selN&&CLN.selN<2e6&&typeof CUI!=='undefined'&&CUI.task==='remove') I=Array.from(CLN.selIdx); }catch(e){} var r=next.apply(this, arguments);
+  try{ if(I){ var F=clfFringe(I); if(F.length){ var n0=CLN.ops.length; clnApply(F, false, true); if(CLN.ops.length===n0+1&&n0>0){ var a=CLN.ops[n0-1], b=CLN.ops.pop(), ii=new Int32Array(a.i.length+b.i.length), zz=new Float32Array(a.z.length+b.z.length); ii.set(a.i); ii.set(b.i, a.i.length); zz.set(a.z); zz.set(b.z, a.z.length); a.i=ii; a.z=zz; } } } }catch(e){ console.warn(e); } return r; }); }catch(e){}
+
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
    the motor; the Monster is pitched a little lower and the Sports car higher. A soft thump when it lands a jump and a light plastic
    knock when it hits something, louder the harder the hit. Sound on the RC bar still loads your own file; Shift+click goes back to this. ===== */
@@ -28723,7 +28738,7 @@ var SBI_OLD=skinIcon;
 skinIcon=function(k){ var I=SBI_NEW[k]; if(!I) return SBI_OLD(k); return '<svg class="sbIc sbIc2" viewBox="0 0 24 24" aria-hidden="true">'+(I.f?'<path class="f" d="'+I.f+'"/>':'')+'<path d="'+I.s+'"/></svg>'; };
 function sbiSvg(k, col, sz){ var I=SBI_NEW[k]; if(!I) return ''; return '<svg class="sbIc2" viewBox="0 0 24 24" width="'+sz+'" height="'+sz+'" style="color:'+col+'" aria-hidden="true">'+(I.f?'<path class="f" d="'+I.f+'"/>':'')+'<path d="'+I.s+'"/></svg>'; }
 /* Clean up tiles take the same icons */
-var SBI_CLT={remove:'remove', fill:'fill', trim:'trim', tidy:'tidy', look:'look', repair:'repair'};
+var SBI_CLT={remove:'remove', holes:'fill', fill:'fill', trim:'trim', tidy:'tidy', look:'look', repair:'repair'};
 function sbiClt(){ document.querySelectorAll('#cuiTiles .cuiTile').forEach(function(b){ var k=SBI_CLT[b.dataset.task], sv=b.querySelector('svg'); if(!k||!sv||sv.classList.contains('sbIc2')) return; var col=sv.style.color||'currentColor'; var t=document.createElement('span'); t.innerHTML=sbiSvg(k, col, 26); sv.replaceWith(t.firstChild); }); }
 try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }catch(e){}
 (function(){ var c=document.createElement('style'); c.textContent=
@@ -28739,7 +28754,10 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'17 October 2026', r:'r447 to r466', t:[
+ {d:'17 October 2026', r:'r447 to r467', t:[
+  'Clean up is four tiles in the order you work: 1 Remove object, 2 Trim (Trim box plus Lasso, Box, Brush and Lines; nothing selects until you pick one), 3 Fix holes (one place for filling, Find holes, Clone, Repeat and Straighten), 4 Looks.',
+  'Clean up: removing an object also takes the see-through fringe it leaves behind, in the same Undo step.',
+  'Fix: after deleting something, the RC car and Walk see it gone (their maps of walls and ground are remade).',
   'Forked lightning: bolts are a little brighter and wider, reach higher into the sky and fork more near the cloud.',
   'Walk: up steps, stairs and ramps one tread at a time (the floor is read from the scan every 15 cm); a rise over 35 cm still stops you. Space jumps about 45 cm. The Walk bar is tidied, with Stop on the right and the keys underneath.',
   'RC car: the F1 car replaces the Sports car, with a Colour button on the RC bar (Orange, Blue, Red, Green, Purple, Yellow, White).',
