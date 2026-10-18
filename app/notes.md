@@ -1,1 +1,1 @@
-r471: RC headlight glow lens sized and on the car; red rear lights (brighter when braking), Rear button.
+r472: Delete + fill fills only the real hole; RC reverse lights.
