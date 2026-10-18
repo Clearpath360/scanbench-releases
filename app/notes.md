@@ -1,1 +1,1 @@
-r491: smooth camera routes (walk-through + compare paths), walk-through panel visible in Prep, distinct scan names.
+r492: auto line-up in step 2, date start places on route, one point editor, fly path side view.
