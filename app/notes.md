@@ -1,1 +1,1 @@
-r493: coloured cut edge where the height trim slices the scan.
+r494: Compare: recent scans list, click to add.
