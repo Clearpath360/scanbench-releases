@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-19 r497';
+var SB_BUILD='2026-10-19 r498';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29517,7 +29517,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'19 October 2026', r:'r494 to r497', t:[
+ {d:'19 October 2026', r:'r494 to r498', t:[
+  'Tabs fix: a scan opened any other way (dropped in, from a job, a converted file) now gets its tab too.',
   'Tabs: every scan you open gets a tab under the menu bar. Click a tab to switch (your work on each scan is kept), the cross closes it, + opens another. The dot means unsaved changes. Tabs come back next time.',
   'Fix: opening a different scan after cleaning one no longer deletes the same point numbers from the new scan.',
   'Fix: the smooth video (F9) now shows the RC car, and the fireworks, rain and lights drawn over the scan.',
@@ -29782,6 +29783,19 @@ setTimeout(tabsDraw, 900);
    also carried onto a different scan opened next, by point number. Opening another file now starts it clean. */
 sbBefore('openFile', function(f){ try{ if(f&&f.name&&!f.__sbConv&&f.name!==APP.fileName) APP._sbNewFile=true; }catch(e){} });
 sbAround('clnCarry', function(next){ if(APP._sbNewFile){ APP._sbNewFile=false; try{ CLN.sel=null; CLN.selIdx=new Int32Array(0); CLN.selN=0; CLN.shapes=[]; }catch(e){} return null; } return next(); });
+/* r498: a scan that opened by a route that never made its tab (dropped, opened from a job, an update, a converted format) gets one
+   as soon as it is on screen: matched to its recent entry by name, so the tab can open it again later */
+function tabsAdopt(){ try{ if(!APP.res||TABS.pend||TABS.busy||(typeof MS!=='undefined'&&MS.on)) return; var nm=APP.fileName||''; if(!nm) return;
+    if(typeof LCCI!=='undefined'&&LCCI.info&&LCCI.info.name&&nm===String(LCCI.info.name).replace(/\n/g,' ').replace(/\.lcc2?$/i,'')+'.ply') nm=String(LCCI.info.name).replace(/\n/g,' ');
+    var cur=TABS.list.filter(function(t){ return t.k===TABS.act; })[0]; if(cur&&cur.name===nm) return;
+    var byName=TABS.list.filter(function(t){ return t.name===nm; })[0]; if(byName){ TABS.act=byName.k; TABS.u0=APP.undo?APP.undo.length:0; tabsSave(); tabsDraw(); return; }
+    rcAll().then(function(L){ if(!APP.res) return; var q=L.filter(function(o){ return String(o.name).replace(/\n/g,' ')===nm; })[0], k=q?q.k:nm+'|'+(APP.fileBytes||0);
+      if(TABS.list.some(function(t){ return t.k===k; })){ TABS.act=k; } else { TABS.list.push({k:k, name:nm}); if(TABS.list.length>12) TABS.list.shift(); TABS.act=k; }
+      TABS.u0=APP.undo?APP.undo.length:0; tabsSave(); tabsDraw(); }); }catch(e){ console.warn(e); } }
+try{ sbAfter('onResult', function(r){ setTimeout(tabsAdopt, 1500); return r; }); }catch(e){}
+setInterval(tabsAdopt, 3000);
+/* and whatever route opens the next scan, the one on screen keeps its work first */
+sbBefore('openFile', function(f){ try{ if(f&&f.name&&!f.__sbConv&&APP.res&&TABS.act&&!TABS.busy&&f.name!==APP.fileName&&!(typeof MS!=='undefined'&&MS.on)){ var j=ceiJob(); tabsPut(TABS.act, {job:j, t:Date.now()}); } }catch(e){ console.warn(e); } });
 
 /* ===== r496: runs last of all the parts. The smooth video takes its frame here, after everything has been drawn into the 3D view
    (the RC car, fireworks, weather, lights, fun effects), not straight after the scan. Keep this file last in parts.txt. ===== */
