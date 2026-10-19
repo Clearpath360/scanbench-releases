@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-19 r495';
+var SB_BUILD='2026-10-19 r496';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -24531,7 +24531,9 @@ function srCompose(x, W, H){ var st=document.getElementById('stage'), r=st.getBo
   if(CEI.view==='3d'&&APP.view==='3d') put(glCv); else if(CEI.view==='plan') put(planCv); else put(document.getElementById('ceilCv'));
   put(document.getElementById('clnOv')); put(document.getElementById('mdlOv')); ['secOv','chkOv','lvOv'].forEach(function(id){ put(document.getElementById(id)); }); if(typeof sbOvExtra==='function') sbOvExtra().forEach(put); var mb=document.getElementById('ceMiniBox'); if(mb&&mb.style.display!=='none') put(document.getElementById('ceMini')); x.setTransform(1,0,0,1,0,0); }
 /* straight after each 3D draw, while the picture is still there */
-sbAfter('gl_render', function(r){ try{ if(SREC&&!SREC.done&&CEI.view==='3d'&&APP.view==='3d'){ var now=performance.now(); if(now-SREC.last>=30){ SREC.last=now; srCompose(SREC.x, SREC.cv.width, SREC.cv.height); SREC.n++; } } }catch(e){} return r; });
+function srGrab(){ try{ if(SREC&&!SREC.done&&CEI.view==='3d'&&APP.view==='3d'&&!miniVP){ var now=performance.now(); if(now-SREC.last>=30){ SREC.last=now; srCompose(SREC.x, SREC.cv.width, SREC.cv.height); SREC.n++; } } }catch(e){} }
+/* r496: the frame is taken by the very last hook on the 3D draw (sb99_zlast.js), so the RC car, fireworks, rain and everything else drawn after the scan is in it */
+sbAfter('gl_render', function(r){ if(!window.SR_LATE) srGrab(); return r; });
 function srStart(){ if(!APP.res){ toast('Load a scan first.'); return; } if(SREC||window.SB_REC){ toast('Already recording.', 2000); return; } if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){ toast('This browser cannot record video. Use Chrome or Edge.', 5000); return; }
   var st=document.getElementById('stage').getBoundingClientRect(), dpr=window.devicePixelRatio||1, W=Math.round(st.width*dpr), H=Math.round(st.height*dpr), s=Math.min(1, 1920/W, 1080/H); W=Math.round(W*s/2)*2; H=Math.round(H*s/2)*2;
   var cv=document.createElement('canvas'); cv.width=W; cv.height=H; var x=cv.getContext('2d'); srCompose(x, W, H);
@@ -29515,7 +29517,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'19 October 2026', r:'r494 to r495', t:[
+ {d:'19 October 2026', r:'r494 to r496', t:[
+  'Fix: the smooth video (F9) now shows the RC car, and the fireworks, rain and lights drawn over the scan.',
   'Timelapse: six new change styles: Build up, Top down, Laser scan, Blocks, Sweep and Pop. Pick them under Change style in step 4.',
   'Fly path: the heights are yours again: drag them in the side view, or set all points at once with Height and Look down, Set all. The camera glides smoothly between them.',
   'Walk-through: Match every point to point N under the side view puts the whole route at one height in one click.',
@@ -29702,6 +29705,11 @@ window.addEventListener('message', function(e){ if(e.data==='sbManClose') sbManC
 try{ sbAfter('sbMenus', function(M){ try{ var H=M.filter(function(m){ return m.id==='help'; })[0]; if(H&&!H.items.some(function(x){ return x&&x.t==='User manual'; })) H.items.unshift({t:'User manual', k:'F1', fn:function(){ sbManual(); }}); }catch(e){} return M; }); }catch(e){}
 try{ sbAfter('skinCmds', function(L){ if(!L.some(function(c){ return c&&c.t==='User manual'; })) L.unshift({t:'User manual', where:'Help', fn:function(){ sbManual(); }}); L.push({t:'Keyboard shortcuts in the manual', where:'Help', fn:function(){ sbManual('keys'); }}, {t:'FAQ', where:'Help', fn:function(){ sbManual('faq'); }}); return L; }); }catch(e){}
 (function(){ var box=document.getElementById('sbChk'); if(!box) return; var b=document.createElement('button'); b.type='button'; b.className='sbManB'; b.textContent='Read the manual (F1)'; var t=box.querySelector('#sbTourB'); if(t){ b.className=t.className+' sbManB'; t.after(b); } else box.appendChild(b); b.onclick=function(e){ e.stopPropagation(); sbManual(); }; })();
+
+/* ===== r496: runs last of all the parts. The smooth video takes its frame here, after everything has been drawn into the 3D view
+   (the RC car, fireworks, weather, lights, fun effects), not straight after the scan. Keep this file last in parts.txt. ===== */
+window.SR_LATE=true;
+sbAfter('gl_render', function(r){ try{ srGrab(); }catch(e){} return r; });
 
 
 </script>
