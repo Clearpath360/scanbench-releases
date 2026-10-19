@@ -1,1 +1,1 @@
-r494: Compare: recent scans list, click to add.
+r495: six new timelapse change styles; fly path heights adjustable with set-all; match all heights button.
