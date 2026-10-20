@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-20 r503';
+var SB_BUILD='2026-10-20 r504';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29572,7 +29572,9 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'20 October 2026', r:'r503', t:[
+ {d:'20 October 2026', r:'r503 to r504', t:[
+  'Fix: on LCC scans, bits of something you deleted no longer show up inside the box while you turn the view. The lighter copy used while turning leaves out any big splat that reaches into deleted space, and the full scan is drawn there instead.',
+  'Fix: no freeze or black view when you start turning just after a delete. The lighter copy is remade straight after the delete, and until it is ready the full scan is used while turning.',
   'Trim box panel: the count and a red Delete inside at the top, Width, Depth and Height in the unit set on the top bar, exact position, turn and tilt folded away under one line, and a key for the handles.',
   'Fix holes: the tools are labelled tiles in two groups, Fill gaps and Fix surfaces. Only the picked tool\'s settings show, as switches with plain words. Photo out and Photo in sit under Photo editing.'
  ]},
@@ -30244,6 +30246,50 @@ function funRecPaint(x, X, Y, W, H, k){ x.save(); x.beginPath(); x.rect(X, Y, W,
   else if(k==='old'){ vign(0.28, 'rgba(40,25,10,0.75)'); }
   x.restore(); }
 try{ var _fl=funLook; funLook=function(k){ var r=_fl.apply(this, arguments); try{ var t=document.getElementById('toast'); if(t&&/On screen only for now/.test(t.textContent)) t.textContent=t.textContent.replace(' (On screen only for now.)',' It shows in pictures and videos too.'); }catch(e){} return r; }; }catch(e){}
+
+/* ===== r504: nothing deleted comes back while you turn an LCC scan.
+   1) The lighter level's splats are big; one whose centre sat just outside a delete still reached into it, so bits of the deleted
+      thing showed while turning. Now a lighter splat is left out if its own size reaches the deleted space, and the full scan's
+      splats are drawn in that whole zone instead.
+   2) Remaking the lighter level after a delete took about a second, and it was done at the moment you started turning (a freeze,
+      sometimes a black view). Now it is remade straight after the delete while nothing moves, and until it is ready the full scan
+      is drawn while turning. ===== */
+var LOD2={busy:false, tm:0, want:null, last:0};
+function lod2Key(){ return lccXfKey()+'|'+SPL.n+'|'+LODFX.ver+'|e2'; }
+function lod2Build(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.res||!S.raw) return null; var t0=performance.now(), R=APP.res, del=R.del, k=lod2Key();
+  var Src=SPL.src, P=Src.pos, n=Src.n, mn=[1e30,1e30,1e30], mx=[-1e30,-1e30,-1e30], i, a, live=function(j){ return !(del&&del[j])&&P[j*3+2]>DEL_Z+1; };
+  for(i=0;i<n;i++){ if(!live(i)) continue; for(a=0;a<3;a++){ var v=P[i*3+a]; if(v<mn[a]) mn[a]=v; if(v>mx[a]) mx[a]=v; } }
+  if(mn[0]>mx[0]) return null;
+  var c=0.15, dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); while(dims[0]*dims[1]*dims[2]>60e6){ c*=1.25; dims=[0,1,2].map(function(q){ return Math.max(1, Math.ceil((mx[q]-mn[q])/c)+3); }); }
+  var X=dims[0], Y=dims[1], Zd=dims[2], XY=X*Y, NC=XY*Zd, G=new Uint8Array(NC), Dg=null, cell=function(x,y,z){ var gx=Math.floor((x-mn[0])/c)+1, gy=Math.floor((y-mn[1])/c)+1, gz=Math.floor((z-mn[2])/c)+1; if(gx<1||gy<1||gz<1||gx>X-2||gy>Y-2||gz>Zd-2) return -1; return gx+gy*X+gz*XY; };
+  for(i=0;i<n;i++){ if(!live(i)) continue; var q=cell(P[i*3],P[i*3+1],P[i*3+2]); if(q>=0&&G[q]<255) G[q]++; }
+  /* distance, in cells, from every cell near a delete or a fill to the nearest deleted (or filled) cell; 255 = far */
+  var MAXD=12, dist=null, front=[];
+  var DZ=lodfxDeletedPos(); if(DZ&&DZ.length){ Dg=new Uint8Array(NC); dist=new Uint8Array(NC).fill(255); for(i=0;i<DZ.length;i+=3){ var q2=cell(DZ[i],DZ[i+1],DZ[i+2]); if(q2<0) continue; if(Dg[q2]<255) Dg[q2]++; if(dist[q2]){ dist[q2]=0; front.push(q2); } } }
+  try{ if(typeof PATCH!=='undefined') PATCH.list.forEach(function(p){ if(p.off||!p.n||!p.pos) return; if(!dist) dist=new Uint8Array(NC).fill(255); for(var j=0;j<p.n;j+=3){ var q3=cell(p.pos[j*3],p.pos[j*3+1],p.pos[j*3+2]); if(q3>=0&&dist[q3]){ dist[q3]=0; front.push(q3); } } }); }catch(e){}
+  if(dist){ var nb=[1,-1,X,-X,XY,-XY]; for(var d=1; d<=MAXD&&front.length; d++){ var nx=[]; for(var f=0; f<front.length; f++){ var q4=front[f]; for(var e=0;e<6;e++){ var w=q4+nb[e]; if(w<0||w>=NC||dist[w]<=d) continue; dist[w]=d; nx.push(w); } } front=nx; } }
+  var lo=lccToRes(S.raw, null), keepI=new Uint32Array(lo.n), m=0, zoneR=0;
+  for(i=0;i<lo.n;i++){ var x=lo.pos[i*3], y=lo.pos[i*3+1], z=lo.pos[i*3+2], q5=cell(x,y,z); if(q5<0) continue;
+    if(dist){ var cv=lo.cov, rad=Math.min(MAXD*c, 2.2*Math.sqrt(Math.max(cv[i*6], cv[i*6+3], cv[i*6+5]))), dd=dist[q5];
+      if(dd<255&&dd*c<=rad+c){ if(rad>zoneR) zoneR=rad; continue; } }
+    /* what is still in the scan here beats what was deleted */
+    var L=0, D=0; if(G[q5]||(Dg&&Dg[q5])){ L=G[q5]; D=Dg?Dg[q5]:0; } else { for(var dz=-1;dz<=1;dz++) for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++){ var kk=q5+dx+dy*X+dz*XY; L+=G[kk]; if(Dg) D+=Dg[kk]; } }
+    if(L>0&&L>=D) keepI[m++]=i; }
+  /* the full scan's own splats over the whole zone the lighter splats were taken out of */
+  var add=[]; if(dist){ var zc=Math.min(MAXD, Math.ceil(zoneR/c)+1); for(i=0;i<n;i++){ if(!live(i)) continue; var q6=cell(P[i*3],P[i*3+1],P[i*3+2]); if(q6>=0&&dist[q6]<=zc) add.push(i); } }
+  var st=Math.max(1, Math.ceil(add.length/900000)); if(st>1) add=add.filter(function(_, j){ return j%st===0; });
+  var N=m+add.length, pos=new Float32Array(N*3), cov=new Float32Array(N*6), col=new Uint8Array(N*3), opa=new Uint8Array(N);
+  for(var j=0;j<m;j++){ var s=keepI[j]; pos[j*3]=lo.pos[s*3]; pos[j*3+1]=lo.pos[s*3+1]; pos[j*3+2]=lo.pos[s*3+2]; for(var e2=0;e2<6;e2++) cov[j*6+e2]=lo.cov[s*6+e2]; col[j*3]=lo.col[s*3]; col[j*3+1]=lo.col[s*3+1]; col[j*3+2]=lo.col[s*3+2]; opa[j]=lo.opa[s]; }
+  add.forEach(function(s, j){ var o=m+j; pos[o*3]=P[s*3]; pos[o*3+1]=P[s*3+1]; pos[o*3+2]=P[s*3+2]; for(var e3=0;e3<6;e3++) cov[o*6+e3]=Src.cov?Src.cov[s*6+e3]:0; col[o*3]=Src.col[s*3]; col[o*3+1]=Src.col[s*3+1]; col[o*3+2]=Src.col[s*3+2]; opa[o]=Src.opa?Src.opa[s]:255; });
+  lccDrop(S); S.set=lccSet({n:N, pos:pos, cov:cov, col:col, opa:opa}); S.key=k; S.srcRef=SPL.src; LOD2.last=performance.now()-t0; LOD2.stats={lod:lo.n, kept:m, added:add.length, zoneR:+zoneR.toFixed(2)}; return S.set; }
+function lod2Soon(){ clearTimeout(LOD2.tm); LOD2.tm=setTimeout(function(){ var S=LCCI.lod; if(!S||!S.on) return; if(glMoving){ lod2Soon(); return; } if(S.set&&S.key===lod2Key()&&S.srcRef===SPL.src) return;
+    LOD2.busy=true; try{ lod2Build(); }catch(e){ console.warn(e); } finally{ LOD2.busy=false; } }, 350); }
+lodfxReady=function(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.res) return null; if(S.set&&S.key===lod2Key()&&S.srcRef===SPL.src) return S.set;
+  /* the very first time (no lighter level yet, nothing deleted) build it now; after an edit, draw the full scan until it is remade */
+  if(!S.set&&!(APP.res.del&&LODFX.ver)){ try{ return lod2Build(); }catch(e){ console.warn(e); return null; } }
+  lod2Soon(); return null; };
+(function(){ var bump=function(){ try{ lod2Soon(); }catch(e){} };
+  try{ sbAfter('clnApply', function(r){ bump(); return r; }); }catch(e){} try{ sbAfter('patchRebuild', function(r){ bump(); return r; }); }catch(e){} try{ sbAfter('clbEnd', function(r){ bump(); return r; }); }catch(e){} })();
 
 /* ===== r496: runs last of all the parts. The smooth video takes its frame here, after everything has been drawn into the 3D view
    (the RC car, fireworks, weather, lights, fun effects), not straight after the scan. Keep this file last in parts.txt. ===== */
