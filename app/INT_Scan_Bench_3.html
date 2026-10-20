@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-20 r504';
+var SB_BUILD='2026-10-20 r505';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29572,7 +29572,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'20 October 2026', r:'r503 to r504', t:[
+ {d:'20 October 2026', r:'r503 to r505', t:[
+  'Help > Licence: where the licence key goes once the shop opens (email plus key, works on 2 computers, Move to another computer). It is not switched on yet, so nothing is locked.',
   'Fix: on LCC scans, bits of something you deleted no longer show up inside the box while you turn the view. The lighter copy used while turning leaves out any big splat that reaches into deleted space, and the full scan is drawn there instead.',
   'Fix: no freeze or black view when you start turning just after a delete. The lighter copy is remade straight after the delete, and until it is ready the full scan is used while turning.',
   'Trim box panel: the count and a red Delete inside at the top, Width, Depth and Height in the unit set on the top bar, exact position, turn and tilt folded away under one line, and a key for the handles.',
@@ -30290,6 +30291,88 @@ lodfxReady=function(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.
   lod2Soon(); return null; };
 (function(){ var bump=function(){ try{ lod2Soon(); }catch(e){} };
   try{ sbAfter('clnApply', function(r){ bump(); return r; }); }catch(e){} try{ sbAfter('patchRebuild', function(r){ bump(); return r; }); }catch(e){} try{ sbAfter('clbEnd', function(r){ bump(); return r; }); }catch(e){} })();
+
+/* ===== r505: licence key (Lemon Squeezy). The buyer pays, gets a key by email, types it in once with their email; the app checks it
+   with Lemon Squeezy and remembers it on this computer. Each key works on LIC.cfg.limit computers (set on the Lemon Squeezy product).
+   It re-checks quietly at start; without internet it keeps working for LIC.cfg.grace days after the last good check.
+   A key for another product, or one that is expired (subscription ended) or disabled, is refused.
+   LIC.cfg.enforce stays false until the store and product ids are filled in, so nothing locks before the shop is live. ===== */
+var LIC={cfg:{name:'Scan Bench', storeId:0, productIds:[], api:'https://api.lemonsqueezy.com/v1/licenses', buyUrl:'', helpEmail:'', grace:14, enforce:false}, st:null, busy:false};
+function licLoad(){ try{ LIC.st=JSON.parse(localStorage.getItem('sb_lic')||'null'); }catch(e){ LIC.st=null; } return LIC.st; }
+function licSave(s){ LIC.st=s; try{ if(s) localStorage.setItem('sb_lic', JSON.stringify(s)); else localStorage.removeItem('sb_lic'); }catch(e){} }
+function licMachine(){ var id=null; try{ id=localStorage.getItem('sb_lic_pc'); }catch(e){} if(!id){ id=Math.random().toString(36).slice(2,8).toUpperCase(); try{ localStorage.setItem('sb_lic_pc', id); }catch(e){} }
+  var host=''; try{ host=(window.sbDesk&&window.sbDesk.hostname)||''; }catch(e){} return (host?host+' ':'')+'('+id+')'; }
+function licPost(path, body){ var f=(window.sbDesk&&typeof window.sbDesk.fetch==='function')?window.sbDesk.fetch:fetch, form=Object.keys(body).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(body[k]); }).join('&');
+  return Promise.resolve(f(LIC.cfg.api+'/'+path, {method:'POST', headers:{'Accept':'application/json', 'Content-Type':'application/x-www-form-urlencoded'}, body:form})).then(function(r){ return r.json().then(function(j){ j._http=r.status; return j; }, function(){ return {_http:r.status, error:'The licence server sent back something unexpected ('+r.status+').'}; }); }); }
+/* is this key for our product, bought with this email? */
+function licMine(j, email){ var m=j&&j.meta||{}, C=LIC.cfg; if(C.storeId&&+m.store_id!==+C.storeId) return 'That key is for a different shop, not '+C.name+'.';
+  if(C.productIds.length&&C.productIds.map(Number).indexOf(+m.product_id)<0) return 'That key is for a different product, not '+C.name+'.';
+  if(email&&m.customer_email&&String(m.customer_email).trim().toLowerCase()!==String(email).trim().toLowerCase()) return 'That key was bought with a different email address. Use the email on your receipt.';
+  return null; }
+function licWhy(j){ var e=String(j&&j.error||''), k=j&&j.license_key||{};
+  if(/activation limit/i.test(e)||(k.activation_limit&&k.activation_usage>=k.activation_limit&&!j.activated)) return 'This key is already in use on '+(k.activation_limit||'the most')+' computer'+(k.activation_limit>1?'s':'')+'. On the old computer use Help > Licence > Move to another computer, then try again.';
+  if(k.status==='expired') return 'This licence has expired.'+(LIC.cfg.buyUrl?' You can renew it from the shop.':'');
+  if(k.status==='disabled') return 'This licence has been turned off. Please get in touch.';
+  if(/not found|invalid/i.test(e)) return 'That key was not recognised. Check it against the email you were sent (copy and paste it if you can).';
+  return e||'The key could not be checked.'; }
+function licActivate(key, email){ key=String(key||'').trim(); email=String(email||'').trim(); if(!key) return Promise.resolve({ok:false, msg:'Type or paste your licence key.'}); if(!/@/.test(email)) return Promise.resolve({ok:false, msg:'Type the email address you bought it with.'});
+  var name=licMachine(); return licPost('activate', {license_key:key, instance_name:name}).then(function(j){
+      if(!j.activated) return {ok:false, msg:licWhy(j)}; var bad=licMine(j, email);
+      if(bad){ licPost('deactivate', {license_key:key, instance_id:j.instance&&j.instance.id}).catch(function(){}); return {ok:false, msg:bad}; }
+      var k=j.license_key||{}; licSave({key:key, email:email, inst:j.instance&&j.instance.id, pc:name, status:k.status||'active', exp:k.expires_at||null, limit:k.activation_limit||null, used:k.activation_usage||null, product:(j.meta||{}).product_name||'', variant:(j.meta||{}).variant_name||'', ok:Date.now(), checked:Date.now()});
+      return {ok:true}; }, function(e){ return {ok:false, msg:'Could not reach the licence server. Check the internet connection and try again.'}; }); }
+/* quiet check at start: valid keeps going; refused locks; no internet is fine for LIC.cfg.grace days */
+function licValidate(){ var s=licLoad(); if(!s||!s.key) return Promise.resolve({ok:false, why:'none'});
+  return licPost('validate', {license_key:s.key, instance_id:s.inst||''}).then(function(j){ var k=j.license_key||{}; s.checked=Date.now();
+      if(j.valid&&(!k.status||k.status==='active')&&!licMine(j, s.email)&&(!s.inst||j.instance)){ s.ok=Date.now(); s.status=k.status||'active'; s.exp=k.expires_at||null; s.used=k.activation_usage; s.limit=k.activation_limit; licSave(s); return {ok:true}; }
+      s.status=k.status||'invalid'; s.bad=licWhy(j); if(!j.instance&&s.inst&&j.valid) s.bad='This computer was removed from the licence. Type the key again to add it back.'; licSave(s); return {ok:false, why:'refused', msg:s.bad}; },
+    function(){ var left=LIC.cfg.grace-(Date.now()-(s.ok||0))/864e5; return left>0?{ok:true, offline:true, days:Math.ceil(left)}:{ok:false, why:'offline', msg:'Scan Bench needs to check the licence online once every '+LIC.cfg.grace+' days. Connect to the internet and press Check again.'}; }); }
+function licDeactivate(){ var s=licLoad(); if(!s) return Promise.resolve({ok:true}); return licPost('deactivate', {license_key:s.key, instance_id:s.inst||''}).then(function(j){ if(j.deactivated||/not found/i.test(String(j.error||''))){ licSave(null); return {ok:true}; } return {ok:false, msg:licWhy(j)}; }, function(){ return {ok:false, msg:'Could not reach the licence server, so this computer was not released. Try again when online.'}; }); }
+function licGood(){ var s=LIC.st; if(!s||!s.key||s.bad) return false; if(s.status&&s.status!=='active') return false; return (Date.now()-(s.ok||0))/864e5<LIC.cfg.grace; }
+/* ---------- the screen ---------- */
+function licShow(mode, msg){ var old=document.getElementById('licBox'); if(old) old.remove(); var C=LIC.cfg, s=LIC.st, d=document.createElement('div'); d.id='licBox'; var lock=mode==='lock';
+  var e=function(t){ return String(t==null?'':t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var h='<div class="licB"><div class="licH"><b>'+e(C.name)+' licence</b>'+(lock?'':'<button class="licX" id="licX" title="Close">✕</button>')+'</div>';
+  if(s&&s.key&&!s.bad&&mode!=='enter'){ var masked=s.key.replace(/^(.{4}).*(.{4})$/, '$1••••••••$2');
+    h+='<div class="licOk'+(lock?' warn':'')+'"><span class="licDot"></span><div><b>'+(lock?'Needs checking online':'Licensed')+'</b><small>'+e(s.product||C.name)+(s.variant&&s.variant!=='Default'?' · '+e(s.variant):'')+'</small></div></div>'+
+      '<dl><dt>Key</dt><dd>'+e(masked)+'</dd><dt>Email</dt><dd>'+e(s.email)+'</dd><dt>This computer</dt><dd>'+e(s.pc)+'</dd>'+(s.limit?'<dt>Computers</dt><dd>'+e((s.used||1)+' of '+s.limit+' in use')+'</dd>':'')+(s.exp?'<dt>Renews / ends</dt><dd>'+e(new Date(s.exp).toLocaleDateString('en-GB'))+'</dd>':'')+'<dt>Last checked</dt><dd>'+e(s.ok?new Date(s.ok).toLocaleString('en-GB'):'never')+'</dd></dl>'+
+      (msg?'<p class="licMsg">'+e(msg)+'</p>':'')+'<div class="licF"><button id="licMove" title="Frees this computer\'s place, so the key can be used on another one">Move to another computer</button><button id="licChk" class="p">Check now</button></div>';
+  } else {
+    h+='<p class="licLead">'+(lock?'To use '+e(C.name)+', type the licence key from the email you were sent when you bought it.':'Type the licence key from your purchase email.')+'</p>'+
+      '<label>Email you bought it with<input id="licEm" type="email" autocomplete="email" value="'+e(s&&s.email||'')+'" placeholder="you@example.co.uk"></label>'+
+      '<label>Licence key<input id="licKey" type="text" spellcheck="false" autocomplete="off" value="'+e(s&&s.bad?s.key:'')+'" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"></label>'+
+      '<p class="licMsg'+(msg?' bad':'')+'" id="licMsg">'+e(msg||'')+'</p><div class="licF">'+(C.buyUrl?'<a href="'+e(C.buyUrl)+'" target="_blank" rel="noopener">Buy a licence</a>':'<span></span>')+'<button id="licGo" class="p">Activate</button></div>'+
+      (C.helpEmail?'<p class="licSm">Lost your key or stuck? Email <b>'+e(C.helpEmail)+'</b></p>':'');
+  }
+  d.innerHTML=h+'</div>'; if(lock) d.classList.add('lock'); document.body.appendChild(d); var g=function(id){ return d.querySelector('#'+id); };
+  d.querySelectorAll('input').forEach(function(i){ i.onkeydown=function(ev){ ev.stopPropagation(); if(ev.key==='Enter'&&g('licGo')) g('licGo').click(); }; });
+  if(g('licX')) g('licX').onclick=function(){ d.remove(); };
+  if(g('licGo')) g('licGo').onclick=function(){ var b=this; b.disabled=true; b.textContent='Checking…'; g('licMsg').className='licMsg'; g('licMsg').textContent='';
+    licActivate(g('licKey').value, g('licEm').value).then(function(r){ if(r.ok){ d.remove(); document.body.classList.remove('licLocked'); toast(C.name+' is licensed on this computer. Thank you.', 4000); return; } b.disabled=false; b.textContent='Activate'; g('licMsg').className='licMsg bad'; g('licMsg').textContent=r.msg; }); };
+  if(g('licChk')) g('licChk').onclick=function(){ var b=this; b.disabled=true; b.textContent='Checking…'; licValidate().then(function(r){ licGate(r); if(document.getElementById('licBox')&&!document.body.classList.contains('licLocked')) licShow('info', r.ok?(r.offline?'Offline: works for '+r.days+' more day'+(r.days>1?'s':'')+' without a check.':'Checked just now: all good.'):r.msg); }); };
+  if(g('licMove')) g('licMove').onclick=function(){ var b=this; b.disabled=true; b.textContent='Releasing…'; licDeactivate().then(function(r){ if(r.ok){ toast('This computer is released. Type the key on the new one.', 5000); licGate({ok:false, why:'none'}); if(!LIC.cfg.enforce) licShow('enter'); } else { b.disabled=false; b.textContent='Move to another computer'; licShow('info', r.msg); } }); };
+  setTimeout(function(){ var f=g('licEm')&&!g('licEm').value?g('licEm'):g('licKey'); if(f) f.focus(); }, 50); }
+/* lock or unlock the app from a check result */
+function licGate(r){ if(!LIC.cfg.enforce){ document.body.classList.remove('licLocked'); return; }
+  if(r&&r.ok){ document.body.classList.remove('licLocked'); var b=document.getElementById('licBox'); if(b&&b.classList.contains('lock')) b.remove(); return; }
+  document.body.classList.add('licLocked'); licShow('lock', r&&r.why==='none'?'':(r&&r.msg)); }
+function licStart(){ licLoad(); if(!LIC.cfg.enforce) return; if(!LIC.st){ licGate({ok:false, why:'none'}); return; }
+  if(!licGood()) licGate({ok:false, why:'offline', msg:'Checking your licence…'});
+  licValidate().then(licGate); }
+(function(){ var c=document.createElement('style'); c.textContent=
+  '#licBox{position:fixed;inset:0;z-index:9500;background:rgba(10,14,20,.45);display:flex;align-items:center;justify-content:center;font:13px Inter,Segoe UI,system-ui,sans-serif}#licBox.lock{background:rgba(10,14,20,.82)}'+
+  '#licBox .licB{width:min(440px,92vw);background:var(--bg2,#fff);color:var(--sbTx,#1f2933);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:18px;display:flex;flex-direction:column;gap:10px}'+
+  '#licBox .licH{display:flex;align-items:center}#licBox .licH b{flex:1;font-size:17px}#licBox .licX{border:0;background:rgba(127,127,127,.14);border-radius:8px;width:28px;height:28px;cursor:pointer;color:inherit}'+
+  '#licBox .licLead{margin:0;line-height:1.45;color:#46546a}#licBox label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#6b7785}#licBox input{width:100%!important;min-width:0;box-sizing:border-box;height:auto!important;border:1px solid var(--sbLn,#cfd5dc);border-radius:9px;padding:9px 10px;font:14px Inter,Segoe UI,system-ui,sans-serif;color:inherit;background:transparent}#licBox input:focus{outline:2px solid #0b5cd5;border-color:#0b5cd5}'+
+  '#licBox #licKey{font-family:Consolas,ui-monospace,monospace;letter-spacing:.02em}#licBox .licMsg{margin:0;min-height:1em;line-height:1.4}#licBox .licMsg.bad{color:#dc2626}#licBox .licSm{margin:0;font-size:12px;color:#6b7785}'+
+  '#licBox .licF{display:flex;gap:8px;align-items:center;justify-content:space-between}#licBox .licF button{border:1px solid var(--sbLn,#cfd5dc);background:transparent;color:inherit;border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer}#licBox .licF button.p{background:#0b5cd5;border-color:#0b5cd5;color:#fff;font-weight:600}#licBox .licF button:disabled{opacity:.6;cursor:default}#licBox a{color:#0b5cd5;font-weight:600}'+
+  '#licBox .licOk{display:flex;gap:10px;align-items:center;background:rgba(22,163,74,.09);border-radius:10px;padding:9px 10px}#licBox .licOk small{display:block;color:#6b7785}#licBox .licDot{width:12px;height:12px;border-radius:6px;background:#16a34a}#licBox .licOk.warn{background:rgba(217,119,6,.1)}#licBox .licOk.warn .licDot{background:#d97706}'+
+  '#licBox dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0}#licBox dt{color:#6b7785}#licBox dd{margin:0;overflow-wrap:anywhere}'+
+  'body.licLocked #stage, body.licLocked #sbRail{pointer-events:none;filter:blur(3px)}';
+  document.head.appendChild(c);
+  try{ sbAfter('sbMenus', function(M){ try{ var H=M.filter(function(m){ return m.id==='help'; })[0]; if(H){ var i=H.items.findIndex(function(x){ return x.sep; }); H.items.splice(i<0?H.items.length:i, 0, {t:'Licence...', fn:function(){ licLoad(); licShow(LIC.st&&LIC.st.key&&!LIC.st.bad?'info':'enter'); }}); } }catch(e){} return M; }); }catch(e){}
+  try{ sbAfter('skinCmds', function(L){ L.push({t:'Licence key', where:'Help', fn:function(){ licLoad(); licShow(LIC.st&&LIC.st.key&&!LIC.st.bad?'info':'enter'); }}); return L; }); }catch(e){}
+  setTimeout(licStart, 600); })();
 
 /* ===== r496: runs last of all the parts. The smooth video takes its frame here, after everything has been drawn into the 3D view
    (the RC car, fireworks, weather, lights, fun effects), not straight after the scan. Keep this file last in parts.txt. ===== */

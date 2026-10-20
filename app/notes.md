@@ -1,3 +1,2 @@
-r504 (20 October 2026)
-- Fix: LCC scans no longer show deleted bits inside the box while turning.
-- Fix: no freeze or black view when turning just after a delete.
+r505 (20 October 2026)
+- Help > Licence: the licence key screen for the paid beta (not switched on yet, nothing is locked).
