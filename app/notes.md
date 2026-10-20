@@ -1,2 +1,2 @@
-r505 (20 October 2026)
-- Help > Licence: the licence key screen for the paid beta (not switched on yet, nothing is locked).
+r506 (20 October 2026)
+- Help > Licence checks keys from the Clearpath360 shop, with a Buy a licence link (not switched on yet).

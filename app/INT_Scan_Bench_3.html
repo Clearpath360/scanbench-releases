@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-20 r505';
+var SB_BUILD='2026-10-20 r506';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29572,7 +29572,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'20 October 2026', r:'r503 to r505', t:[
+ {d:'20 October 2026', r:'r503 to r506', t:[
+  'Help > Licence now checks keys from the Clearpath360 shop and links to Buy a licence. It is still not switched on, so nothing is locked.',
   'Help > Licence: where the licence key goes once the shop opens (email plus key, works on 2 computers, Move to another computer). It is not switched on yet, so nothing is locked.',
   'Fix: on LCC scans, bits of something you deleted no longer show up inside the box while you turn the view. The lighter copy used while turning leaves out any big splat that reaches into deleted space, and the full scan is drawn there instead.',
   'Fix: no freeze or black view when you start turning just after a delete. The lighter copy is remade straight after the delete, and until it is ready the full scan is used while turning.',
@@ -30297,7 +30298,7 @@ lodfxReady=function(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.
    It re-checks quietly at start; without internet it keeps working for LIC.cfg.grace days after the last good check.
    A key for another product, or one that is expired (subscription ended) or disabled, is refused.
    LIC.cfg.enforce stays false until the store and product ids are filled in, so nothing locks before the shop is live. ===== */
-var LIC={cfg:{name:'Scan Bench', storeId:0, productIds:[], api:'https://api.lemonsqueezy.com/v1/licenses', buyUrl:'', helpEmail:'', grace:14, enforce:false}, st:null, busy:false};
+var LIC={cfg:{name:'Scan Bench', storeId:502957, productIds:[], api:'https://api.lemonsqueezy.com/v1/licenses', buyUrl:'https://clearpath360.lemonsqueezy.com/checkout/buy/9eeb3c10-cc0c-464e-9fe0-9597f391b988', helpEmail:'info@clearpath360.co.uk', grace:14, enforce:false /* LAUNCH DAY: set true */}, st:null, busy:false};
 function licLoad(){ try{ LIC.st=JSON.parse(localStorage.getItem('sb_lic')||'null'); }catch(e){ LIC.st=null; } return LIC.st; }
 function licSave(s){ LIC.st=s; try{ if(s) localStorage.setItem('sb_lic', JSON.stringify(s)); else localStorage.removeItem('sb_lic'); }catch(e){} }
 function licMachine(){ var id=null; try{ id=localStorage.getItem('sb_lic_pc'); }catch(e){} if(!id){ id=Math.random().toString(36).slice(2,8).toUpperCase(); try{ localStorage.setItem('sb_lic_pc', id); }catch(e){} }
@@ -30319,12 +30320,12 @@ function licActivate(key, email){ key=String(key||'').trim(); email=String(email
   var name=licMachine(); return licPost('activate', {license_key:key, instance_name:name}).then(function(j){
       if(!j.activated) return {ok:false, msg:licWhy(j)}; var bad=licMine(j, email);
       if(bad){ licPost('deactivate', {license_key:key, instance_id:j.instance&&j.instance.id}).catch(function(){}); return {ok:false, msg:bad}; }
-      var k=j.license_key||{}; licSave({key:key, email:email, inst:j.instance&&j.instance.id, pc:name, status:k.status||'active', exp:k.expires_at||null, limit:k.activation_limit||null, used:k.activation_usage||null, product:(j.meta||{}).product_name||'', variant:(j.meta||{}).variant_name||'', ok:Date.now(), checked:Date.now()});
+      var k=j.license_key||{}; licSave({key:key, email:email, inst:j.instance&&j.instance.id, pc:name, status:k.status||'active', exp:k.expires_at||null, limit:k.activation_limit||null, used:k.activation_usage||null, product:(j.meta||{}).product_name||'', pid:(j.meta||{}).product_id||null, sid:(j.meta||{}).store_id||null, variant:(j.meta||{}).variant_name||'', ok:Date.now(), checked:Date.now()});
       return {ok:true}; }, function(e){ return {ok:false, msg:'Could not reach the licence server. Check the internet connection and try again.'}; }); }
 /* quiet check at start: valid keeps going; refused locks; no internet is fine for LIC.cfg.grace days */
 function licValidate(){ var s=licLoad(); if(!s||!s.key) return Promise.resolve({ok:false, why:'none'});
   return licPost('validate', {license_key:s.key, instance_id:s.inst||''}).then(function(j){ var k=j.license_key||{}; s.checked=Date.now();
-      if(j.valid&&(!k.status||k.status==='active')&&!licMine(j, s.email)&&(!s.inst||j.instance)){ s.ok=Date.now(); s.status=k.status||'active'; s.exp=k.expires_at||null; s.used=k.activation_usage; s.limit=k.activation_limit; licSave(s); return {ok:true}; }
+      if(j.valid&&(!k.status||k.status==='active')&&!licMine(j, s.email)&&(!s.inst||j.instance)){ s.ok=Date.now(); s.pid=(j.meta||{}).product_id||s.pid; s.sid=(j.meta||{}).store_id||s.sid; s.status=k.status||'active'; s.exp=k.expires_at||null; s.used=k.activation_usage; s.limit=k.activation_limit; licSave(s); return {ok:true}; }
       s.status=k.status||'invalid'; s.bad=licWhy(j); if(!j.instance&&s.inst&&j.valid) s.bad='This computer was removed from the licence. Type the key again to add it back.'; licSave(s); return {ok:false, why:'refused', msg:s.bad}; },
     function(){ var left=LIC.cfg.grace-(Date.now()-(s.ok||0))/864e5; return left>0?{ok:true, offline:true, days:Math.ceil(left)}:{ok:false, why:'offline', msg:'Scan Bench needs to check the licence online once every '+LIC.cfg.grace+' days. Connect to the internet and press Check again.'}; }); }
 function licDeactivate(){ var s=licLoad(); if(!s) return Promise.resolve({ok:true}); return licPost('deactivate', {license_key:s.key, instance_id:s.inst||''}).then(function(j){ if(j.deactivated||/not found/i.test(String(j.error||''))){ licSave(null); return {ok:true}; } return {ok:false, msg:licWhy(j)}; }, function(){ return {ok:false, msg:'Could not reach the licence server, so this computer was not released. Try again when online.'}; }); }
@@ -30335,7 +30336,7 @@ function licShow(mode, msg){ var old=document.getElementById('licBox'); if(old) 
   var h='<div class="licB"><div class="licH"><b>'+e(C.name)+' licence</b>'+(lock?'':'<button class="licX" id="licX" title="Close">✕</button>')+'</div>';
   if(s&&s.key&&!s.bad&&mode!=='enter'){ var masked=s.key.replace(/^(.{4}).*(.{4})$/, '$1••••••••$2');
     h+='<div class="licOk'+(lock?' warn':'')+'"><span class="licDot"></span><div><b>'+(lock?'Needs checking online':'Licensed')+'</b><small>'+e(s.product||C.name)+(s.variant&&s.variant!=='Default'?' · '+e(s.variant):'')+'</small></div></div>'+
-      '<dl><dt>Key</dt><dd>'+e(masked)+'</dd><dt>Email</dt><dd>'+e(s.email)+'</dd><dt>This computer</dt><dd>'+e(s.pc)+'</dd>'+(s.limit?'<dt>Computers</dt><dd>'+e((s.used||1)+' of '+s.limit+' in use')+'</dd>':'')+(s.exp?'<dt>Renews / ends</dt><dd>'+e(new Date(s.exp).toLocaleDateString('en-GB'))+'</dd>':'')+'<dt>Last checked</dt><dd>'+e(s.ok?new Date(s.ok).toLocaleString('en-GB'):'never')+'</dd></dl>'+
+      '<dl><dt>Key</dt><dd>'+e(masked)+'</dd><dt>Email</dt><dd>'+e(s.email)+'</dd><dt>This computer</dt><dd>'+e(s.pc)+'</dd>'+(s.limit?'<dt>Computers</dt><dd>'+e((s.used||1)+' of '+s.limit+' in use')+'</dd>':'')+(s.exp?'<dt>Renews / ends</dt><dd>'+e(new Date(s.exp).toLocaleDateString('en-GB'))+'</dd>':'')+(s.pid?'<dt>Product no.</dt><dd>'+e(s.sid+' / '+s.pid)+'</dd>':'')+'<dt>Last checked</dt><dd>'+e(s.ok?new Date(s.ok).toLocaleString('en-GB'):'never')+'</dd></dl>'+
       (msg?'<p class="licMsg">'+e(msg)+'</p>':'')+'<div class="licF"><button id="licMove" title="Frees this computer\'s place, so the key can be used on another one">Move to another computer</button><button id="licChk" class="p">Check now</button></div>';
   } else {
     h+='<p class="licLead">'+(lock?'To use '+e(C.name)+', type the licence key from the email you were sent when you bought it.':'Type the licence key from your purchase email.')+'</p>'+
