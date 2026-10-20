@@ -1,0 +1,1 @@
+r510: volume under a roof fixed, ceiling height reads true on noisy scans, tidier start screen, Straighten and Crop in plain words, Volume starts on Stockpile with one scan, licence Buy link goes to the website.
