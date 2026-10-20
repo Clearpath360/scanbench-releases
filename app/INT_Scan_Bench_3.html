@@ -8198,7 +8198,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-20 r508';
+var SB_BUILD='2026-10-20 r509';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29572,7 +29572,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'20 October 2026', r:'r503 to r508', t:[
+ {d:'20 October 2026', r:'r503 to r509', t:[
+  'Fix: after Straighten, if the view has ended up off the scan it is brought back onto it, so the scan cannot be left tiny and off the grid.',
   'Clean up: clearer icons on the four tiles, a tool that is on shows blue (red is only for Delete), and only one way of trimming is on at a time: Trim box, Lasso/Box/Brush/Lines, or Lonely splats.',
   'Scan panel: the file at the top, a Get it ready checklist (Level, Scale, Crop, Clean up) that ticks off as you go with one blue Next button, Combine scans into one as its own feature, the other scan options explained, and Recent scans.',
   'Help > Licence now checks keys from the Clearpath360 shop and links to Buy a licence. It is still not switched on, so nothing is locked.',
@@ -30455,6 +30456,12 @@ function cu3SelOff(){ try{ if(typeof CLT_SEL!=='undefined'&&CLT_SEL.indexOf(CLN.
     'body #cuiPanel #tbxBtn.on,body #cuiPanel #clnLonely.on{background:var(--acc,#2563eb)!important;border-color:var(--acc,#2563eb)!important;color:#fff!important}'+
     'body #cuiPanel #tbxBtn,body #cuiPanel #clnLonely{color:inherit}';
   document.head.appendChild(c); try{ cltPaint(); }catch(e){} })();
+
+/* ===== r509: after Straighten, if the camera ends up off the scan (target outside it, or far away), it is put back on the scan. ===== */
+function sfOffScan(){ var r=APP.res&&APP.res.robust; if(!r) return false; var sx=r.x[1]-r.x[0], sy=r.y[1]-r.y[0], sz=r.z[1]-r.z[0], D=Math.hypot(sx,sy,sz)||1, m=0.5;
+  var out=cam.tx<r.x[0]-sx*m||cam.tx>r.x[1]+sx*m||cam.ty<r.y[0]-sy*m||cam.ty>r.y[1]+sy*m||cam.tz<r.z[0]-sz*m-D*0.2||cam.tz>r.z[1]+sz*m+D*0.2;
+  return out||!(cam.dist>0)||cam.dist>D*4||!isFinite(cam.tx+cam.ty+cam.tz); }
+try{ sbAfter('strAfterResult', function(r){ try{ if(APP.res&&sfOffScan()){ camFitBox(); SPL.lastKey=''; gl_render(); } }catch(e){ console.warn(e); } return r; }); }catch(e){}
 
 /* ===== r496: runs last of all the parts. The smooth video takes its frame here, after everything has been drawn into the 3D view
    (the RC car, fireworks, weather, lights, fun effects), not straight after the scan. Keep this file last in parts.txt. ===== */
