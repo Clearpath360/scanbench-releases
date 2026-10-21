@@ -1,3 +1,2 @@
-# r519
-- Combine: Line up automatically uses the pre-r515 line-up again.
-- Combine: the newer search is the Try harder button next to it.
+# r520
+- Combine: tilt the second scan (2. Nudge > Tilt) and Match floor tilt.
