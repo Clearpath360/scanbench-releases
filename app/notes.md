@@ -1,3 +1,3 @@
-# r516
-- Weather: rope lights, cables and wires no longer count as a roof (no rings in the air, ground under them gets wet).
-- Weather: wet ground and puddle edges are soft instead of square and noisy.
+# r517
+- Combine: Adjust the last combine button back in the Combine card on the scan panel.
+- Combine: saved combined scans keep their line-up, so they can be adjusted after reopening.
