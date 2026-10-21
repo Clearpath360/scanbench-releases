@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-21 r513';
+var SB_BUILD='2026-10-21 r514';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29584,7 +29584,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'21 October 2026', r:'r510 to r513', t:[
+ {d:'21 October 2026', r:'r510 to r514', t:[
+  'Licence: Scan Bench is now a yearly licence, £49 a year after a 7 day free trial. Help > Licence links to Manage, renew or cancel, and says so plainly if a year has ended.',
   'Fix: with a side panel open, the bar along the bottom of the 3D view goes onto two rows instead of running off the screen.',
   'Fix: the background colour now shows behind the scan in plan in every look (Points as well as Photo), not only round the edge. View > Background colour... sits under Show.',
   'Plan: a small scan is no longer cut off at its edges; the plan leaves room round the scan.',
@@ -30344,7 +30345,7 @@ function licMine(j, email){ var m=j&&j.meta||{}, C=LIC.cfg; if(C.storeId&&+m.sto
   return null; }
 function licWhy(j){ var e=String(j&&j.error||''), k=j&&j.license_key||{};
   if(/activation limit/i.test(e)||(k.activation_limit&&k.activation_usage>=k.activation_limit&&!j.activated)) return 'This key is already in use on '+(k.activation_limit||'the most')+' computer'+(k.activation_limit>1?'s':'')+'. On the old computer use Help > Licence > Move to another computer, then try again.';
-  if(k.status==='expired') return 'This licence has expired.'+(LIC.cfg.buyUrl?' You can renew it from the shop.':'');
+  if(k.status==='expired') return 'Your yearly licence has ended. Renew it with Manage my licence below, then press Activate again.';
   if(k.status==='disabled') return 'This licence has been turned off. Please get in touch.';
   if(/not found|invalid/i.test(e)) return 'That key was not recognised. Check it against the email you were sent (copy and paste it if you can).';
   return e||'The key could not be checked.'; }
@@ -30368,14 +30369,14 @@ function licShow(mode, msg){ var old=document.getElementById('licBox'); if(old) 
   var h='<div class="licB"><div class="licH"><b>'+e(C.name)+' licence</b>'+(lock?'':'<button class="licX" id="licX" title="Close">✕</button>')+'</div>';
   if(s&&s.key&&!s.bad&&mode!=='enter'){ var masked=s.key.replace(/^(.{4}).*(.{4})$/, '$1••••••••$2');
     h+='<div class="licOk'+(lock?' warn':'')+'"><span class="licDot"></span><div><b>'+(lock?'Needs checking online':'Licensed')+'</b><small>'+e(s.product||C.name)+(s.variant&&s.variant!=='Default'?' · '+e(s.variant):'')+'</small></div></div>'+
-      '<dl><dt>Key</dt><dd>'+e(masked)+'</dd><dt>Email</dt><dd>'+e(s.email)+'</dd><dt>This computer</dt><dd>'+e(s.pc)+'</dd>'+(s.limit?'<dt>Computers</dt><dd>'+e((s.used||1)+' of '+s.limit+' in use')+'</dd>':'')+(s.exp?'<dt>Renews / ends</dt><dd>'+e(new Date(s.exp).toLocaleDateString('en-GB'))+'</dd>':'')+(s.pid?'<dt>Product no.</dt><dd>'+e(s.sid+' / '+s.pid)+'</dd>':'')+'<dt>Last checked</dt><dd>'+e(s.ok?new Date(s.ok).toLocaleString('en-GB'):'never')+'</dd></dl>'+
+      '<dl><dt>Key</dt><dd>'+e(masked)+'</dd><dt>Email</dt><dd>'+e(s.email)+'</dd><dt>This computer</dt><dd>'+e(s.pc)+'</dd>'+(s.limit?'<dt>Computers</dt><dd>'+e((s.used||1)+' of '+s.limit+' in use')+'</dd>':'')+(s.exp?'<dt>Renews / ends</dt><dd>'+e(new Date(s.exp).toLocaleDateString('en-GB'))+'</dd>':'')+(s.pid?'<dt>Product no.</dt><dd>'+e(s.sid+' / '+s.pid)+'</dd>':'')+'<dt>Your licence</dt><dd><a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">Manage, renew or cancel</a></dd><dt>Last checked</dt><dd>'+e(s.ok?new Date(s.ok).toLocaleString('en-GB'):'never')+'</dd></dl>'+
       (msg?'<p class="licMsg">'+e(msg)+'</p>':'')+'<div class="licF"><button id="licMove" title="Frees this computer\'s place, so the key can be used on another one">Move to another computer</button><button id="licChk" class="p">Check now</button></div>';
   } else {
-    h+='<p class="licLead">'+(lock?'To use '+e(C.name)+', type the licence key from the email you were sent when you bought it.':'Type the licence key from your purchase email.')+'</p>'+
+    h+='<p class="licLead">'+(lock?'To use '+e(C.name)+', type the licence key from your sign-up email. The 7 day free trial starts when you sign up.':'Type the licence key from your sign-up email.')+'</p>'+
       '<label>Email you bought it with<input id="licEm" type="email" autocomplete="email" value="'+e(s&&s.email||'')+'" placeholder="you@example.co.uk"></label>'+
       '<label>Licence key<input id="licKey" type="text" spellcheck="false" autocomplete="off" value="'+e(s&&s.bad?s.key:'')+'" placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"></label>'+
-      '<p class="licMsg'+(msg?' bad':'')+'" id="licMsg">'+e(msg||'')+'</p><div class="licF">'+(C.buyUrl?'<a href="'+e(C.buyUrl)+'" target="_blank" rel="noopener">Buy a licence</a>':'<span></span>')+'<button id="licGo" class="p">Activate</button></div>'+
-      (C.helpEmail?'<p class="licSm">Lost your key or stuck? Email <b>'+e(C.helpEmail)+'</b></p>':'');
+      '<p class="licMsg'+(msg?' bad':'')+'" id="licMsg">'+e(msg||'')+'</p><div class="licF">'+(C.buyUrl?'<a href="'+e(C.buyUrl)+'" target="_blank" rel="noopener">Start a 7 day free trial</a>':'<span></span>')+'<button id="licGo" class="p">Activate</button></div>'+
+      '<p class="licSm">Already signed up? <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener">Manage my licence</a> to renew, cancel or find your key.</p>'+(C.helpEmail?'<p class="licSm">Lost your key or stuck? Email <b>'+e(C.helpEmail)+'</b></p>':'');
   }
   d.innerHTML=h+'</div>'; if(lock) d.classList.add('lock'); document.body.appendChild(d); var g=function(id){ return d.querySelector('#'+id); };
   d.querySelectorAll('input').forEach(function(i){ i.onkeydown=function(ev){ ev.stopPropagation(); if(ev.key==='Enter'&&g('licGo')) g('licGo').click(); }; });

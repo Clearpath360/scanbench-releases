@@ -1,1 +1,1 @@
-r513: the 3D view's bottom bar wraps onto two rows with a side panel open instead of running off screen.
+r514: yearly licence wording (7 days free, then £49 a year); Help > Licence links to Manage, renew or cancel.
