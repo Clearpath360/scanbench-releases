@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-21 r517';
+var SB_BUILD='2026-10-21 r518';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22723,7 +22723,7 @@ function wxLampsNear(){ if(typeof ltList!=='function'||!ltOn()) return []; var d
 function wxLampLit(Lm, x, y, z){ var r=0, g=0, b=0; for(var i=0;i<Lm.length;i++){ var Q=Lm[i], dx=x-Q.p[0], dy=y-Q.p[1], dz=z-Q.p[2], dd=Math.sqrt(dx*dx+dy*dy+dz*dz), f=Q.s/(1+dd*dd/(Q.r*Q.r*0.25)); if(Q.beam){ var c=(dx*Q.d[0]+dy*Q.d[1]+dz*Q.d[2])/Math.max(1e-4,dd); if(c<Q.cs) continue; f*=Math.min(1,(c-Q.cs)/(1-Q.cs)*3)*2; } r+=Q.c[0]*f; g+=Q.c[1]*f; b+=Q.c[2]*f; } return [r,g,b]; }
 function wxPartDraw(){ var S=wxS(); if(!S||!wxOn()||APP.view!=='3d'||miniVP) return; if(!(S.rain>0||S.snow>0)) return; var gl=GL, pr=wxPartProg(); if(!pr) return;
   var X=wxState(), k=X.k, t=X.t, sc=wxSc(), u=wxSeed(), cx=cam.tx, cy=cam.ty, H=wxClamp(cam.dist*0.7, 5, 45)*sc, g=typeof mdlFloor==='function'?mdlFloor():0, Hz=Math.max(6*sc, cam.tz-g+H*0.8), B=camBasis(), E=B.eye, Lm=wxLampsNear(), T=[], V=[];
-  var wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wux=Math.cos(wd), wuy=Math.sin(wd), lit=wxMix([0.72,0.78,0.88],[0.2,0.23,0.3], X.night); lit=lit.map(function(v){ return v*(1+X.flash*1.5); });
+  var wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wux=Math.cos(wd), wuy=Math.sin(wd), lit=wxMix([0.72,0.78,0.88],[0.2,0.23,0.3], X.night); lit=lit.map(function(v){ return v*(1+X.flash*0.45); });
   function vtx(A, c, a, s){ T.push(A[0],A[1],A[2], c[0],c[1],c[2],a, s||1); }
   if(S.rain>0){ var rk=S.rain*Math.min(1.3,k), dt=1/45, vh=wv*7*sc;
     /* r345: one streak per drop, each its own length, thickness and brightness; brighter near its leading end and fading to nothing behind, like a drop caught by the shutter */
@@ -24198,8 +24198,14 @@ function wpBuild(){ var S=wxS(), R=APP.res, T=wxTop(); if(!R||!T||!R.pos) return
     var X0=T.x0+(x+0.5)*fc, Y0=T.y0+(y+0.5)*fc, za=B.v[a]-thr+lift, zb=B.v[b]-thr+lift, zc=B.v[c]-thr+lift, ze=B.v[e]-thr+lift;
     V.push(X0,Y0,za,fa, X0+fc,Y0,zb,fb, X0+fc,Y0+fc,ze,fe,  X0,Y0,za,fa, X0+fc,Y0+fc,ze,fe, X0,Y0+fc,zc,fcn); if(fa>0&&(x+y)%3===0) zs.push(za); }
   /* the wet sheen: a coarser sheet over all the rest of the open ground (30 cm squares), skipping squares that hold water */
-  var K=3, WET=-1000*sc; for(y=1;y<fy-K-1;y+=K) for(x=1;x<fx-K-1;x+=K){ var a2=y*fx+x, b2=a2+K, c2=a2+K*fx, e2=c2+K; if(B.f[a2]<0.2||B.f[b2]<0.2||B.f[c2]<0.2||B.f[e2]<0.2) continue; var hit=false; for(var yy2=0;yy2<K&&!hit;yy2++) for(var xx2=0;xx2<K;xx2++) if(used[a2+yy2*fx+xx2]){ hit=true; break; } if(hit) continue; var gq=Math.max(Math.abs(B.v[b2]-B.v[a2]), Math.abs(B.v[c2]-B.v[a2]), Math.abs(B.v[e2]-B.v[a2]))/(fc*K); if(gq>0.2||Math.abs(A.v[a2]-B.v[a2])>0.06*sc||Math.abs(A.v[e2]-B.v[e2])>0.06*sc) continue;
-    var X1=T.x0+(x+0.5)*fc, Y1=T.y0+(y+0.5)*fc, L1=fc*K; V.push(X1,Y1,B.v[a2]+lift,WET, X1+L1,Y1,B.v[b2]+lift,WET, X1+L1,Y1+L1,B.v[e2]+lift,WET, X1,Y1,B.v[a2]+lift,WET, X1+L1,Y1+L1,B.v[e2]+lift,WET, X1,Y1+L1,B.v[c2]+lift,WET); }
+  /* r518: the sheen fades out over its last square instead of stopping in a hard square edge (no blocky dark patches) */
+  var K=3, WET=-1000*sc, SX=Math.ceil(fx/K)+2, SY=Math.ceil(fy/K)+2, inc=new Uint8Array(SX*SY), keep=[];
+  for(y=1;y<fy-K-1;y+=K) for(x=1;x<fx-K-1;x+=K){ var a2=y*fx+x, b2=a2+K, c2=a2+K*fx, e2=c2+K, si=((y-1)/K+1)*SX+((x-1)/K+1); if(B.f[a2]<0.2||B.f[b2]<0.2||B.f[c2]<0.2||B.f[e2]<0.2) continue; var hit=false; for(var yy2=0;yy2<K&&!hit;yy2++) for(var xx2=0;xx2<K;xx2++) if(used[a2+yy2*fx+xx2]){ hit=true; break; } if(hit){ inc[si]=1; /* the dry cells of a square that holds water still get the sheen, cell by cell */ for(var yy3=0;yy3<K;yy3++) for(var xx3=0;xx3<K;xx3++){ var q3=a2+yy3*fx+xx3; if(used[q3]) continue; var r3=q3+1, c3q=q3+fx, e3q=c3q+1, X3=T.x0+(x+xx3+0.5)*fc, Y3=T.y0+(y+yy3+0.5)*fc; V.push(X3,Y3,B.v[q3]+lift,WET, X3+fc,Y3,B.v[r3]+lift,WET, X3+fc,Y3+fc,B.v[e3q]+lift,WET, X3,Y3,B.v[q3]+lift,WET, X3+fc,Y3+fc,B.v[e3q]+lift,WET, X3,Y3+fc,B.v[c3q]+lift,WET); } continue; } var gq=Math.max(Math.abs(B.v[b2]-B.v[a2]), Math.abs(B.v[c2]-B.v[a2]), Math.abs(B.v[e2]-B.v[a2]))/(fc*K); if(gq>0.2||Math.abs(A.v[a2]-B.v[a2])>0.06*sc||Math.abs(A.v[e2]-B.v[e2])>0.06*sc) continue;
+    inc[si]=2; keep.push(x,y,si); }
+  var cw=function(si){ return ((inc[si]?1:0)+(inc[si-1]?1:0)+(inc[si-SX]?1:0)+(inc[si-SX-1]?1:0))/4; }, wv=function(w){ return WET*(w>=1?1:2); };
+  for(var kq=0;kq<keep.length;kq+=3){ x=keep[kq]; y=keep[kq+1]; var s0=keep[kq+2], a3=y*fx+x, b3=a3+K, c3=a3+K*fx, e3=c3+K, X1=T.x0+(x+0.5)*fc, Y1=T.y0+(y+0.5)*fc, L1=fc*K,
+      wa=wv(cw(s0)), wb=wv(cw(s0+1)), wc2=wv(cw(s0+SX)), we=wv(cw(s0+SX+1));
+    V.push(X1,Y1,B.v[a3]+lift,wa, X1+L1,Y1,B.v[b3]+lift,wb, X1+L1,Y1+L1,B.v[e3]+lift,we, X1,Y1,B.v[a3]+lift,wa, X1+L1,Y1+L1,B.v[e3]+lift,we, X1,Y1+L1,B.v[c3]+lift,wc2); }
   if(!V.length) return false; zs.sort(function(a2,b2){ return a2-b2; }); WP.zmed=zs.length?zs[Math.floor(zs.length/2)]:null; WP.cov=frac;
   var gl=GL; if(!WP.vao){ WP.vao=gl.createVertexArray(); WP.buf=gl.createBuffer(); } gl.bindVertexArray(WP.vao); gl.bindBuffer(gl.ARRAY_BUFFER, WP.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(V), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,4,gl.FLOAT,false,16,0); gl.bindVertexArray(null);
   WP.n=V.length/4; return true; }
@@ -24219,7 +24225,7 @@ function wpProg(){ if(WP.prog) return WP.prog; var gl=GL;
     'float occ(vec2 u, float zw){ float ds=texture(uDep,u).r; if(ds>0.99999) return 0.0; float zs=lin(ds); return (zs<zw*0.995&&uEye.z+(vW.z-uEye.z)*(zs/max(zw,1e-4))>vW.z+0.12/uT.z)?1.0:0.0; }\n'+
     'float glint(vec3 R, vec3 L, vec3 side, vec2 k){ vec3 dd=R-L; float ds=dot(dd,side), dv=dd.z; return exp(-ds*ds*k.x-dv*dv*k.y); }\n'+
     'vec3 refl(vec2 ru, float st, vec3 sky){ if(uReflOn<0.5) return sky; vec3 acc=vec3(0.0); float wt=0.0; for(int i=0;i<6;i++){ float w=1.0-float(i)*0.15; acc+=w*texture(uRefl,clamp(ru+vec2(0.0,float(i)*st),vec2(0.002),vec2(0.998))).rgb; wt+=w; } return acc/wt; }\n'+
-    'void main(){ if(uEye.z<vW.z+0.02/uT.z) discard; vec2 pm=vW.xy*uT.z; float ed=vF*uT.z-(1.0-uGrow)*0.025+(vn(pm*2.2)-0.5)*0.006+(vn(pm*6.0)-0.5)*0.0015; float e=smoothstep(0.0,0.012,ed); float shn=uWet*(0.45+0.55*smoothstep(0.25,0.75,vn(pm*0.45+3.1))); if(e<0.01&&shn<0.01) discard;\n'+
+    'void main(){ if(uEye.z<vW.z+0.02/uT.z) discard; vec2 pm=vW.xy*uT.z; float ed=vF*uT.z-(1.0-uGrow)*0.025+(vn(pm*2.2)-0.5)*0.006+(vn(pm*6.0)-0.5)*0.0015; float e=smoothstep(0.0,0.012,ed); float shw=vF*uT.z<-500.0?clamp(2.0+vF*uT.z/1000.0,0.0,1.0):1.0; shw=shw*shw*(3.0-2.0*shw); float shn=uWet*shw*(0.45+0.55*smoothstep(0.25,0.75,vn(pm*0.45+3.1))); if(e<0.01&&shn<0.01) discard;\n'+
     ' vec2 uv=(gl_FragCoord.xy-uVpR.xy)/uVpR.zw;\n'+
     ' if(uDT>0.5){ vec2 tx=1.0/vec2(textureSize(uDep,0)); float oc=occ(uv,vZ)+occ(uv+vec2(tx.x,0.0),vZ)+occ(uv-vec2(tx.x,0.0),vZ)+occ(uv+vec2(0.0,tx.y),vZ)+occ(uv-vec2(0.0,tx.y),vZ); if(uDbg>0.5){ o=vec4(e, shn, oc/5.0, 1.0); return; } if(oc>2.5) discard; if(oc>0.5) shn=0.0; if(e<0.01&&shn<0.01) discard; }\n'+
     /* ripple rings from the rain: three staggered grids of drop sites, each drop a ring that spreads and fades */
@@ -29584,7 +29590,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'21 October 2026', r:'r510 to r517', t:[
+ {d:'21 October 2026', r:'r510 to r518', t:[
+  'Weather: when lightning flashes, the rain no longer turns into bright white streaks, and the wet sheen on the ground fades out softly instead of leaving dark square patches.',
   'Combine scans: Adjust the last combine is back, as a button in the Combine card on the scan panel (and Tools > Adjust the combine...).',
   'Weather: rope lights, cables and wires are no longer taken for a roof, so rain falls past them, no splash rings float in the air and the ground under them gets wet.',
   'Weather: wet ground and puddles have soft, natural edges instead of square patches and sharp, noisy rims.',

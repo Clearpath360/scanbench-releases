@@ -1,3 +1,3 @@
-# r517
-- Combine: Adjust the last combine button back in the Combine card on the scan panel.
-- Combine: saved combined scans keep their line-up, so they can be adjusted after reopening.
+# r518
+- Weather: rain streaks no longer flare bright white in a lightning flash.
+- Weather: wet sheen has no square holes or blocky dark patches round puddles.
