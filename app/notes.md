@@ -1,1 +1,1 @@
-r511: small scans no longer cut off in plan; background colour works in plan (View > Background colour); point clouds say m.
+r512: background colour shows behind the scan in plan in every look; View > Background colour sits under Show.
