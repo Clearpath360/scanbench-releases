@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-21 r512';
+var SB_BUILD='2026-10-21 r513';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29584,7 +29584,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'21 October 2026', r:'r510 to r512', t:[
+ {d:'21 October 2026', r:'r510 to r513', t:[
+  'Fix: with a side panel open, the bar along the bottom of the 3D view goes onto two rows instead of running off the screen.',
   'Fix: the background colour now shows behind the scan in plan in every look (Points as well as Photo), not only round the edge. View > Background colour... sits under Show.',
   'Plan: a small scan is no longer cut off at its edges; the plan leaves room round the scan.',
   'Background colour now works in plan too: View > Background colour..., or the swatch on the 3D view bar. Around the scan photo the colour shows through, and the text and scale bar turn dark on a light background.',
@@ -30495,7 +30496,7 @@ try{ sbAfter('strAfterResult', function(r){ try{ if(APP.res&&sfOffScan()){ camFi
    so the only thing to do is open a scan; the graphics warning is readable on the dark background. ===== */
 (function(){ var last=null; function upd(){ var on=!!(window.APP&&APP.res); if(on===last) return; last=on; document.body.classList.toggle('sbNoScan', !on); try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
   upd(); setInterval(upd, 400);
-  var c=document.createElement('style'); c.textContent='body.sbNoScan #side,body.sbNoScan #right{display:none!important}body.sbNoScan #app{grid-template-columns:1fr!important}body.sbNoScan #stage{grid-column:1/-1!important}#sbChk .bad{color:#fecaca!important;background:rgba(239,68,68,.22)!important}#sbChk .warn{color:#fde68a}.row.cropHd{margin-bottom:-4px}.row.cropHd span{flex:1;font-size:11px;font-weight:700;color:var(--sbTx2,#6b7785);text-transform:uppercase;letter-spacing:.04em}';
+  var c=document.createElement('style'); c.textContent='body.sbNoScan #side,body.sbNoScan #right{display:none!important}body.sbNoScan #app{grid-template-columns:1fr!important}body.sbNoScan #stage{grid-column:1/-1!important}#sbChk .bad{color:#fecaca!important;background:rgba(239,68,68,.22)!important}#sbChk .warn{color:#fde68a}body.sbSkin #tools3d{flex-wrap:wrap!important;justify-content:flex-start;max-width:calc(100% - 200px)!important}.row.cropHd{margin-bottom:-4px}.row.cropHd span{flex:1;font-size:11px;font-weight:700;color:var(--sbTx2,#6b7785);text-transform:uppercase;letter-spacing:.04em}';
   document.head.appendChild(c); })();
 
 /* ===== r511: the background colour (the swatch on the 3D view bar) is used by the plan too, and View > Background colour... picks it

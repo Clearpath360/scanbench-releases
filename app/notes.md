@@ -1,1 +1,1 @@
-r512: background colour shows behind the scan in plan in every look; View > Background colour sits under Show.
+r513: the 3D view's bottom bar wraps onto two rows with a side panel open instead of running off screen.
