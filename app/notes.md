@@ -1,3 +1,3 @@
-# r518
-- Weather: rain streaks no longer flare bright white in a lightning flash.
-- Weather: wet sheen has no square holes or blocky dark patches round puddles.
+# r519
+- Combine: Line up automatically uses the pre-r515 line-up again.
+- Combine: the newer search is the Try harder button next to it.
