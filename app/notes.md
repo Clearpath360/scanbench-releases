@@ -1,3 +1,2 @@
-# r521
-- Combine: overlap, gap and colour match shown as soon as it lines up.
-- Combine: drag picked points, Undo last point, Clear points.
+# r522
+- Combine: Draw the join, so each side keeps one scan (no ghosting).
