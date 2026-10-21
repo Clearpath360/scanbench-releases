@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Scan Bench User Manual</title>
+<title>User manual | Scan Bench</title><link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <style>
 :root{
   --paper:#f6f4ef; --card:#ffffff; --ink:#1d2422; --mute:#5d6763; --line:#e2ded5;
@@ -146,8 +146,32 @@ figure.shot figcaption{font-size:13.5px;color:var(--mute);margin-top:7px}
 #zoom img{max-width:100%;max-height:100%;border-radius:8px}
 #zoom.on{display:flex}
 </style>
-</head>
-<body>
+<style id="siteTheme">
+@font-face{font-family:Archivo;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Archivo;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2");font-weight:500 600;font-display:swap}
+@font-face{font-family:Archivo;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:Archivo;src:url(fonts/archivo-latin-800-normal.woff2) format("woff2");font-weight:800;font-display:swap}
+:root,:root[data-theme],:root:not([data-theme="light"]){--paper:#fff!important;--card:#f5f5f5!important;--ink:#000!important;--mute:#3c3c3c!important;--line:#d9d9d9!important;--acc:#000!important;--acc-soft:#eef3fb!important;--warm:#b8410e!important;--warm-soft:#fbf1ec!important;--kbd:#f5f5f5!important;--shadow:none!important}
+body{font-family:Archivo,Arial,Helvetica,sans-serif!important;background:#fff!important;color:#000!important}
+a{color:#0b5cd5}h1,h2,h3,h4,.brand b{font-weight:800}h1{font-size:44px!important;letter-spacing:-.01em}h2{font-size:28px!important}h3{font-weight:700}
+.sitetop{position:sticky;top:0;z-index:60;background:#000;color:#fff;border-bottom:1px solid #222}.sitetop .in{max-width:1240px;margin:0 auto;padding:0 40px;display:flex;align-items:center;gap:26px;height:62px}
+.sitetop .lg{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:.04em;text-transform:uppercase;color:#fff;text-decoration:none;margin-right:auto}.sitetop .lg i{width:20px;height:20px;border:3px solid #fff;display:inline-block}
+.sitetop nav{display:flex;gap:24px}.sitetop nav a{color:#d4d4d4;text-decoration:none;font-size:15px}.sitetop nav a:hover,.sitetop nav a.on{color:#fff;text-decoration:underline;text-underline-offset:6px}
+.sitetop .bt{border:1px solid #fff;color:#fff;padding:8px 14px;font-weight:600;font-size:14px;text-decoration:none}.sitetop .bt:hover{background:#fff;color:#000}
+.siteband{background:#000;color:#fff}.siteband .in{max-width:1240px;margin:0 auto;padding:44px 40px 36px}.siteband .ey{font-size:13px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#bdbdbd}.siteband h1{color:#fff;margin:8px 0 6px}.siteband p{color:#d0d0d0;font-size:18px;margin:0;max-width:720px}
+header.hero{display:none}
+nav.toc{top:62px!important;height:calc(100vh - 62px)!important;background:#fff}nav.toc a{border-radius:0!important}nav.toc a.on{background:#000!important;color:#fff!important}nav.toc a:hover{background:#f0f0f0!important}
+.brand svg{display:none}.search{border-radius:2px!important;border-color:#8c8c8c!important;background:#fff!important}
+section{border-bottom:1px solid #d9d9d9}h2 .n{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;background:#000;color:#fff!important;font-size:17px;margin-right:12px;vertical-align:3px}
+.card,.guide,.path-steps>li,details,table,.tip,.warn{border-radius:0!important}.tip{border-left-color:#0b5cd5!important}.path-steps>li::before{border-radius:0!important;background:#000!important}
+th{background:#f5f5f5!important;color:#000!important}table{border-top:2px solid #000!important}
+figure.shot img{border-radius:0!important}.legend-num i{border-radius:0!important;background:#000!important}kbd{border-radius:2px!important}
+.s-top{background:#000!important}.s-rail{border-color:#000!important;color:#000!important}
+html{scroll-padding-top:76px!important}
+.sitefoot{background:#000;color:#bdbdbd;font-size:14px}.sitefoot .in{max-width:1240px;margin:0 auto;padding:30px 40px;display:flex;gap:20px;flex-wrap:wrap;justify-content:space-between}.sitefoot a{color:#bdbdbd}
+@media(max-width:900px){.sitetop nav{display:none}.sitetop .in,.siteband .in,.sitefoot .in{padding-left:16px;padding-right:16px}h1{font-size:32px!important}nav.toc{position:static!important;height:auto!important}}
+</style></head>
+<body><div class="sitetop"><div class="in"><a class="lg" href="index.html"><i></i>Scan Bench</a><nav><a href="index.html">Home</a><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="download.html">Free trial</a><a href="help.html" class="on">Help</a><a href="contact.html">Contact</a></nav><a class="bt" href="download.html">Free trial</a></div></div><div class="siteband"><div class="in"><span class="ey">Help</span><h1>Scan Bench user manual</h1><p>From opening your first scan to sending finished drawings. Search it, or pick a section on the left.</p></div></div>
 <div class="wrap">
 <nav class="toc" id="toc" aria-label="Contents">
   <div class="brand">
@@ -168,6 +192,7 @@ figure.shot figcaption{font-size:13.5px;color:var(--mute);margin-top:7px}
     <li><a href="#screen">The screen</a></li>
     <li><a href="#moving">Moving around</a></li>
     <li><a href="#prep">Step 1: Prep</a></li>
+    <li><a href="#combine">Combine scans</a></li>
     <li><a href="#model">Step 2: Model</a></li>
     <li><a href="#drawings">Step 3: Drawings</a></li>
     <li><a href="#saving">Saving and exporting</a></li>
@@ -354,6 +379,19 @@ figure.shot figcaption{font-size:13.5px;color:var(--mute);margin-top:7px}
 
   <h3>The Scan panel</h3>
   <p>Opens when a scan loads. At the top: the file, its size and how many splats or points are shown. <span class="ui">Get it ready</span> lists the four set-up steps, ticked when done: <span class="ui">Level</span>, <span class="ui">Scale</span> (shown in orange until the figures are real metres), <span class="ui">Crop</span> and <span class="ui">Clean up</span>; each has its own button, and the blue <span class="ui">Next</span> button takes you to the next one to do. <span class="ui">Combine scans into one</span> joins floors, rooms, or the inside and outside of a building into one scan. Under <span class="ui">Other scans</span>: <span class="ui">Open a different scan</span> (this one stays in its tab), <span class="ui">Show a second scan on top</span> (a see-through overlay) and <span class="ui">Compare dates</span>. <span class="ui">Recent</span> reopens the last scans with one click.</p>
+
+  <h3 id="combine">Combine scans into one</h3>
+  <p>Join scans of the same building or site into one: floor by floor, room by room, or the inside and the outside. Open the first scan, then click <span class="ui">Combine with another scan</span> on the Scan panel.</p>
+  <ul>
+    <li><span class="ui">Choose files...</span> takes one scan or several at once (PLY, SPZ or E57). You can also drop them on the window.</li>
+    <li><span class="ui">Add an XGRIDS LCC folder...</span> takes the folder the scanner made, at the most detail that still fits with what is open.</li>
+    <li>Each scan is lined up automatically. Blue is the first scan, orange the new one, white where they agree. Look from <span class="ui">Top</span> and <span class="ui">Side</span> before you combine.</li>
+    <li>If it looks wrong, <span class="ui">Try another match</span>, or <span class="ui">Pick matching points</span> (click the same spot in both scans, at least 3 times) and then <span class="ui">Fine snap</span>.</li>
+    <li><span class="ui">Where both scans cover the same place</span> decides which scan is kept in the overlap, so it does not double up.</li>
+    <li><span class="ui">Combine into one scan</span> joins them. With several scans, the next one opens in the window by itself (scan 3 of 4 and so on), and you check each one.</li>
+    <li>Each scan needs some overlap with what is already open, such as a doorway, the stairs or a shared wall. A flat open area with no walls or objects, like an empty car park, is hard to line up automatically: use Pick matching points.</li>
+    <li>Save the result with <span class="ui">File &gt; Save cleaned scan</span>.</li>
+  </ul>
 
   <h3>Scale</h3>
   <p>Everything you measure depends on the scale, so check it first.</p>
@@ -873,5 +911,5 @@ figure.shot figcaption{font-size:13.5px;color:var(--mute);margin-top:7px}
   if(!document.documentElement.getAttribute('data-theme')){ try{ var th=localStorage.getItem('sb_theme'); if(th==='dark'||th==='light') document.documentElement.setAttribute('data-theme', th); }catch(e){} }
 })();
 </script>
-</body>
+<div class="sitefoot"><div class="in"><span>&copy; 2026 Refresh Print Ltd, trading as Clearpath360.</span><span><a href="index.html">Home</a> &middot; <a href="features.html">Features</a> &middot; <a href="help.html">Help</a> &middot; <a href="contact.html">Contact</a></span></div></div></body>
 </html>
