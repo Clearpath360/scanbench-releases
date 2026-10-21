@@ -63,3 +63,11 @@ form.f .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-widt
 footer{background:#000;color:#bdbdbd;padding:48px 0 34px;font-size:14px}footer .wrap{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:26px}footer h4{color:#fff;font:700 14px Archivo;margin:0 0 10px}footer a{display:block;color:#bdbdbd;text-decoration:none;padding:3px 0}footer a:hover{color:#fff;text-decoration:underline}footer .logo{color:#fff}
 @media(max-width:800px){footer .wrap{grid-template-columns:1fr 1fr}}
 table.acc{width:100%;border-collapse:collapse;font-size:15px;border-top:2px solid #000}table.acc th,table.acc td{padding:12px 14px 12px 0;text-align:left;border-bottom:1px solid var(--line)}table.acc th{font-weight:700}table.acc td:nth-child(n+2){white-space:nowrap}
+/* features page */
+.fnav{position:sticky;top:62px;z-index:40;background:#fff;border-bottom:1px solid var(--line)}.fnav .wrap{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}.fnav .wrap::-webkit-scrollbar{display:none}
+.fnav a{white-space:nowrap;text-decoration:none;font-weight:600;font-size:14.5px;padding:16px 14px;border-bottom:3px solid transparent;color:var(--ink2)}.fnav a:hover{color:#000;border-bottom-color:#000}
+.fsec{scroll-margin-top:120px}.fhead{display:flex;gap:18px;align-items:flex-start;margin-bottom:28px;max-width:760px}.fhead .ic{width:52px;height:52px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:2px solid #000;background:#fff}.fhead .ic svg{width:28px;height:28px;stroke:#000;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fhead h2{margin-bottom:.2em}.fhead p{color:var(--ink2);font-size:17px;margin:0}
+.flist{display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid #000}.flist>div{padding:20px 22px 22px 0;border-bottom:1px solid var(--line)}.flist h3{font-size:18px;margin:0 0 6px}.flist p{margin:0;color:var(--ink2);font-size:15.5px}
+@media(max-width:900px){.flist{grid-template-columns:1fr 1fr}}@media(max-width:600px){.flist{grid-template-columns:1fr}.fnav{top:62px}.fhead .ic{width:44px;height:44px}}
+table.acc.req td{white-space:normal!important}table.acc.req td:first-child{font-weight:700;width:28%;padding-right:16px}
