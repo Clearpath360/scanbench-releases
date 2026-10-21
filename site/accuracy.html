@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accuracy check | Scan Bench</title><meta name="description" content="How accurate are Scan Bench measurements? A test against a room of known size: lengths within half a millimetre, volumes within 0.2%.">
+<meta property="og:title" content="Accuracy check | Scan Bench"><meta property="og:description" content="How accurate are Scan Bench measurements? A test against a room of known size: lengths within half a millimetre, volumes within 0.2%."><meta property="og:image" content="assets/og.jpg">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><script src="site.js" defer></script></head>
+<body>
+<header class="top"><div class="wrap"><a class="logo" href="index.html"><i></i>Scan Bench</a><nav class="menu"><a href="index.html">Home</a><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="download.html">Buy</a><a href="help.html">Help</a><a href="contact.html">Contact</a></nav><a class="btn pri sm" href="download.html">Buy the beta</a><button class="burger" aria-label="Menu">☰</button></div></header>
+<main>
+<section class="band"><div class="wrap"><span class="eyebrow">Accuracy check</span><h1>Does Scan Bench add any error?</h1><p>A scan is only as accurate as the scanner that made it. What we can test is whether Scan Bench keeps that accuracy when it levels, turns and measures the scan. Here is how we checked, and what we found.</p></div></section>
+<section style="padding-top:10px"><div class="wrap" style="max-width:900px">
+<div class="card"><h3>The test</h3><p>We made a scan of a room where every size is known exactly: 6.000 m by 4.500 m, ceiling at 2.700 m, a door opening, and a cone shaped heap on the floor (1.5 m radius, 0.8 m high, so 1.885 m&sup3;). Then we tilted it 2.5&deg; one way and 1.2&deg; the other, turned it 31&deg; and moved it, the way a scanner leaves a scan. We made two copies: one with 2 mm of noise (a good laser scanner) and one with 10 mm (a handheld or phone scanner). Each copy was opened in Scan Bench. The height and the volume were read with its own tools; the lengths were read between the wall surfaces of the levelled scan.</p></div>
+<div style="overflow-x:auto;margin-top:18px"><table class="acc"><thead><tr><th>What was measured</th><th>True</th><th>2 mm noise</th><th>10 mm noise</th></tr></thead><tbody>
+<tr><td>Room length (wall to wall)</td><td>6.000 m</td><td>6.000 m</td><td>6.000 m (0.4 mm short)</td></tr>
+<tr><td>Room width (wall to wall)</td><td>4.500 m</td><td>4.500 m</td><td>4.500 m (0.2 mm short)</td></tr>
+<tr><td>Ceiling height (Quantities, auto)</td><td>2.700 m</td><td>2.699 m</td><td>2.698 m</td></tr>
+<tr><td>Floor left after levelling</td><td>0&deg; tilt</td><td>0.04&deg;</td><td>0.02&deg;</td></tr>
+<tr><td>Walls turned square to the plan</td><td>31&deg;</td><td>30.95&deg;</td><td>31.00&deg;</td></tr>
+<tr><td>Heap volume (Volume, stockpile)</td><td>1.885 m&sup3;</td><td>1.881 m&sup3; (0.2% under)</td><td>1.882 m&sup3; (0.2% under)</td></tr>
+</tbody></table></div>
+<div class="grid2" style="margin-top:22px;align-items:start">
+<div class="card"><h3>What this shows</h3><ul><li>Levelling, turning and measuring do not add error you would notice on site.</li><li>Lengths stay within half a millimetre.</li><li>Volumes come out within 0.2% on a clean heap.</li></ul></div>
+<div class="card"><h3>What it does not show</h3><ul><li>How accurate your scanner is. Check the maker's published figures.</li><li>A real site is messier than a test room: plants, glass, people and missing patches all cost accuracy.</li><li>Splat scans from a phone app have no real size until you set the scale, so their accuracy depends on the length you give it.</li><li>Clicking a point by hand adds your own error, so zoom in and use snapping.</li></ul></div></div>
+<div class="card" style="margin-top:18px"><h3>We fixed two things on the way</h3><p>The test found that a volume measured indoors counted the ceiling, so heaps under a roof read high; the ceiling is now left out. It also found the automatic ceiling height read about 15 mm low on noisy scans; it now uses the middle of the floor and ceiling readings. Both fixes are in build r510.</p></div>
+<p style="margin-top:18px">Want to try it yourself? <a href="contact.html">Ask for the test scan</a> and open it in Scan Bench. Test run 20 October 2026, build r510.</p>
+</div></section>
+</main>
+<footer><div class="wrap">
+<div><a class="logo" href="index.html"><i></i>Scan Bench</a><p style="margin-top:10px">Desktop software for 3D scans: clean them up, measure them, compare them over time and turn them into films.</p><p>Made in Halifax, West Yorkshire by Clearpath360 (Refresh Print Ltd)</p></div>
+<div><h4>Product</h4><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="download.html">Buy the beta</a></div>
+<div><h4>Help</h4><a href="help.html">User manual</a><a href="accuracy.html">Accuracy check</a><a href="help.html#new">What's new</a><a href="contact.html">Contact</a></div>
+<div><h4>Legal</h4><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refunds.html">Refunds</a></div>
+</div><div class="wrap" style="display:block;margin-top:26px">© <span id="yr">2026</span> Refresh Print Ltd, trading as Clearpath360. XGRIDS, PortalCam and other names belong to their owners.</div></footer>
+</body></html>
