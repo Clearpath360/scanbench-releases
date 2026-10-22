@@ -1,2 +1,2 @@
-# r530
-- Manual pictures of every menu and panel; ticked menu items aligned.
+r531
+Defects: numbered pins on the scan with type, priority, status, note and picture; Defects panel; PDF report and CSV; saved in the job.
