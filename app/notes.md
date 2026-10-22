@@ -1,2 +1,2 @@
-# r522
-- Combine: Draw the join, so each side keeps one scan (no ghosting).
+# r523
+- Combine: Suggest a join, join shown and draggable in every view, Combine report PDF, weak match warning.
