@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-22 r523';
+var SB_BUILD='2026-10-22 r524';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -22697,7 +22697,7 @@ sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL,
     tint=tint.map(function(v){ return v*(1+X.flash*1.3); });
     var wet=(S.wet&&S.rain>0)?wxClamp(S.rain*1.4,0,1)*Math.min(1,k):0, B=camBasis();
     gl.uniform4f(L.uWx, tint[0]-1, tint[1]-1, tint[2]-1, wet); if(L.uTopB===undefined){ ['uTopTex','uTopB','uTopS','uSnowC'].forEach(function(k2){ L[k2]=gl.getUniformLocation(SPL.prog,k2); }); } var TG=(wet>0||S.snowCover>0||S.puddles>0)?wxTop():null; if(TG&&wxTopTex(TG)){ gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, TG.tex); gl.activeTexture(gl.TEXTURE0); gl.uniform1i(L.uTopTex, 6); gl.uniform4f(L.uTopB, TG.x0, TG.y0, 1/TG.cell, 0.45*sc); gl.uniform2f(L.uTopS, TG.nx, TG.ny); } else if(L.uTopB) gl.uniform4f(L.uTopB,0,0,0,0); if(L.uSnowC) gl.uniform1f(L.uSnowC, Math.min(1,(S.snowCover||0)*Math.min(1.2,k))); gl.uniform3f(L.uEyeW, B.eye[0], B.eye[1], B.eye[2]); gl.uniform3fv(L.uFgCol, X.fogCol);
-    var g=typeof mdlFloor==='function'?mdlFloor():0; var fogE=Math.min(1, S.fog+0.5*S.rain+0.2*S.snow); gl.uniform4f(L.uFg, fogE>0?(0.012+0.11*fogE*fogE)*k/sc:0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
+    var g=typeof mdlFloor==='function'?mdlFloor():0; var fogE=Math.min(1, S.fog+0.3*S.rain+0.2*S.snow); gl.uniform4f(L.uFg, fogE>0?(0.012+0.11*fogE*fogE)*k/sc*wxFogScale():0, 1.5*sc, S.mist>0?Math.min(0.95,S.mist*0.85*k):0, g+(0.6+1.4*S.mist)*sc); }catch(e){ console.warn(e); } return r; });
 
 /* ---------- rain, snow and splashes: worked out from the clock alone, anchored to the ground (they do not swim when you move) ---------- */
 function wxPartProg(){ if(WX.pprog||!GL) return WX.pprog; var gl=GL;
@@ -22862,6 +22862,9 @@ sbAfter('wxPanel', function(r){ try{ var s=document.getElementById('sbWxSec'), S
     ['wxLat','wxLon'].forEach(function(id){ q(id).onchange=function(){ var v=parseFloat(this.value); if(!isFinite(v)) return; pushUndo(); T[id==='wxLat'?'lat':'lon']=v; afterEdit(); wxPanel(); live(); }; });
     q('wxDate').onchange=function(){ if(!this.value) return; pushUndo(); T.date=this.value; afterEdit(); wxPanel(); live(); }; q('wxToday').onclick=function(){ var d2=new Date(); pushUndo(); T.date=d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0'); afterEdit(); wxPanel(); live(); };
     var nn=q('wxNorth'); nn.onpointerdown=function(){ pushUndo(); }; nn.oninput=function(){ T.north=+this.value; q('wxNorthV').textContent=this.value+'°'; live(); }; nn.onchange=function(){ afterEdit(); wxPanel(); }; }catch(e){ console.warn(e); } return r; });
+
+/* r524: haze from fog, rain and snow is set by the size of the scan, so a big outdoor site (a car park, a street) stays clear enough to see across instead of turning grey */
+function wxFogScale(){ try{ var R=APP.res, rb=R&&R.robust; if(!rb) return 1; var e=Math.max(rb.x[1]-rb.x[0], rb.y[1]-rb.y[0])/Math.max(1e-6, wxSc()); return Math.max(0.15, Math.min(1, 30/Math.max(1,e))); }catch(e){ return 1; } }
 
 /* ===== Sky & weather, part 2 (r312): puddles, light shafts through the clouds, and rain, wind and thunder sound in walk-through videos.
    All three are optional (Puddles slider, Light shafts switch, Sound in videos switch). ===== */
@@ -29590,7 +29593,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'22 October 2026', r:'r521 to r523', t:[
+ {d:'22 October 2026', r:'r521 to r524', t:[
+  'Weather: rain, fog and storms on a big outdoor scan, such as a car park, no longer turn the whole view grey. The haze is set by the size of the scan.',
   'Combine scans: Suggest a join puts a join line across the middle of the overlap for you to check.',
   'Combine scans: the join shows in every view (a see-through yellow wall in Front, Side and Iso), and its ends can be dragged in any view.',
   'Combine scans: Combine report (PDF) on the Scan panel and in Tools: a one-page sheet with a picture, how the scans were lined up and how good the match is.',

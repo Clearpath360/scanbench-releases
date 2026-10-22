@@ -1,2 +1,2 @@
-# r523
-- Combine: Suggest a join, join shown and draggable in every view, Combine report PDF, weak match warning.
+# r524
+- Weather: haze scaled to the size of the scan, so big outdoor scans stay clear in rain and storms.
