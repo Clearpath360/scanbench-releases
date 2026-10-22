@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-22 r527';
+var SB_BUILD='2026-10-22 r528';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -21941,7 +21941,7 @@ sbAfter('styUniforms', function(r){ try{ if(!GL||!SPL.prog) return r; var gl=GL,
       if(l.kind==='sun'){ var S=ltSunState(l), s=S?S.dir:ltDir(l.az||0, l.el||40); if(S){ c=S.col; st=S.str; } P[o]=s[0]; P[o+1]=s[1]; P[o+2]=s[2]; P[o+3]=1; }
       else if(typeof lt2Line==='function'&&(l.kind==='strip'||l.kind==='sign')){ var Ln=lt2Line(l); P[o]=Ln.a[0]; P[o+1]=Ln.a[1]; P[o+2]=Ln.a[2]; P[o+3]=3; }
       else { P[o]=W.pos[0]; P[o+1]=W.pos[1]; P[o+2]=W.pos[2]; P[o+3]=(l.kind==='beam'||l.kind==='street')?2:0; }
-      if(l.kind!=='sun'&&typeof wxDuskK==='function') st*=wxDuskK();   /* Sky & weather: lamps on at dusk */
+      if(l.kind!=='sun'&&!l.always&&typeof wxDuskK==='function') st*=wxDuskK();   /* Sky & weather: lamps on at dusk */
       C[o]=c[0]; C[o+1]=c[1]; C[o+2]=c[2]; C[o+3]=st;
       var half=Math.max(1, Math.min(89, (l.cone||35)/2))*Math.PI/180, inner=half*(1-Math.max(0, Math.min(0.95, l.soft==null?0.4:l.soft)));
       D[o]=W.dir[0]; D[o+1]=W.dir[1]; D[o+2]=W.dir[2]; D[o+3]=Math.cos(half); R[o]=Math.max(0.2, l.reach||4)*sc; R[o+1]=Math.cos(inner);
@@ -27857,7 +27857,7 @@ function wkvLoop(){ if(!WKV.on) return; WKV.raf=requestAnimationFrame(wkvLoop); 
   var sp=(K.shift?4.0:1.4)*sc*(WKV.preset==='dog'?1.3:1); WKV.head-=turn*1.6*dt; var fx=Math.cos(WKV.head), fy=Math.sin(WKV.head);
   wkvMove((fx*fw+fy*st)*sp*dt, (fy*fw-fx*st)*sp*dt); wkvApply(); }
 /* the torch: a beam from where you stand, pointing where you look */
-function wkvTorch(on){ var M=ltM(); if(!M) return; if(on&&!WKV.lt){ if(ltList().length>=LT_MAX){ toast('Up to '+LT_MAX+' lights: delete one to use the torch.', 3000); return; } var l=ltMake('beam'); Object.assign(l, {name:'Torch', col:'#fff6e0', str:3.2, reach:18, cone:26, soft:0.55, glow:false, haze:0.12, temp:1}); M.lights.push(l); WKV.lt=l; WKV.lton=M.lightsOn; M.lightsOn=true; }
+function wkvTorch(on){ var M=ltM(); if(!M) return; if(on&&!WKV.lt){ if(ltList().length>=LT_MAX){ toast('Up to '+LT_MAX+' lights: delete one to use the torch.', 3000); return; } var l=ltMake('beam'); Object.assign(l, {name:'Torch', always:true, col:'#fff6e0', str:3.2, reach:18, cone:26, soft:0.55, glow:false, haze:0.12, temp:1}); M.lights.push(l); WKV.lt=l; WKV.lton=M.lightsOn; M.lightsOn=true; }
   if(!on&&WKV.lt){ var i=M.lights.indexOf(WKV.lt); if(i>=0) M.lights.splice(i,1); WKV.lt=null; if(WKV.lton===false) M.lightsOn=false; }
   WKV.torch=!!on&&!!WKV.lt; if(WKV.on) wkvApply(); wkvHudPaint(); requestRender(false); }
 function wkvDark(on){ var M=ltM(); if(!M) return; if(on&&!WKV.dark){ WKV.amb=M.lightAmb; M.lightAmb=0.12; WKV.dark=true; } else if(!on&&WKV.dark){ M.lightAmb=WKV.amb; WKV.dark=false; } wkvHudPaint(); requestRender(false); }
@@ -29593,7 +29593,9 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'22 October 2026', r:'r521 to r527', t:[
+ {d:'22 October 2026', r:'r521 to r528', t:[
+  'Walk: the torch now works with Sky & weather on, in daylight too (other lamps still come on at dusk).',
+  'Tabs: closing the tab of the scan on screen always closes that scan, and closing the last tab always goes back to the start screen.',
   'Sections: every setting is now in the left panel and the right panel is just the drawing, titled with what it cuts (from A to A′, how long, how thick).',
   'Sections: the ends of the line are labelled A (start) and A′ (end) on the plan and in 3D; drag them to change the length. Dips and falls checks are under Check levels; rarely used settings under More settings.',
   'Reset the look: one click turns the sky, weather and every light off and puts the colours back to normal. View > Reset the look, or the button at the top of the Sky, Lights and Colour panels. Undo brings it back.',
@@ -29875,9 +29877,9 @@ function tabsSwitch(k){ if(k===TABS.act&&APP.res) return; if(TABS.busy){ toast('
     TABS.busy=true; tabsDraw(); try{ if(typeof MS!=='undefined'&&MS.on) msClose(); }catch(e){}
     tabsKeep().then(function(){ var was=APP.res; setTimeout(function(){ try{ rcOpen(q); }catch(e){ console.warn(e); } var n=0; (function chk(){ if(APP.res!==was||TABS.pend||n++>40){ if(!TABS.pend&&APP.res===was){ TABS.busy=false; tabsDraw(); } return; } setTimeout(chk, 250); })(); }, 30); }); }); }
 /* closing: ask first when there is work that would be lost */
-function tabsClose(k){ var t=TABS.list.filter(function(o){ return o.k===k; })[0]; if(!t) return; var act=k===TABS.act&&APP.res;
+function tabsClose(k){ var t=TABS.list.filter(function(o){ return o.k===k; })[0]; if(!t) return; var act=!!APP.res&&(k===TABS.act||tabsIsScene(t));
   var go=function(save){ (save?Promise.resolve(ceiSaveJob()):Promise.resolve()).then(function(){ var i=TABS.list.indexOf(t); TABS.list.splice(i, 1); tabsPut(k, null); tabsSave();
-      if(act){ TABS.act=null; var nx=TABS.list[Math.min(i, TABS.list.length-1)]; if(nx){ TABS.u0=APP.undo?APP.undo.length:0; var keepAct=TABS.act; TABS.act=null; tabsSwitchNoKeep(nx.k); } else { toast('Closing the scan...', 1500); setTimeout(function(){ location.reload(); }, 300); } } tabsDraw(); }); };
+      if(!act&&APP.res&&!TABS.list.length){ act=true; } if(act){ TABS.act=null; var nx=TABS.list[Math.min(i, TABS.list.length-1)]; if(nx){ TABS.u0=APP.undo?APP.undo.length:0; var keepAct=TABS.act; TABS.act=null; tabsSwitchNoKeep(nx.k); } else { toast('Closing the scan...', 1500); setTimeout(function(){ location.reload(); }, 300); } } tabsDraw(); }); };
   if(act&&tabsDirty()){ tabsAsk('Close '+t.name+'?', 'There are changes on this scan that are not saved in a job file.', [['Save job, then close', function(){ go(true); }, 1], ['Close without saving', function(){ go(false); }], ['Cancel', null]]); return; }
   if(!act){ tabsGet(k).then(function(v){ if(v&&v.job){ tabsAsk('Close '+t.name+'?', 'The work kept on this tab will be lost.', [['Close', function(){ go(false); }, 1], ['Cancel', null]]); } else go(false); }); return; }
   go(false); }
@@ -29935,6 +29937,10 @@ try{ sbAfter('onResult', function(r){ setTimeout(tabsAdopt, 1500); return r; });
 setInterval(tabsAdopt, 3000);
 /* and whatever route opens the next scan, the one on screen keeps its work first */
 sbBefore('openFile', function(f){ try{ if(f&&f.name&&!f.__sbConv&&APP.res&&TABS.act&&!TABS.busy&&f.name!==APP.fileName&&!(typeof MS!=='undefined'&&MS.on)){ var j=ceiJob(); tabsPut(TABS.act, {job:j, t:Date.now()}); } }catch(e){ console.warn(e); } });
+
+/* r528: the tab of the scan on screen is found by its name too (so closing it always closes the scan), and closing the last tab
+   always closes the scan, never leaving a scan open with no tab */
+function tabsIsScene(t){ try{ var nm=String(APP.fileName||''); if(!nm||!t) return false; if(t.name===nm) return true; if(typeof LCCI!=='undefined'&&LCCI.info&&LCCI.info.name&&String(LCCI.info.name).replace(/\n/g,' ')===t.name) return true; }catch(e){} return false; }
 
 /* ===== r500 UX: one colour rule. Blue = the main action of a panel, grey = other choices, red = delete or record.
    Select on the left rail is a tool mode, not a step, so it no longer looks like one. Sky tiles dim while Sky is off. ===== */

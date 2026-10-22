@@ -1,2 +1,3 @@
-# r527
-- Sections: settings left, drawing right with a plain title; ends labelled A and A-prime; Check levels and More settings.
+# r528
+- Walk torch works with weather on.
+- Tabs: closing the scene tab or the last tab always closes the scan.
