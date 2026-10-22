@@ -1,3 +1,2 @@
-# r526
-- Reset the look button and View menu item.
-- Openings bar shows the picked kind in one dropdown.
+# r527
+- Sections: settings left, drawing right with a plain title; ends labelled A and A-prime; Check levels and More settings.
