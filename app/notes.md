@@ -1,2 +1,2 @@
-# r542
-- Walk-through panel keeps its place when heights are dragged.
+# r543
+- Compare timelapse date bar follows the route change points.

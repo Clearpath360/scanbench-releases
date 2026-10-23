@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-23 r542';
+var SB_BUILD='2026-10-23 r543';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29526,6 +29526,15 @@ try{ sbAfter('cmpAddPick', function(r){ try{ if(MS.on){ var d=document.getElemen
   'body.msxOn #mainClip{display:block!important;z-index:46!important}body.msxOn.view3d #mdlTrimBtn{display:block!important;z-index:46!important}body.msxOn #msUI.msxFlyM label:has(#mwEye),body.msxOn #msUI.msxFlyM .mwPts{display:none!important}'+
   'body.msxOn #msUI #msRenB{background:#dc2626!important;border-color:#b91c1c!important;color:#fff!important;font-weight:700}';
   document.head.appendChild(c); })();
+/* r543: with change points on the route, the timeline bar under the view shows the dates where those points put them (with a striped
+   strip for each change), not spread evenly */
+sbAfter('msDraw', function(r){ try{ if(!MS.on||MS.tab!=='time'||!msxCpList()) return r; var R=msxCpV(), u=document.getElementById('msUI'), bd=u&&u.querySelector('#msTrack .msBands'); if(!R||!bd) return r;
+  var V=R.V, T=Math.max(0.01, V.T), S=msS(), C=cpM(), cur=Math.min(S.length-1, Math.max(0, C.start||0)), at=0, segs=[], fades=[];
+  V.L.forEach(function(q){ var m=q.m, to=Math.min(S.length-1, Math.max(0, m.to==null?cur+1:m.to)), len=m.kind==='cut'?0:Math.max(0.05, m.len||1.5); if(to===cur) return; var mid=q.v+len/2; segs.push([at, mid, cur]); if(len) fades.push([q.v, len]); at=mid; cur=to; });
+  segs.push([at, T, cur]);
+  var col=function(k){ return (typeof TLX_COL!=='undefined'?TLX_COL:['#3b82f6','#f59e0b','#10b981','#ec4899','#8b5cf6'])[k%5]; };
+  bd.innerHTML=segs.filter(function(s){ return s[1]>s[0]; }).map(function(s){ return '<div class="msBand" style="left:'+(s[0]/T*100)+'%;width:'+((s[1]-s[0])/T*100)+'%;background:'+col(s[2])+'">'+msxEsc(msxName(S[s[2]]))+'</div>'; }).join('')+fades.map(function(f){ return '<div class="msFade" style="left:'+(f[0]/T*100)+'%;width:'+(f[1]/T*100)+'%"></div>'; }).join('');
+  }catch(e){ console.warn(e); } return r; });
 
 /* ===== r462: RC car sounds. The motor is a real recording of a toy RC car (a steady stretch looped), its pitch and loudness following
    the motor; the Monster is pitched a little lower and the Sports car higher. A soft thump when it lands a jump and a light plastic
@@ -29604,7 +29613,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'23 October 2026', r:'r532 to r542', t:[
+ {d:'23 October 2026', r:'r532 to r543', t:[
+  'Compare timelapse: the date bar under the view now shows the dates where your route change points put them.',
   'Walk-through panel: dragging a height in the side view (or picking a point) no longer makes the panel jump.',
   'Route editor: the green Route done: back to Compare button sits at the top of the Walk-through panel, clear of the timeline and the view.',
   'Compare timelapse on a Walk or Fly path: the change points put on the route (+ Change here) now change the dates where they are, with their style, length and stop.',
