@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-23 r541';
+var SB_BUILD='2026-10-23 r542';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29604,7 +29604,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'23 October 2026', r:'r532 to r541', t:[
+ {d:'23 October 2026', r:'r532 to r542', t:[
+  'Walk-through panel: dragging a height in the side view (or picking a point) no longer makes the panel jump.',
   'Route editor: the green Route done: back to Compare button sits at the top of the Walk-through panel, clear of the timeline and the view.',
   'Compare timelapse on a Walk or Fly path: the change points put on the route (+ Change here) now change the dates where they are, with their style, length and stop.',
   'Meet: measure lines, areas and notes drawn by anyone in the meeting show for everyone. Meeting notes PDF (Meet panel): who was there and when, each Look here with a picture, and the defects and measurements added or changed.',
@@ -31414,6 +31415,16 @@ try{ sbAfter('mtPanel', function(r){ try{ var s=document.getElementById('sbMtSec
     d.innerHTML='<div class="mtH">Meeting notes</div><small>'+(MT.on?'Being written as you go: ':'Last meeting: ')+n+(n===1?' person':' people')+', '+L.looks.length+' pointed out, '+Object.keys(L.df).length+' defects, '+Object.keys(L.ms).length+' measurements.</small><button id="mtnPdf" class="mtPri">Meeting notes PDF</button>';
     var lv=b.querySelector('#mtLeave'); if(lv) b.insertBefore(d, lv); else b.appendChild(d); d.querySelector('#mtnPdf').onclick=mtnPdf; }catch(e){ console.warn(e); } return r; }); }catch(e){}
 setInterval(function(){ try{ var s=document.getElementById('sbMtSec'), L=MTN.log||MTN.last; if(!s||!L||MT.mdown) return; var sm=s.querySelector('#mtnCard small'); if(sm){ var n=Object.keys(L.people).length; sm.textContent=(MT.on?'Being written as you go: ':'Last meeting: ')+n+(n===1?' person':' people')+', '+L.looks.length+' pointed out, '+Object.keys(L.df).length+' defects, '+Object.keys(L.ms).length+' measurements.'; } }catch(e){} }, 2000);
+
+/* ===== r542: the Walk-through panel keeps its place when it is redrawn (dragging a height in the side view, picking a point), instead
+   of jumping back to the top; and the Route done button stays at its top while editing a Compare route. ===== */
+function wtkKey(el, root){ var k=[]; for(var e=el; e&&e!==root; e=e.parentElement){ var i=0, s=e; while((s=s.previousElementSibling)) i++; k.push((e.id||e.className||e.tagName)+':'+i); } return k.join('<'); }
+try{ sbAround('wtDraw', function(next){ var p=document.getElementById('wtPanel'), keep=[];
+  var anc=[]; for(var a=p&&p.parentElement; a; a=a.parentElement){ if(a.scrollTop>0) anc.push([a, a.scrollTop]); } if(document.scrollingElement&&document.scrollingElement.scrollTop>0) anc.push([document.scrollingElement, document.scrollingElement.scrollTop]);
+  if(p){ keep.push(['', p.scrollTop]); Array.prototype.slice.call(p.querySelectorAll('*')).forEach(function(el){ if(el.scrollTop>0&&el.scrollHeight>el.clientHeight) keep.push([wtkKey(el, p), el.scrollTop]); }); }
+  var r=next();
+  try{ var q=document.getElementById('wtPanel'); if(q&&keep.length){ var put=function(){ keep.forEach(function(k){ if(!k[0]){ q.scrollTop=k[1]; return; } var hit=Array.prototype.slice.call(q.querySelectorAll('*')).filter(function(el){ return wtkKey(el, q)===k[0]; })[0]; if(hit) hit.scrollTop=k[1]; }); }; put(); requestAnimationFrame(put); } var putA=function(){ anc.forEach(function(x){ if(Math.abs(x[0].scrollTop-x[1])>1) x[0].scrollTop=x[1]; }); }; putA(); requestAnimationFrame(putA); setTimeout(putA, 60); }catch(e){ console.warn(e); }
+  try{ if(typeof MSX!=='undefined'&&MSX.routeEd&&typeof msxBackPill==='function'){ var b=document.getElementById('msxBack'); if(!b||!b.isConnected||b.parentNode!==document.getElementById('wtPanel')) msxBackPill(); } }catch(e){} return r; }); }catch(e){}
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,

@@ -1,2 +1,2 @@
-# r541
-- Route done button moved into the Walk-through panel.
+# r542
+- Walk-through panel keeps its place when heights are dragged.
