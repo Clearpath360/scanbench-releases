@@ -1,2 +1,2 @@
-# r537
-- Meet: about a third of the messages while moving; smooth gliding between updates.
+# r538
+- Help > Key features: Defects and meetings page.

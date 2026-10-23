@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-23 r537';
+var SB_BUILD='2026-10-23 r538';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29084,7 +29084,7 @@ try{ var lst=document.createElement('style'); lst.textContent=
   '#libFocusX{display:none;position:fixed;top:10px;right:16px;z-index:9000;border:0;border-radius:18px;padding:7px 14px;background:rgba(15,20,28,.72);color:#fff;font:13px system-ui,Segoe UI,sans-serif;cursor:pointer;opacity:.25;transition:opacity .2s}#libFocusX:hover{opacity:1}body.sbFocus #libFocusX{display:block}#libFocusB.on{background:#dbe8ff}';
   document.head.appendChild(lst); }catch(e){}
 
-/* ===== r484: Help > Key features. The nine headline features of Scan Bench on one page, each with a short help page: what it does,
+/* ===== r484: Help > Key features. The headline features of Scan Bench on one page, each with a short help page: what it does,
    where to find it and the three steps to use it. Shown once by itself the first time; Help > Key features any time after. ===== */
 var KF=[
  {ic:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 7v10a2 2 0 0 0 2 2h13.5a2 2 0 0 0 1.9-1.4L22 11H7.5a2 2 0 0 0-1.9 1.4L3 19"/>', t:'Open any scan', s:'PLY, E57, SPZ, SPLAT, SOG, KSPLAT and XGRIDS LCC folders, with your scans as picture cards on the start screen.',
@@ -29099,6 +29099,9 @@ var KF=[
  {ic:'<path d="M2 20h20"/><path d="M4 20l6-10 4 6 2-3 4 7"/>', t:'Survey tools', s:'Volumes, ponding, floor levels and more, each with its own report.',
   pts:['Volume: stockpiles, and cut and fill between two dates, with PDF and CSV reports','Ponding and dips with a rain test, gullies and drains','Floor levels, headroom, roof pitch and CCTV coverage'],
   where:'Left rail: Survey (Volume, Ponding, Floor levels and the others).', steps:['Open Survey and pick the tool.','Draw the area (or leave it for the whole scan) and set what it asks for.','Read the colour map and figures, then press Report for the PDF or CSV.']},
+ {ic:'<path d="M12 2a6 6 0 0 0-6 6c0 4.5 6 12 6 12s6-7.5 6-12a6 6 0 0 0-6-6z"/><circle cx="12" cy="8" r="2"/>', t:'Defects and meetings', s:'Pin defects to the scan with a picture each, and walk the scan with others from their own computers.',
+  pts:['Numbered defect pins with type, priority, status, note and picture; PDF report and CSV','Meet: see each other in the scan, Follow, Everyone follow me and Look here','Defects added by anyone in a meeting show for everyone'],
+  where:'Left rail: Survey > Defects and Survey > Meet. Insert > Defect pin. File > Start or join a meeting.', steps:['Defects: press + Add a defect, click the spot, then set the type, priority and note.','Meet: press Start a meeting and send the code; the other person opens the same scan and joins.','Press Everyone follow me to show them round, or Look here to point at something.']},
  {ic:'<path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/>', t:'Model and drawings', s:'Trace the building over the scan and turn it into measured drawings.',
   pts:['Trace walls, doors, windows, columns and roofs over the scan','Measured survey PDF: plan, sections, elevations and schedules','DXF, IFC and OBJ for CAD and BIM'],
   where:'Top bar: Model and Drawings. Export for the PDF and the CAD files.', steps:['Model: trace the walls on the plan; add doors, windows and roofs.','Drawings: check the sheets and dimensions.','Export: pick a pack (survey, planning, builder, CAD) and save.']},
@@ -29593,7 +29596,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'23 October 2026', r:'r532 to r537', t:[
+ {d:'23 October 2026', r:'r532 to r538', t:[
+  'Help > Key features: new Defects and meetings page.',
   'Meet: uses about a third of the messages while people move round (view and pointer sent together, 5 times a second, only when they move), and the others still glide smoothly.',
   'Meet (rail: Survey > Meet, or File > Start or join a meeting): be in the scan together from different computers. Start a meeting and send the code. Everyone shows in the scan with their name, Follow someone\'s view, Everyone follow me for a guided tour, Look here to point something out, live pointers, and defect pins shared live. Nothing to set up: just start a meeting and send the code.',
   'Defects: Delete, New picture and Photo file work first time (the buttons no longer jump when you press them).',
