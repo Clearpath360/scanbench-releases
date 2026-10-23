@@ -8203,7 +8203,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-23 r536';
+var SB_BUILD='2026-10-23 r537';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29593,7 +29593,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'23 October 2026', r:'r532 to r536', t:[
+ {d:'23 October 2026', r:'r532 to r537', t:[
+  'Meet: uses about a third of the messages while people move round (view and pointer sent together, 5 times a second, only when they move), and the others still glide smoothly.',
   'Meet (rail: Survey > Meet, or File > Start or join a meeting): be in the scan together from different computers. Start a meeting and send the code. Everyone shows in the scan with their name, Follow someone\'s view, Everyone follow me for a guided tour, Look here to point something out, live pointers, and defect pins shared live. Nothing to set up: just start a meeting and send the code.',
   'Defects: Delete, New picture and Photo file work first time (the buttons no longer jump when you press them).',
   'Defects: an OK button under the note while you type it saves the note.',
@@ -31131,17 +31132,22 @@ function mtStart(code){ if(!APP.res){ toast('Open the scan first. Everyone in th
   MT.people={}; MT.follow=null; MT.guide=false; MT.looks=[]; MT.joined=Date.now(); MT.dfSent={}; MT.state='connecting'; MT.on=true; mtSave();
   var onState=function(s, why){ MT.state=s; MT.why=why||''; if(s==='ok'){ mtSend('hi', mtHi(true)); mtCamTick(true); setTimeout(function(){ if(MT.on) mtSend('hi', mtHi(true)); }, 700); } mtPanel(); mtChip(); };
   MT.tx=(MT.mode==='local'?mtLocalTx:mtSupaTx)(code.replace('-',''), mtRecv, onState); if(!MT.tx){ MT.on=false; mtPanel(); mtChip(); return; }
-  dfMarkSent(); clearInterval(MT.t.hi); MT.t.hi=setInterval(mtHiTick, 3000); clearInterval(MT.t.cam); MT.t.cam=setInterval(function(){ mtCamTick(false); }, 120);
+  dfMarkSent(); clearInterval(MT.t.hi); MT.t.hi=setInterval(mtHiTick, 5000); clearInterval(MT.t.cam); MT.t.cam=setInterval(function(){ mtCamTick(false); }, 200);
   mtPanel(); mtChip(); mtRedraw(); }
 function mtLeave(quiet){ if(!MT.on) return; try{ mtSend('bye', {}); }catch(e){} try{ MT.tx&&MT.tx.close(); }catch(e){} MT.tx=null; MT.on=false; MT.people={}; MT.follow=null; MT.guide=false; MT.looks=[]; MT.arm=false;
   clearInterval(MT.t.hi); clearInterval(MT.t.cam); mtPanel(); mtChip(); mtRedraw(); if(!quiet) toast('You left the meeting.', 2000); }
 function mtSend(e, p){ if(MT.tx) MT.tx.send({f:MT.id, e:e, p:p}); }
 function mtHi(isNew){ return {name:MT.name, col:MT.col, scan:mtScanId(), guide:MT.guide, joined:MT.joined, isNew:!!isNew}; }
-function mtHiTick(){ mtSend('hi', mtHi(false)); var now=Date.now(), ch=false; Object.keys(MT.people).forEach(function(k){ if(now-MT.people[k].seen>10000){ if(MT.follow===k) MT.follow=null; delete MT.people[k]; ch=true; } }); if(ch){ mtPanel(); mtChip(); mtRedraw(); } }
+function mtHiTick(){ mtSend('hi', mtHi(false)); var now=Date.now(), ch=false; Object.keys(MT.people).forEach(function(k){ if(now-MT.people[k].seen>16000){ if(MT.follow===k) MT.follow=null; delete MT.people[k]; ch=true; } }); if(ch){ mtPanel(); mtChip(); mtRedraw(); } }
 /* where I am and what I look at */
 function mtMyCam(){ try{ var cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch), E=[cam.tx+cam.dist*cp*Math.cos(cam.yaw), cam.ty+cam.dist*cp*Math.sin(cam.yaw), cam.tz+cam.dist*sp];
   var o={view:APP.view, tx:cam.tx, ty:cam.ty, tz:cam.tz, dist:cam.dist, yaw:cam.yaw, pitch:cam.pitch, eye:E}; if(typeof WKV!=='undefined'&&WKV.on){ o.walk=1; o.eyeH=WKV.eye; } if(APP.view==='plan'&&typeof planView!=='undefined'){ try{ var cv=planCv, a=s2w(cv.width/2, cv.height/2); o.pc=[a[0], a[1]]; }catch(e){} } return o; }catch(e){ return null; } }
-function mtCamTick(force){ if(!MT.on||MT.state!=='ok') return; var o=mtMyCam(); if(!o) return; var k=JSON.stringify([o.view,o.tx,o.ty,o.tz,o.dist,o.yaw,o.pitch,o.walk,o.pc].map(function(v){ return typeof v==='number'?+v.toFixed(3):v; })); if(!force&&k===MT.lastCam) return; MT.lastCam=k; mtSend('cam', o); }
+/* r537: the view and the pointer go together in one small message, at most 5 times a second, and only when they have moved
+   (1 cm, a twentieth of a degree). The other computers glide between messages, so it looks as smooth as before. */
+function mtR(v, d){ return typeof v==='number'?+v.toFixed(d):v; }
+function mtCamTick(force){ if(!MT.on||MT.state!=='ok') return; var o=(MT.follow&&!force)?null:mtMyCam(), m={}; if(o){ o.tx=mtR(o.tx,2); o.ty=mtR(o.ty,2); o.tz=mtR(o.tz,2); o.dist=mtR(o.dist,2); o.yaw=mtR(o.yaw,3); o.pitch=mtR(o.pitch,3); o.eye=o.eye.map(function(v){ return mtR(v,2); }); if(o.pc) o.pc=o.pc.map(function(v){ return mtR(v,2); });
+    var k=JSON.stringify([o.view,o.tx,o.ty,o.tz,o.dist,o.yaw,o.pitch,o.walk,o.pc]); if(force||k!==MT.lastCam){ MT.lastCam=k; m.c=o; } }
+  if(MT.ptrDirty){ MT.ptrDirty=false; m.p=MT.myPtr||null; m.hp=1; } if(m.c||m.hp) mtSend('st', m); }
 /* ---------- what comes in ---------- */
 function mtRecv(m){ if(!MT.on||!m||m.f===MT.id) return; var P=MT.people[m.f], p=m.p||{};
   if(m.e==='bye'){ if(P){ delete MT.people[m.f]; if(MT.follow===m.f){ MT.follow=null; toast(P.name+' left; you are not following anyone now.', 3000); } else toast(P.name+' left the meeting.', 2500); mtPanel(); mtChip(); mtRedraw(); } return; }
@@ -31149,13 +31155,24 @@ function mtRecv(m){ if(!MT.on||!m||m.f===MT.id) return; var P=MT.people[m.f], p=
   P.seen=Date.now();
   if(m.e==='hi'){ var wasG=P.guide; P.name=p.name||'Guest'; P.col=p.col||'#2563eb'; P.scan=p.scan||{}; P.guide=!!p.guide; P.joined=p.joined||0;
     if(p.isNew&&mtHost()) dfSendAll(); if(P.guide&&!wasG&&!MT.guide){ MT.follow=m.f; toast(P.name+' is showing you round. Your view follows theirs. Drag the view to look round on your own.', 4500); mtApplyCam(P); } if(!P.guide&&wasG&&MT.follow===m.f){ MT.follow=null; toast(P.name+' stopped the tour.', 2500); } mtPanel(); mtChip(); }
-  else if(m.e==='cam'){ P.cam=p; if(MT.follow===m.f) mtApplyCam(P); mtRedraw(); }
+  else if(m.e==='st'){ if(p.c) mtCamIn(P, p.c); if(p.hp){ P.ptr=p.p||null; P.ptrT=Date.now(); } mtRedraw(); }
+  else if(m.e==='cam'){ mtCamIn(P, p); mtRedraw(); }
   else if(m.e==='ptr'){ P.ptr=p.p||null; P.ptrT=Date.now(); mtRedraw(); }
   else if(m.e==='look'){ mtLookAdd(p.p, P.col, P.name); }
   else if(m.e==='dfu'){ dfRecv(p.d); } else if(m.e==='dfdel'){ dfRecvDel(p.id); } }
+function mtCamIn(P, c){ P.camT=c; if(!P.cam||P.cam.view!==c.view||!!P.cam.walk!==!!c.walk){ P.cam=JSON.parse(JSON.stringify(c)); if(MT.follow===P.id) mtApplyCam(P); return; } mtGlide(); clearTimeout(MT.t.wd); MT.t.wd=setTimeout(mtSnap, 260); }
+/* a window that is not being drawn (minimised, behind another) does not glide: jump straight to the latest view instead */
+function mtSnap(){ if(performance.now()-(MT.glLast||0)<200) return; Object.keys(MT.people).forEach(function(k){ var P=MT.people[k]; if(P.camT){ P.cam=JSON.parse(JSON.stringify(P.camT)); if(MT.follow===k) mtApplyCam(P); } }); if(MT.t.gl){ clearInterval(MT.t.gl); MT.t.gl=0; } mtRedraw(); }
+function mtGlide(){ if(MT.t.gl) return; var last=performance.now(); var step=function(){ var now=performance.now(); var dt=Math.min(1000, now-last), a=1-Math.exp(-dt/65), moving=false; last=now; MT.glLast=performance.now();
+    Object.keys(MT.people).forEach(function(k){ var P=MT.people[k], C=P.cam, T=P.camT; if(!C||!T) return; ['tx','ty','tz','dist','pitch'].forEach(function(f){ var d=T[f]-C[f]; if(Math.abs(d)>1e-4){ C[f]+=d*a; moving=true; } else C[f]=T[f]; });
+      var dy=T.yaw-C.yaw; dy=Math.atan2(Math.sin(dy), Math.cos(dy)); if(Math.abs(dy)>1e-4){ C.yaw+=dy*a; moving=true; } else C.yaw=T.yaw;
+      if(T.eye){ C.eye=C.eye||T.eye.slice(); for(var i=0;i<3;i++){ var de=T.eye[i]-C.eye[i]; if(Math.abs(de)>1e-4){ C.eye[i]+=de*a; moving=true; } else C.eye[i]=T.eye[i]; } }
+      if(T.pc){ C.pc=C.pc||T.pc.slice(); for(var j=0;j<2;j++){ var dp=T.pc[j]-C.pc[j]; if(Math.abs(dp)>1e-4){ C.pc[j]+=dp*a; moving=true; } else C.pc[j]=T.pc[j]; } }
+      C.walk=T.walk; C.eyeH=T.eyeH; C.view=T.view; if(MT.follow===k) mtApplyCam(P); });
+    mtRedraw(); if(!(moving&&MT.on)){ clearInterval(MT.t.gl); MT.t.gl=0; } }; MT.t.gl=setInterval(function(){ try{ step(); }catch(e){ clearInterval(MT.t.gl); MT.t.gl=0; console.warn(e); } }, 16); }
 function mtHost(){ var me=MT.joined, ids=Object.keys(MT.people); return ids.every(function(k){ var j=MT.people[k].joined||0; return me<j||(me===j&&MT.id<k); }); }
 function mtApplyCam(P){ var c=P.cam; if(!c) return; try{ if(typeof WKV!=='undefined'&&WKV.on) return; if(c.view==='plan'){ if(APP.view!=='plan') wsView('plan'); if(c.pc&&typeof planView!=='undefined'){ planView.cx=c.pc[0]; planView.cy=c.pc[1]; try{ planDrawSoon(); }catch(e){} } return; }
-  if(APP.view!=='3d') wsView('3d'); MT._apply=1; cam.tx=c.tx; cam.ty=c.ty; cam.tz=c.tz; cam.dist=c.dist; cam.yaw=c.yaw; cam.pitch=c.pitch; requestRender(false); MT._apply=0; MT.lastCam=''; }catch(e){ console.warn(e); } }
+  if(APP.view!=='3d') wsView('3d'); MT._apply=1; cam.tx=c.tx; cam.ty=c.ty; cam.tz=c.tz; cam.dist=c.dist; cam.yaw=c.yaw; cam.pitch=c.pitch; requestRender(false); MT._apply=0; }catch(e){ console.warn(e); } }
 /* ---------- defects shared live ---------- */
 function dfKey(d){ var o={}; for(var k in d) if(k!=='photo') o[k]=d[k]; return JSON.stringify(o)+'|'+(d.photo?d.photo.length:0); }
 function dfMarkSent(){ MT.dfSent={}; try{ dfList().forEach(function(d){ MT.dfSent[d.id]=dfKey(d); }); }catch(e){} }
@@ -31182,8 +31199,9 @@ window.addEventListener('mouseup', function(e){ var dn=_mtDn; _mtDn=null; if(!dn
 document.addEventListener('wheel', function(e){ if(MT.on&&MT.follow&&(e.target===glCv||(typeof planCv!=='undefined'&&e.target===planCv))){ MT.follow=null; toast('You are looking round on your own now.', 2500); mtPanel(); } }, {capture:true, passive:true});
 document.addEventListener('keydown', function(e){ if(e.key==='Escape'&&MT.arm){ MT.arm=false; mtPanel(); e.stopImmediatePropagation(); } }, true);
 /* my pointer, a few times a second */
-window.addEventListener('pointermove', function(e){ if(!MT.on||!MT.ptrOn||MT.state!=='ok'||e.buttons) return; var cv=e.target===glCv||(typeof planCv!=='undefined'&&e.target===planCv); var now=Date.now(); if(now-MT.lastPtr<160) return; MT.lastPtr=now;
-  if(!cv){ if(MT._ptrOut) return; MT._ptrOut=1; mtSend('ptr', {p:null}); return; } MT._ptrOut=0; var p=mtPickAt(e); mtSend('ptr', {p:p?[+p[0].toFixed(3),+p[1].toFixed(3),+(p[2]||0).toFixed(3)]:null}); }, true);
+window.addEventListener('pointermove', function(e){ if(!MT.on||!MT.ptrOn||MT.state!=='ok'||e.buttons) return; var cv=e.target===glCv||(typeof planCv!=='undefined'&&e.target===planCv); var now=Date.now(); if(now-MT.lastPtr<190) return; MT.lastPtr=now;
+  if(!cv){ if(MT.myPtr!==null){ MT.myPtr=null; MT.ptrDirty=true; } return; } var p=mtPickAt(e), q=p?[mtR(p[0],2), mtR(p[1],2), mtR(p[2]||0,2)]:null, o=MT.myPtr;
+  if(!q&&!o) return; if(q&&o&&Math.abs(q[0]-o[0])+Math.abs(q[1]-o[1])+Math.abs(q[2]-o[2])<0.02) return; MT.myPtr=q; MT.ptrDirty=true; }, true);
 /* ---------- drawing the people ---------- */
 function mtRedraw(){ try{ if(APP.view==='3d'){ if(typeof mdlOv==='function') mdlOv(); } else planDrawSoon(); }catch(e){} }
 function mtLabel(c, x, y, t, col, dpr){ c.font='600 '+(11*dpr)+'px system-ui'; var w=c.measureText(t).width+12*dpr, h=18*dpr; c.fillStyle=col; c.beginPath(); if(c.roundRect) c.roundRect(x-w/2, y-h, w, h, 9*dpr); else c.rect(x-w/2, y-h, w, h); c.fill(); c.fillStyle='#fff'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(t, x, y-h/2+0.5*dpr); }
@@ -31257,7 +31275,7 @@ function mtPanel(){ var s=mtSec(); if(!s) return; var b=s.querySelector('.body')
   b.querySelectorAll('[data-fol]').forEach(function(x){ x.onclick=function(){ var k=x.dataset.fol; if(MT.follow===k){ MT.follow=null; } else { MT.follow=k; var P=MT.people[k]; if(P) mtApplyCam(P); toast('Following '+(P?P.name:'')+'. Drag the view to look round on your own.', 3000); } mtPanel(); mtRedraw(); }; });
   if(q('mtGuide')) q('mtGuide').onclick=function(){ MT.guide=!MT.guide; mtSend('hi', mtHi(false)); MT.lastCam=''; mtCamTick(true); toast(MT.guide?'Everyone now follows your view. Move round and they move with you.':'Tour stopped. Everyone can look round on their own.', 3000); mtPanel(); };
   if(q('mtLook')) q('mtLook').onclick=function(){ MT.arm=!MT.arm; mtPanel(); };
-  if(q('mtPtr')) q('mtPtr').onchange=function(){ MT.ptrOn=this.checked; mtSave(); if(!MT.ptrOn) mtSend('ptr', {p:null}); };
+  if(q('mtPtr')) q('mtPtr').onchange=function(){ MT.ptrOn=this.checked; mtSave(); if(!MT.ptrOn){ MT.myPtr=null; MT.ptrDirty=true; } };
   if(q('mtShow')) q('mtShow').onchange=function(){ MT.showOn=this.checked; mtRedraw(); };
   if(q('mtLeave')) q('mtLeave').onclick=function(){ mtLeave(false); }; }
 window.addEventListener('mousedown', function(e){ var P=document.getElementById('sbMtSec'); if(P&&P.contains(e.target)) MT.mdown=true; }, true);

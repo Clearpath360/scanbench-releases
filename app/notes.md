@@ -1,2 +1,2 @@
-# r536
-- Meet: built-in meeting server, nothing to set up.
+# r537
+- Meet: about a third of the messages while moving; smooth gliding between updates.
