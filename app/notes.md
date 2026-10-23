@@ -1,2 +1,2 @@
-# r543
-- Compare timelapse date bar follows the route change points.
+# r544
+- Route editor: pinned Play timelapse / Back to timelapse bar.
