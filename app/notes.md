@@ -1,2 +1,2 @@
-# r544
-- Route editor: pinned Play timelapse / Back to timelapse bar.
+# r545
+- Route change points can use all 11 change styles.
