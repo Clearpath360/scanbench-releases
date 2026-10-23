@@ -1,3 +1,2 @@
-# r539
-- Meet: live measurements, areas and notes; Meeting notes PDF.
-- Sections: Whole line fixed (one Length row).
+# r540
+- Compare timelapse uses the route change points.
