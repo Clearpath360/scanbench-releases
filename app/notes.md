@@ -1,2 +1,2 @@
-r531
-Defects: numbered pins on the scan with type, priority, status, note and picture; Defects panel; PDF report and CSV; saved in the job.
+# r532
+- Defects note box: spaces work, click away or Esc to finish, focused after adding. Textareas no longer trigger plan shortcuts.
