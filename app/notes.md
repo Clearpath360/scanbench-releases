@@ -1,2 +1,2 @@
-# r540
-- Compare timelapse uses the route change points.
+# r541
+- Route done button moved into the Walk-through panel.
