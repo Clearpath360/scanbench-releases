@@ -1,2 +1,2 @@
-# r546
-- Timelapse panel: change style note when route change points are used.
+# r547
+- Clean up > Copy: copy a piece of the scan as an object, to My objects, or as PLY/SPZ.
