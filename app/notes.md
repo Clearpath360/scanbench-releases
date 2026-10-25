@@ -1,3 +1,2 @@
-r549
-- Object window: Size buttons (half, double, original) and Look (brightness, contrast, colour).
-- Make shape (vector): object or Copy selection to OBJ, DXF, or a plan outline.
+r550
+- Make shape: Full 3D (keeps canopies, posts, overhangs) with Fine, Normal, Smooth detail; From above kept.
