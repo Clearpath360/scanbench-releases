@@ -1,3 +1,3 @@
-r554
-- Survey pack: one PDF for the client (cover, drawings, every report).
-- Make shape: scan colours, Save GLB, Save DXF lines with plan/front/side, Flat views preview.
+r555
+- Client viewer: defects (pins, list, pictures) and areas, each with a switch.
+- Sample room and Getting started checklist for new users.
