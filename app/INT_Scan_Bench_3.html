@@ -8209,7 +8209,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-25 r557';
+var SB_BUILD='2026-10-25 r558';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29630,7 +29630,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'25 October 2026', r:'r549 to r557', t:[
+ {d:'25 October 2026', r:'r549 to r558', t:[
+  'Fires: flames no longer vanish when the fire is seen from further away; they hide only when something in the scan is in front of them.',
   'Fires: real-looking flames. Each fire is drawn as rising, flickering flame tongues with a deep red edge, orange body and yellow heart (candles get a blue foot), leaning with the wind. Pick a fire and set Flames to Glowing dots for the old look.',
   'Client viewer: tick Survey pack PDF inside and the viewer file carries the whole survey pack; your client gets a Report button that opens it, on a phone too. One file with the 3D and the report.',
   'New here: the start screen has Try the sample room (also Help > Open the sample room), a furnished room in metres to practise on. A Getting started list ticks itself as you turn the view, measure, draw an area, log a defect, save and make something for a client; Show me opens each tool and points at it. Help > Getting started brings it back.',
@@ -32167,11 +32168,17 @@ function flmTongues(it, C){ var hs=0, ids=String(it.id||''); for(var hi=0;hi<ids
   out.push([0, 0, C.r*L.cw, C.h*(L.flat?1.3:1.45), fxH(sd*9.1), L.flat?0.7:0.8, 0, 0]);
   for(var i=0;i<n;i++){ var a=fxH(i*3.1+sd)*6.283, d=Math.sqrt(fxH(i*1.7+sd*3))*C.r*(L.flat?0.85:0.7); out.push([Math.cos(a)*d*(L.flat?1.4:1), Math.sin(a)*d, C.r*(L.flat?0.45:0.7)*(0.75+0.6*fxH(i*5.3+sd)), C.h*(L.flat?0.9:0.7)*(0.8+0.6*fxH(i*2.9+sd)), fxH(i*7.7+sd), L.flat?0.65:0.72, 0, 0]); }
   return out; }
+/* behind the scan? One ray from the eye to the middle of each flame card (kept until the view moves): hidden when the scan is
+   clearly in front of it. The dots' coarse grid catches the ground just in front of a fire, so flames use their own ray. */
+FLM.vis={};
+function flmBehind(E, x, y, z, margin){ try{ if(typeof stScanHit!=='function') return false; var key=E.map(function(v){ return v.toFixed(2); }).join(',')+'|'+x.toFixed(2)+','+y.toFixed(2)+','+z.toFixed(2), c=FLM.vis[key]; if(c!=null) return c;
+    var d=[x-E[0], y-E[1], z-E[2]], L=Math.hypot(d[0],d[1],d[2])||1; d=[d[0]/L, d[1]/L, d[2]/L]; var h=stScanHit({o:E, d:d}), t=h?Math.hypot(h.p[0]-E[0], h.p[1]-E[1], h.p[2]-E[2]):1e9, r=t<L-margin;
+    var ks=Object.keys(FLM.vis); if(ks.length>400) FLM.vis={}; FLM.vis[key]=r; return r; }catch(e){ return false; } }
 function flmDraw(){ if(typeof fxOn!=='function'||!fxOn()||APP.view!=='3d'||miniVP) return; var F=fxS(); if(!F||!F.items.some(flmReal)) return; var gl=GL, pr=flmProg(); if(!pr) return;
   var X=wxState(), t=X.t, sc=fxSc(), S=X.S, wd=(S.windDir||0)*Math.PI/180, wv=(S.wind||0), wx=Math.cos(wd)*wv, wy=Math.sin(wd)*wv, cp=Math.cos(cam.pitch), E=[cam.tx+cam.dist*cp*Math.cos(cam.yaw), cam.ty+cam.dist*cp*Math.sin(cam.yaw), cam.tz+cam.dist*Math.sin(cam.pitch)], V=[];
   F.items.forEach(function(it){ if(!flmReal(it)) return; var C=fxFireC(it), lift=(C.lift||0)*sc; try{ FX.oc=fxOcc(it); }catch(e){ FX.oc=null; }
     flmTongues(it, C).forEach(function(q){ var bx=it.x+q[0]*sc, by=it.y+q[1]*sc, bz=it.z+(q[7]||0)*sc+lift, W=q[2]*sc, H=q[3]*sc;
-      if(FX.oc&&fxHidden(bx, by, bz+H*0.4)) return;
+      if(flmBehind(E, bx, by, bz+H*0.45, Math.max(0.3*sc, W*0.6))) return; /* hidden only when the scan is clearly in front of it */
       var vx=E[0]-bx, vy=E[1]-by, L=Math.hypot(vx, vy)||1, rx=-vy/L*W/2, ry=vx/L*W/2, tx=wx*H*0.45, ty=wy*H*0.45, k=[q[4], q[5], q[6], fxH(q[4]*13)];
       var A=[bx-rx, by-ry, bz], B=[bx+rx, by+ry, bz], Cc=[bx+rx+tx, by+ry+ty, bz+H], D=[bx-rx+tx, by-ry+ty, bz+H];
       [[A,-1,0],[B,1,0],[Cc,1,1],[A,-1,0],[Cc,1,1],[D,-1,1]].forEach(function(p){ V.push(p[0][0], p[0][1], p[0][2], p[1], p[2], k[0], k[1], k[2], k[3]); }); }); });

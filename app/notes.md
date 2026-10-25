@@ -1,2 +1,2 @@
-r557
-- Fires: real-looking flames (flame tongues with a shader), old dots as an option.
+r558
+- Fires: flames no longer vanish at a distance; hidden only behind the scan.
