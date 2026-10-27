@@ -8209,7 +8209,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-27 r562';
+var SB_BUILD='2026-10-27 r563';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29630,7 +29630,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'27 October 2026', r:'r559 to r562', t:[
+ {d:'27 October 2026', r:'r559 to r563', t:[
+  'Snow by day: under cloud the flakes are a soft grey against the sky and white against walls and trees, the way real snowfall looks, so you can see it falling over snowy ground too. Bigger flakes are lit on top and shaded underneath; in sunshine they stay bright white.',
   'Rain: wet ground is darker and shinier. Reflections hold their shape and smear downwards, lamps leave long soft streaks of light in the wet, and the splashes are tiny, like real rain.',
   'Rain: real-looking rain. Thousands of long, thin streaks that show up against dark walls and trees and fade into a grey mist further off, with soft blurry drops right in front of you. Heavy rain sweeps through in sheets with the wind, lamps glow in the wet air at night, and the splashes are smaller and quieter.',
   'Snow: real-looking falling snow. Many more flakes, from fine specks far off to big soft ones drifting past close up, each swinging and blown by gusts as it falls. At night the lamps light the snow round them and glow through it, like a street lamp in a snowstorm.',
@@ -32229,7 +32230,7 @@ function snwReady(){ if(SNW.ok===false||!GL||APP.ortho3d) return false; return t
 var SNW_VS=['#version 300 es','precision highp float;','layout(location=4) in vec4 aR;',
  'uniform mat4 uM; uniform vec3 uEye, uC, uAmb; uniform float uR, uT, uFall, uSh, uSc, uFpx, uFoc, uAp, uSize, uA, uGust, uFlash, uTopOn, uGround; uniform vec2 uBand, uWind, uVP;',
  'uniform vec4 uLP[6]; uniform vec4 uLC[6]; uniform vec4 uLD[6]; uniform int uLN; uniform highp sampler2D uTop; uniform vec4 uTopB;',
- 'out vec2 vQ; out vec4 vC; out vec3 vS; out float vPh;',
+ 'out vec2 vQ; out vec4 vC; out vec3 vS; out float vPh; out float vY;',
  'vec2 swirl(float t, vec4 r){ float w=1.4+2.6*r.y, rs=(0.03+0.15*r.x)*uSc, ph=t*w+r.z*40.0; return vec2(cos(ph), sin(ph))*rs; }',
  'vec3 gust(float t, vec3 p){ vec3 q=p/uSc; return uGust*uSc*vec3(sin(t*0.83+q.y*0.23+1.3)+0.6*sin(t*0.41+q.x*0.17), cos(t*0.71+q.x*0.19)+0.6*sin(t*0.53+q.y*0.13+2.0), 0.35*sin(t*0.9+q.x*0.21+q.y*0.15)); }',
  'void main(){ int id=gl_VertexID; vec2 cr=vec2((id&1)==1?1.0:-1.0, (id&2)==2?1.0:-1.0);',
@@ -32243,7 +32244,7 @@ var SNW_VS=['#version 300 es','precision highp float;','layout(location=4) in ve
  '  if(head.z<uGround) a=0.0;',
  '  if(uTopOn>0.5){ vec2 tu=(head.xy-uTopB.xy)*uTopB.zw; if(tu.x>=0.0&&tu.y>=0.0&&tu.x<1.0&&tu.y<1.0){ if(head.z<texture(uTop,tu).r) a=0.0; } }',
  '  vec4 ch=uM*vec4(head,1.0), ct=uM*vec4(tail,1.0);',
- '  if(ch.w<0.02||a<0.002){ gl_Position=vec4(2.0,2.0,2.0,1.0); vC=vec4(0.0); vQ=vec2(0.0); vS=vec3(1.0); vPh=0.0; return; }',
+ '  if(ch.w<0.02||a<0.002){ gl_Position=vec4(2.0,2.0,2.0,1.0); vC=vec4(0.0); vQ=vec2(0.0); vS=vec3(1.0); vPh=0.0; vY=0.0; return; }',
  '  vec2 sh=ch.xy/ch.w*0.5*uVP, st=ct.w>0.02?ct.xy/ct.w*0.5*uVP:sh;',
  /* most flakes are small; one in a few hundred is a big wet clump */
  '  float big=pow(fract(q.x*7.31+q.w*3.17),7.0), dia=uSize*(0.45+0.9*q.y+3.2*big);',
@@ -32258,14 +32259,16 @@ var SNW_VS=['#version 300 es','precision highp float;','layout(location=4) in ve
  '    if(uLD[i].w>-1.5){ float c=dot(lv/ld,uLD[i].xyz); f*=c<uLD[i].w?0.0:min(1.0,(c-uLD[i].w)/(1.0-uLD[i].w)*3.0)*2.0; }',
  '    float fs=max(dot(lv/ld,te),0.0); f*=1.0+3.0*pow(fs,8.0); col+=uLC[i].rgb*f; }',
  '  float mc=max(col.r,max(col.g,col.b)); col=col*1.35/max(1.35,mc); col=mix(col, vec3(1.3,1.27,1.22), clamp((mc-1.35)/4.0,0.0,0.3)); col*=mix(1.0, 0.65, blur);',
- '  vec2 cen=0.5*(sh+st); float ext=L+r+1.0, wid=r+1.0; vec2 px=cen+dir*cr.x*ext+nr*cr.y*wid;',
+ '  vec2 cen=0.5*(sh+st); float ext=L+r+1.0, wid=r+1.0; vec2 off=dir*cr.x*ext+nr*cr.y*wid, px=cen+off; vY=off.y/max(r,1.0);',
  '  gl_Position=vec4(px/(0.5*uVP)*ch.w, ch.z, ch.w); vQ=vec2(cr.x*ext, cr.y*wid); vS=vec3(L, r, blur); vPh=q.z*6.2832+q.y*20.0; vC=vec4(col, a); }'].join('\n');
-var SNW_FS=['#version 300 es','precision mediump float; in vec2 vQ; in vec4 vC; in vec3 vS; in float vPh; out vec4 o;',
+var SNW_FS=['#version 300 es','precision mediump float; in vec2 vQ; in vec4 vC; in vec3 vS; in float vPh; in float vY; uniform float uShade; out vec4 o;',
  'void main(){ float L=vS.x, r=vS.y, bl=vS.z, dx=max(abs(vQ.x)-L,0.0), dd=length(vec2(dx,vQ.y));',
  /* in focus and big enough to see: a ragged edge, not a perfect dot. Out of focus: a soft flat disc */
  '  float lump=(1.0-bl)*clamp((r-2.0)/6.0,0.0,1.0)*(L<r?1.0:0.3), an=atan(vQ.y, abs(vQ.x)<1e-4?1e-4:vQ.x);',
  '  float re=r*(1.0+0.22*lump*(sin(an*3.0+vPh)*0.6+sin(an*5.0+vPh*1.7)*0.4)), sw=max(0.75, re*(0.3+0.55*bl));',
- '  float a=(1.0-smoothstep(re-sw, re+0.5, dd))*vC.a; if(a<0.002) discard; o=vec4(vC.rgb*a, a); }'].join('\n');
+ '  float a=(1.0-smoothstep(re-sw, re+0.5, dd))*vC.a; if(a<0.002) discard;',
+ /* by day a flake big enough to see is lit from the sky above and shaded underneath */
+ '  float shd=uShade*(1.0-bl)*clamp((r-1.5)/3.0,0.0,1.0)*(L<r?1.0:0.0); vec3 c=vC.rgb*mix(1.0, 0.84+0.34*clamp(vY*0.5+0.5,0.0,1.0), shd); a*=mix(1.0, 0.45, bl*uShade); o=vec4(c*a, a); }'].join('\n');
 /* the glow a lamp makes in falling snow */
 var SNW_HVS='#version 300 es\nuniform mat4 uM; uniform vec3 uP, uRt, uUp; uniform float uRad; out vec2 vQ; void main(){ int id=gl_VertexID; vec2 cr=vec2((id&1)==1?1.0:-1.0,(id&2)==2?1.0:-1.0); vQ=cr; gl_Position=uM*vec4(uP+(uRt*cr.x+uUp*cr.y)*uRad,1.0); }';
 var SNW_HFS='#version 300 es\nprecision mediump float; uniform vec3 uCol; uniform float uA; in vec2 vQ; out vec4 o; void main(){ float d=dot(vQ,vQ); if(d>1.0) discard; float g=(exp(-d*4.5)*0.7+exp(-d*30.0)*0.6)*(1.0-smoothstep(0.65,1.0,d)); o=vec4(uCol*g*uA, 0.0); }';
@@ -32274,7 +32277,7 @@ function snwProg(){ if(SNW.prog) return SNW.prog; if(SNW.ok===false) return null
     var u=new Float32Array(SNW.max*4); for(var i=0;i<u.length;i++){ var x=Math.sin(i*12.9898+78.233)*43758.5453; u[i]=x-Math.floor(x); }
     SNW.buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, SNW.buf); gl.bufferData(gl.ARRAY_BUFFER, u, gl.STATIC_DRAW);
     SNW.vao=gl.createVertexArray(); gl.bindVertexArray(SNW.vao); gl.enableVertexAttribArray(4); gl.vertexAttribPointer(4,4,gl.FLOAT,false,16,0); gl.vertexAttribDivisor(4,1); gl.bindVertexArray(null);
-    SNW.loc={}; ['uM','uEye','uC','uAmb','uR','uT','uFall','uSh','uSc','uFpx','uFoc','uAp','uSize','uA','uGust','uFlash','uTopOn','uGround','uBand','uWind','uVP','uLP','uLC','uLD','uLN','uTop','uTopB'].forEach(function(k){ SNW.loc[k]=gl.getUniformLocation(SNW.prog,k); });
+    SNW.loc={}; ['uM','uEye','uC','uAmb','uR','uT','uFall','uSh','uSc','uFpx','uFoc','uAp','uSize','uA','uGust','uFlash','uTopOn','uGround','uBand','uWind','uVP','uLP','uLC','uLD','uLN','uTop','uTopB','uShade'].forEach(function(k){ SNW.loc[k]=gl.getUniformLocation(SNW.prog,k); });
     SNW.hloc={}; ['uM','uP','uRt','uUp','uRad','uCol','uA'].forEach(function(k){ SNW.hloc[k]=gl.getUniformLocation(SNW.hprog,k); }); SNW.ok=true; return SNW.prog;
   }catch(e){ console.warn('snow: falling back to the simple flakes', e); SNW.ok=false; SNW.prog=null; try{ gl.bindVertexArray(null); }catch(e2){} return null; } }
 /* the three layers, in metres: how far ahead of you the box sits, its half size, the distances it covers, flakes at light and heavy snow,
@@ -32290,14 +32293,17 @@ function snwDraw(){ var S=wxS(); if(!S||!wxOn()||APP.view!=='3d'||miniVP||!(S.sn
   /* lamps, nearest six */ var Lm=wxLampsNear().map(function(q){ q._d=Math.hypot(q.p[0]-E[0], q.p[1]-E[1], q.p[2]-E[2]); return q; }).sort(function(a,b){ return a._d-b._d; }).slice(0,6);
   var LP=new Float32Array(24), LC=new Float32Array(24), LD=new Float32Array(24); Lm.forEach(function(q,i){ LP.set([q.p[0],q.p[1],q.p[2],q.r],i*4); LC.set([q.c[0],q.c[1],q.c[2],q.s],i*4); LD.set(q.beam?[q.d[0],q.d[1],q.d[2],q.cs]:[0,0,1,-2],i*4); });
   /* flakes take the light of the sky: white by day, only faintly seen at night away from the lamps */
-  var night=X.night, amb=wxMix([0.93,0.95,1.0], X.fogCol.map(function(v){ return Math.min(1, v*1.15+0.03); }), Math.min(1, night*0.95));
+  /* r563: by day under cloud a flake is a little darker than the sky behind it (grey against the sky, white against walls and trees), and
+     bright white only when the sun is on it */
+  var night=X.night, hl=0.3*X.C.hor[0]+0.59*X.C.hor[1]+0.11*X.C.hor[2], sunK=wxClamp(X.sun.el/20,0,1)*(1-X.cov), dayC=wxMix([hl*0.92,hl*0.94,hl*0.99],[1.04,1.03,1.0], sunK);
+  var amb=wxMix(dayC, X.fogCol.map(function(v){ return Math.min(1, v*1.15+0.03); }), Math.min(1, night*0.95));
   /* at night the lamps light the falling snow everywhere a little too, the way a snowy town glows */ Lm.forEach(function(q){ var w=Math.min(0.12, 0.05*q.s)*Math.min(1, 2.5*q.r/Math.max(q.r, q._d)); amb=[amb[0]+q.c[0]*w, amb[1]+q.c[1]*w, amb[2]+q.c[2]*w]; });
   var wv=S.wind||0, wd=(S.windDir||0)*Math.PI/180, ws=(0.12+3.6*wv*wv+1.2*wv)*sc*(S.snow>0.75?1.3:1);
   var walk=typeof WKV!=='undefined'&&WKV.on, foc=walk?8*sc:Math.max(2.5*sc, cam.dist);
   gl.useProgram(pr); gl.bindVertexArray(SNW.vao); gl.bindBuffer(gl.ARRAY_BUFFER, SNW.buf);
   gl.uniformMatrix4fv(L.uM, false, M); gl.uniform3f(L.uEye, E[0],E[1],E[2]); gl.uniform3f(L.uAmb, amb[0],amb[1],amb[2]); gl.uniform1f(L.uT, t); gl.uniform1f(L.uFall, 0.95*sc); gl.uniform1f(L.uSh, 1/(120-80*Math.min(1,night))); gl.uniform1f(L.uSc, sc);
   gl.uniform1f(L.uFpx, vh/(2*Math.tan(0.45))); gl.uniform1f(L.uFoc, foc); gl.uniform1f(L.uAp, 0.02*sc); gl.uniform1f(L.uSize, 0.0085*sc); gl.uniform1f(L.uGust, (0.3+0.6*wv)); gl.uniform1f(L.uFlash, X.flash||0);
-  gl.uniform1f(L.uTopOn, topOn); gl.uniform1f(L.uGround, g-0.05*sc); gl.uniform2f(L.uWind, Math.cos(wd)*ws, Math.sin(wd)*ws); gl.uniform2f(L.uVP, vw, vh);
+  gl.uniform1f(L.uTopOn, topOn); gl.uniform1f(L.uShade, Math.max(0, 1-night*1.5)); gl.uniform1f(L.uGround, g-0.05*sc); gl.uniform2f(L.uWind, Math.cos(wd)*ws, Math.sin(wd)*ws); gl.uniform2f(L.uVP, vw, vh);
   gl.uniform4fv(L.uLP, LP); gl.uniform4fv(L.uLC, LC); gl.uniform4fv(L.uLD, LD); gl.uniform1i(L.uLN, Lm.length); gl.uniform1i(L.uTop, 11); if(T) gl.uniform4f(L.uTopB, T.x0, T.y0, 1/(T.cell*T.nx), 1/(T.cell*T.ny));
   gl.enable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   var a0=Math.min(1, 0.55+0.4*s)*Math.min(1.2,k), tot=0;

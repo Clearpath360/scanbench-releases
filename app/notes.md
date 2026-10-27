@@ -1,2 +1,2 @@
-r562
-- Rain: darker, shinier wet ground, lamp streaks, tiny splashes.
+r563
+- Snow by day: grey against the sky, white against walls, shaded flakes.
