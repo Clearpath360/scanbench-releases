@@ -1,2 +1,2 @@
-r560
-- Snow: real-looking falling snow, soft near flakes, lamps glow through it at night.
+r561
+- Rain: real-looking rain, fine streaks, grey mist, soft near drops, lamp glow at night.
