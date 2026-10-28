@@ -1,2 +1,2 @@
-r564
-- Snow: the top of the slider is a real blizzard, with auto fewer flakes on slow computers.
+r565
+- Meet: works with older versions and blocked networks (uses both meeting servers).
