@@ -1,0 +1,36 @@
+# The Windows installer (too big for one git file) is pushed into incoming-installer/ in parts:
+#   part.aa, part.ab, ...   the installer split in order
+#   name.txt                its file name, e.g. EXT_Scan_Bench_Setup_0.9.6_quick.exe
+#   tag.txt                 the release tag, e.g. installer-0.9.6
+#   sha256.txt              its checksum line, to check the parts joined back correctly
+# This joins them, publishes the installer as a PRE-release (so the app's update check, which reads the latest release, never sees it),
+# then removes the parts folder. The website links to the file at /releases/download/<tag>/<name>.
+name: installer
+on:
+  push:
+    paths: ['incoming-installer/**']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Join the parts and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd incoming-installer
+          [ -f name.txt ] || { echo "nothing to publish"; exit 0; }
+          N=$(cat name.txt | tr -d '\r\n'); T=$(cat tag.txt | tr -d '\r\n')
+          cat part.* > "$N"
+          sha256sum -c sha256.txt
+          gh release view "$T" >/dev/null 2>&1 || gh release create "$T" --target "$GITHUB_SHA" --title "Scan Bench installer ${T#installer-}" --notes "Windows installer for Scan Bench. It needs a licence key, apart from joining a meeting someone has invited you to (Join it free on the licence screen). This is not an app update: Scan Bench updates itself." --prerelease
+          gh release upload "$T" "$N" --clobber
+          cd ..
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git rm -r -q incoming-installer
+          git commit -m "Installer $T published"
+          git push
