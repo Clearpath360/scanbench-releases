@@ -1,2 +1,2 @@
-r565
-- Meet: works with older versions and blocked networks (uses both meeting servers).
+r566
+- Licence: Use a different key button, and the licence check reaches the server more reliably.
