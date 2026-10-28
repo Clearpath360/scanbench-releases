@@ -8209,7 +8209,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-28 r566';
+var SB_BUILD='2026-10-28 r567';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29630,7 +29630,9 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'28 October 2026', r:'r564 to r566', t:[
+ {d:'28 October 2026', r:'r564 to r567', t:[
+  'Licence: Scan Bench now needs a licence key. Start the 7 day free trial on the website; the key comes in your sign-up email straight away. Type it once with your email. Each key works on 2 computers.',
+  'Meet: someone you invite does not need a licence. On the licence screen they press Join it free, open the scan you sent and type the meeting code. The free installer for guests is on the website. Starting a meeting needs a licence.',
   'Licence: Help > Licence has a Use a different key button to swap in a new key, and the licence check reaches the licence server more reliably. If it still cannot, the message says why.',
   'Meet: you now meet even if the other computer still has an older Scan Bench, or its network blocks the new meeting server. While everyone updates, a meeting uses both meeting servers at once. Anyone on an older version shows as "older version: ask them to update" in the People list.',
   'Snow: the top of the Snow slider is now a real blizzard. Up to three times the flakes, driven sideways by the wind in gusts, and the air goes white so the distance disappears. If your computer slows down, Scan Bench draws fewer flakes by itself until it keeps up again.'
@@ -30460,8 +30462,8 @@ lodfxReady=function(){ var S=LCCI.lod; if(!S||!S.on||!SPL.ready||!SPL.src||!APP.
    It re-checks quietly at start; without internet it keeps working for LIC.cfg.grace days after the last good check.
    A key for another product, or one that is expired (subscription ended) or disabled, is refused.
    LIC.cfg.enforce stays false until the store and product ids are filled in, so nothing locks before the shop is live. ===== */
-/* r566, 28 Oct 2026: the shop is live. Only keys for the live product count (the test-mode copy, product 1457626, is refused), and the app locks without a key. */
-var LIC={cfg:{name:'Scan Bench', storeId:502957, productIds:[1480909], api:'https://api.lemonsqueezy.com/v1/licenses', buyUrl:'https://scanbench.pages.dev/download.html' /* r510: the website's Buy page, so the shop's link can change without a new build */, helpEmail:'info@clearpath360.co.uk', grace:14, enforce:false /* r567: true, once Chris's own key works */}, st:null, busy:false};
+/* r566/r567, 28 Oct 2026: the shop is live. Only keys for the live product count (the test-mode copy, product 1457626, is refused), and the app locks without a key. */
+var LIC={cfg:{name:'Scan Bench', storeId:502957, productIds:[1480909], api:'https://api.lemonsqueezy.com/v1/licenses', buyUrl:'https://scanbench.pages.dev/download.html' /* r510: the website's Buy page, so the shop's link can change without a new build */, helpEmail:'info@clearpath360.co.uk', grace:14, enforce:true}, st:null, busy:false};
 function licLoad(){ try{ LIC.st=JSON.parse(localStorage.getItem('sb_lic')||'null'); }catch(e){ LIC.st=null; } return LIC.st; }
 function licSave(s){ LIC.st=s; try{ if(s) localStorage.setItem('sb_lic', JSON.stringify(s)); else localStorage.removeItem('sb_lic'); }catch(e){} }
 function licMachine(){ var id=null; try{ id=localStorage.getItem('sb_lic_pc'); }catch(e){} if(!id){ id=Math.random().toString(36).slice(2,8).toUpperCase(); try{ localStorage.setItem('sb_lic_pc', id); }catch(e){} }
