@@ -1,2 +1,2 @@
-r568
-- Opening a scan: no more No scan loaded in the corners while it opens.
+r569
+- Start screen: new layout with recent scans and their pictures.
