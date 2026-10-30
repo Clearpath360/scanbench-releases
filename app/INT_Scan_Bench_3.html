@@ -8210,7 +8210,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-30 r576';
+var SB_BUILD='2026-10-30 r577';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29825,7 +29825,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'30 October 2026', r:'r573 to r576', t:[
+ {d:'30 October 2026', r:'r573 to r577', t:[
+  'Height trim: a trim that would hide the whole scan is no longer carried into the next scan you open; the height goes back to full and a message says so. A trim you make on the scan in front of you is left alone.',
   'The Scan, Model and Show menus on the view bar now close when you click beside them, including after choosing X-ray.',
   'Realsee models open in colour: a GLB whose pictures sit beside it as separate files (texture_0.jpg and so on) now uses them. Open the folder, the zip, or the GLB with its pictures; a GLB on its own asks for them.',
   'A 3D model can also be opened as its unzipped folder (drop the folder on the window, or use XGRIDS LCC folder). A model split into several files is joined into one, and models with lots of big pictures no longer run out of memory.',
@@ -32857,6 +32858,20 @@ try{ skinRail(); }catch(e){}
    They closed on a mousedown that reached the page, but the x-ray view's canvas stops it, so after choosing X-ray the menu stayed open. ===== */
 window.addEventListener('pointerdown', function(e){ var t=e.target; if(!t||!t.closest) return; if(t.closest('#tools3d .pop3')||t.closest('#tools3d .dd')) return;
   var any=false; document.querySelectorAll('#tools3d .pop3.open').forEach(function(q){ q.classList.remove('open'); any=true; }); if(any) document.querySelectorAll('#tools3d .dd.on').forEach(function(b){ b.classList.remove('on'); }); }, true);
+
+/* ===== r577: the height trim is remembered from one scan to the next, so a trim dragged right down hid every scan opened after it.
+   Now, when a scan opens and the trim would leave less than a sliver of it (or none), the trim goes back to full height and says so. ===== */
+function trgCheck(){ try{ var R=APP.res; if(!R||!R.robust) return; var rg=ceiClipRange(), h=R.ceil||2.5;
+  var lo=Math.max(rg[0], APP.zLoOn?APP.zLo*h:-1e9, CEI.zlo!=null?CEI.zlo:-1e9), hi=Math.min(rg[1], APP.zCutOn?APP.zCut*h:1e9, CEI.zhi!=null?CEI.zhi:1e9);
+  var z0=R.robust.z[0], z1=R.robust.z[1], keep=Math.max(0, Math.min(hi, z1)-Math.max(lo, z0)), span=Math.max(0.01, z1-z0);
+  if(keep<Math.max(0.3, span*0.08)){ APP.zCutOn=false; APP.zLoOn=false; bandSet(rg[0], rg[1], true); try{ bandSync(); }catch(e){} try{ mainClipSync(); }catch(e){} try{ savePrefs(); }catch(e){} requestRender(false);
+    toast('The height trim was hiding the whole scan, so it is back to full height. Drag the ends of the slider on the right to trim it again.', 6000); } }catch(e){ console.warn(e); } }
+/* checked as a different scan is set up (the trim came from the one before), and once more just after; a trim you make on this scan is left alone */
+var TRG={file:null, live:false};
+try{ sbBefore('ceiOnScan', function(){ try{ TRG.isNew=APP.fileName!==TRG.file; }catch(e){} }); sbAfter('ceiOnScan', function(r){ try{ if(TRG.isNew){ TRG.file=APP.fileName; TRG.live=true; trgCheck(); var f=TRG.file; setTimeout(function(){ if(TRG.live&&APP.fileName===f) trgCheck(); }, 600); setTimeout(function(){ if(APP.fileName===f) TRG.live=false; }, 4000); } }catch(e){} return r; }); }catch(e){}
+['pointerdown','keydown'].forEach(function(ev){ window.addEventListener(ev, function(e){ if(e.isTrusted) TRG.live=false; }, true); });
+/* a scan's saved work coming back (its tab, its autosave) can bring a trim with it: checked again while you have not touched anything */
+try{ sbAfter('ceiApplyJob', function(r){ try{ trgCheck(); }catch(e){} return r; }); }catch(e){}
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,
