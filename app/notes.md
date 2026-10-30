@@ -1,1 +1,1 @@
-r582: Zone, Section and Note switch to the Plan when picked in 3D; zone card buttons wrap so none are cut off.
+r583: Delete zone removes the outline and offers to delete the walls made from it; Clear all is now Clear zones and notes.

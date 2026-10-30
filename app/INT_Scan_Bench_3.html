@@ -8210,7 +8210,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-30 r582';
+var SB_BUILD='2026-10-30 r583';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -20531,7 +20531,7 @@ var SB_TIPS={'File':'Open, save and recent jobs','Edit':'Undo, redo, select, cop
   '1Prep scan':'Step 1: open, scale, level and clean the scan','2Model':'Step 2: draw walls, floors, roofs and openings on the scan','3Drawings':'Step 3: plans, sections and the PDF or DXF to send',
   'btnFit':'Fit the whole scan in the view (F)','btnReload':'Open a different scan file','btnGhost':'Show a second scan over this one to compare or line up','btnScale':'Set the real size from the floor to ceiling height you type','btnScaleClear':'Forget the scale and go back to scan units','btnScaleLen':'Set the real size from the last measurement you drew',
   'Objects':'Show or hide the objects list','Mark up':'Measuring and clean-up tools','Photo':'Show the scan in its real colours','Points':'Show the scan as plain points (faster on slow computers)','Lasso':'Draw round splats to select them','Box':'Drag a box to select splats','Brush':'Paint over splats to select them',
-  'Front':'Look at the scan straight from the front','Left':'Look at the scan from the left side','Back':'Look at the scan from the back','Iso':'Corner view from above at an angle','Top':'Look straight down on the scan','Under':'Look up from underneath','ceNew':'Start a new measured zone','ceUndo':'Take back the last point you placed','ceClr':'Remove every zone and point'};
+  'Front':'Look at the scan straight from the front','Left':'Look at the scan from the left side','Back':'Look at the scan from the back','Iso':'Corner view from above at an angle','Top':'Look straight down on the scan','Under':'Look up from underneath','ceNew':'Start a new measured zone','ceUndo':'Take back the last point you placed','ceClr':'Removes every zone, measurement and note. Walls and the rest of the model stay.'};
 function sbTipsApply(){ document.querySelectorAll('button, [role=button], label.mini').forEach(function(x){ if(x.title) return; var key=x.id&&SB_TIPS[x.id]?x.id:(x.textContent||'').trim().replace(/\s+/g,' '); var t=SB_TIPS[key]||SB_TIPS[key.replace(/ [A-Z]$/,'')]; if(t) x.title=t; }); }
 (function(){ sbTipsApply(); setTimeout(sbTipsApply, 1500); sbOnBar(function(){ sbTipsApply(); }); })();
 
@@ -29825,7 +29825,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'30 October 2026', r:'r573 to r582', t:[
+ {d:'30 October 2026', r:'r573 to r583', t:[
+  'Zones: Delete is now Delete zone. It removes the outline only, and if walls were made from it a bar offers Delete those walls too. Clear all is now Clear zones and notes and says the walls stay.',
   'Zone, Section and Note now switch to the Plan when you pick them in 3D, so your clicks draw straight away.',
   'The Walls, Roof, Floor and Delete buttons on a zone wrap onto two lines so none are cut off.',
   'Drawings is now part of Model: Zones, Sections and Notes are under Mark up on the Model rail, and the top bar is Prep, Model, Compare.',
@@ -32919,6 +32920,26 @@ try{ sbAfter('setTool', function(r, t){ if(MSV.busy) return r; try{ var L=TOOL_V
   toast(({zone:'Zone', section:'Section', note:'Note'})[t]+' draws on the Plan, so the view has switched there.', 3000); }catch(e){ console.warn(e); } return r; }); }catch(e){}
 /* the zone card buttons wrap onto a second line instead of running off the panel */
 (function(){ var c=document.createElement('style'); c.textContent='#right .cez > div:first-child{flex-wrap:wrap;row-gap:4px}'; document.head.appendChild(c); })();
+
+/* ===== r583: a zone's Delete says what it removes. Delete zone removes the outline only; if walls were made from that zone,
+   a bar offers to delete those walls too. Clear all is now Clear zones and notes, and asks in a bar instead of a browser box. ===== */
+var ZDL={pts:null};
+function zdlWallsOn(pts){ var M=APP.model, V=M&&M.verts; if(!V||!pts||pts.length<2) return [];
+  var n=pts.length, d=function(x, y){ var best=1e9; for(var i=0;i<n;i++){ var a=pts[i], b=pts[(i+1)%n], ex=b.x-a.x, ey=b.y-a.y, L=ex*ex+ey*ey||1e-9, t=Math.max(0, Math.min(1, ((x-a.x)*ex+(y-a.y)*ey)/L)), dx=a.x+ex*t-x, dy=a.y+ey*t-y; best=Math.min(best, Math.hypot(dx, dy)); } return best; }, out=[];
+  M.walls.forEach(function(w, wi){ var a=V[w.a], b=V[w.b]; if(!a||!b) return; var tol=Math.max(0.3, (typeof wallThick==='function'?wallThick(w):0.2)+0.05);
+    if(d(a.x, a.y)<=tol&&d(b.x, b.y)<=tol&&d((a.x+b.x)/2, (a.y+b.y)/2)<=tol) out.push(wi); }); return out; }
+function zdlDelWalls(ids){ if(!ids.length) return; if(typeof mdlIsLocked==='function'&&mdlIsLocked()){ mdlLockToast(); return; } var M=APP.model; pushUndo();
+  ids.slice().sort(function(a, b){ return b-a; }).forEach(function(i){ M.walls.splice(i, 1); }); APP.sel={type:null, id:null}; APP.selSet=[]; afterEdit(); try{ ceiDraw(); }catch(e){}
+  toast(ids.length+' wall'+(ids.length>1?'s':'')+' deleted. Ctrl+Z brings '+(ids.length>1?'them':'it')+' back.', 3500); }
+/* remember the zone's outline as Delete is pressed, then offer its walls once it is gone */
+document.addEventListener('click', function(e){ var b=e.target&&e.target.closest&&e.target.closest('#ceilSide [data-zdel]'); if(!b) return; var Z=CEI.zones[+b.dataset.zdel]; ZDL.pts=Z&&Z.closed?Z.pts.map(function(p){ return {x:p.x, y:p.y}; }):null; var nm=Z?Z.name:'Zone';
+  setTimeout(function(){ var ids=zdlWallsOn(ZDL.pts); ZDL.pts=null; if(!ids.length){ toast(nm+' deleted.', 2500); return; }
+    confirmBar(nm+' deleted. The '+ids.length+' wall'+(ids.length>1?'s':'')+' made from it stay.', 'Delete those walls too', function(){ zdlDelWalls(ids); }); }, 0); }, true);
+try{ sbAfter('ceiPanel', function(r){ try{
+  document.querySelectorAll('#ceilSide [data-zdel]').forEach(function(b){ b.textContent='Delete zone'; b.title='Removes this zone outline and its sizes. Walls, roof or floor made from it stay, and you are asked about the walls.'; });
+  var c=document.getElementById('ceClr'); if(c){ c.textContent='Clear zones and notes'; c.title='Removes every zone, measurement and note. Walls and the rest of the model stay.';
+    c.onclick=function(e){ e.stopPropagation(); confirmBar('Remove every zone, measurement and note? Walls and the model stay.', 'Clear them', function(){ CEI.zones=[]; CEI.notes=[]; CEI.cur=-1; CEI.meas={plan:[], rcp:[], top:[], long:[], cross:[]}; ceiSave(); ceiPanel(); ceiDraw(); toast('Zones, measurements and notes cleared.', 2500); }); }; }
+  }catch(e){ console.warn(e); } return r; }); }catch(e){}
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,
