@@ -1,2 +1,2 @@
-r577
-- A height trim that hides the whole scan is not carried into the next scan.
+r578
+- X-ray keeps the current view when switching in and out.
