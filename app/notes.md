@@ -1,2 +1,1 @@
-r580
-- Steps and view buttons leave Compare directly.
+r581: Drawings is now part of Model. Zones, Sections and Notes are under Mark up on the Model rail, the Rooms and areas and Axis and sections panels show in Model, and the top bar is Prep, Model, Compare.
