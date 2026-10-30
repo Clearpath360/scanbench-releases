@@ -1,2 +1,2 @@
-r572
-- Copy is its own rail tool under Objects (out of Clean up); also Insert > Copy from the scan, right click > Copy this, Ctrl+C / Ctrl+V.
+r573
+- Open a 3D model as a scan: GLB, GLTF, OBJ (+MTL and pictures) or its ZIP, e.g. a Realsee model download.
