@@ -1,2 +1,2 @@
-r574
-- 3D models: open the unzipped folder too; split models joined; big textures fit in memory.
+r575
+- Realsee GLB models open in colour (pictures beside the GLB are used); GLB up axis worked out.
