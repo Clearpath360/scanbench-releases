@@ -1,2 +1,2 @@
-r575
-- Realsee GLB models open in colour (pictures beside the GLB are used); GLB up axis worked out.
+r576
+- View bar menus close on a click beside them, also in X-ray.

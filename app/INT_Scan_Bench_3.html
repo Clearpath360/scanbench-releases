@@ -8210,7 +8210,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-30 r575';
+var SB_BUILD='2026-10-30 r576';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29825,7 +29825,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'30 October 2026', r:'r573 to r575', t:[
+ {d:'30 October 2026', r:'r573 to r576', t:[
+  'The Scan, Model and Show menus on the view bar now close when you click beside them, including after choosing X-ray.',
   'Realsee models open in colour: a GLB whose pictures sit beside it as separate files (texture_0.jpg and so on) now uses them. Open the folder, the zip, or the GLB with its pictures; a GLB on its own asks for them.',
   'A 3D model can also be opened as its unzipped folder (drop the folder on the window, or use XGRIDS LCC folder). A model split into several files is joined into one, and models with lots of big pictures no longer run out of memory.',
   'Open a 3D model as a scan: GLB, GLTF or OBJ (with its MTL and pictures), or the ZIP it came in, such as a Realsee model download. Its surface is covered with small flat splats coloured from its pictures, so Measure, Plan, Sections and Clean up work on it. Read as metres; FBX is not read, so download the GLB instead.'
@@ -32851,6 +32852,11 @@ window.addEventListener('keydown', function(e){ if(!(e.ctrlKey||e.metaKey)||e.al
   'body.cpyMode #cuiTiles #cuiPanel{margin-top:4px}#sbRail .sbIt[data-cpt] .sbIc2{color:#0891b2}#sbRail .sbIt[data-cpt].on .sbIc2{color:inherit}';
   document.head.appendChild(c); })();
 try{ skinRail(); }catch(e){}
+
+/* ===== r576: the Scan, Model and Show menus on the view bar close when you click anywhere else, in every view.
+   They closed on a mousedown that reached the page, but the x-ray view's canvas stops it, so after choosing X-ray the menu stayed open. ===== */
+window.addEventListener('pointerdown', function(e){ var t=e.target; if(!t||!t.closest) return; if(t.closest('#tools3d .pop3')||t.closest('#tools3d .dd')) return;
+  var any=false; document.querySelectorAll('#tools3d .pop3.open').forEach(function(q){ q.classList.remove('open'); any=true; }); if(any) document.querySelectorAll('#tools3d .dd.on').forEach(function(b){ b.classList.remove('on'); }); }, true);
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,
