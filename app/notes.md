@@ -1,2 +1,2 @@
-r578
-- X-ray keeps the current view when switching in and out.
+r579
+- Compare step button lights up while Compare is open.
