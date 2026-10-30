@@ -8210,7 +8210,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-10-30 r579';
+var SB_BUILD='2026-10-30 r580';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29825,7 +29825,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'30 October 2026', r:'r573 to r579', t:[
+ {d:'30 October 2026', r:'r573 to r580', t:[
+  'Compare: Prep, Model, Drawings and the 3D and Plan buttons now take you out of Compare and straight there, instead of needing Done first.',
   'Compare in the top bar now lights up while Compare is open, and Prep, Model or Drawings goes back to normal, like the other steps.',
   'Switching the scan to X-ray and back keeps your view: the same direction, centre and zoom, instead of jumping out to the whole scan.',
   'Height trim: a trim that would hide the whole scan is no longer carried into the next scan you open; the height goes back to full and a message says so. A trim you make on the scan in front of you is left alone.',
@@ -32892,6 +32893,10 @@ function cmsSync(){ try{ var on=typeof MS!=='undefined'&&MS.on, st=document.getE
   st.classList.toggle('cmsOn', !!on); }catch(e){} }
 ['msOpen','msClose'].forEach(function(f){ try{ sbAfter(f, function(r){ cmsSync(); return r; }); }catch(e){} });
 (function(){ var c=document.createElement('style'); c.textContent='#steps.cmsOn [data-step].on{background:transparent!important;color:inherit!important;box-shadow:none!important}'; document.head.appendChild(c); setInterval(cmsSync, 1000); })();
+/* r580: while Compare is open, Prep, Model, Drawings and the view buttons (3D, Plan, More views) close Compare first and then do their job.
+   They used to do nothing until Done was pressed, and 3D switched the view under Compare. */
+window.addEventListener('click', function(e){ try{ if(typeof MS==='undefined'||!MS.on||!e.target||!e.target.closest) return; var t=e.target.closest('#steps [data-step], #vtabs button');
+  if(!t||t.id==='cmpStep') return; msClose(); cmsSync(); }catch(er){ console.warn(er); } }, true);
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,

@@ -1,2 +1,2 @@
-r579
-- Compare step button lights up while Compare is open.
+r580
+- Steps and view buttons leave Compare directly.
