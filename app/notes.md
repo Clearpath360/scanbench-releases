@@ -1,1 +1,1 @@
-r583: Delete zone removes the outline and offers to delete the walls made from it; Clear all is now Clear zones and notes.
+r584: Dollhouse view for scans opened from a 3D model (Realsee GLB/OBJ): near walls and ceilings drop away as you turn. Dollhouse button, View > Dollhouse, or D.
