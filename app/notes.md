@@ -1,1 +1,1 @@
-r584: Dollhouse view for scans opened from a 3D model (Realsee GLB/OBJ): near walls and ceilings drop away as you turn. Dollhouse button, View > Dollhouse, or D.
+r585: Ceilings show when a scan opens: Cut at ceiling height starts unticked (Show in the 3D bar, or View).
