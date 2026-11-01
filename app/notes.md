@@ -1,1 +1,1 @@
-r587: Drone fly-through, Build-up reveal film, bouncy balls. (re-run)
+r588: Glow and lens flare; AR in the client viewer.
