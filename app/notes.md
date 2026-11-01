@@ -1,1 +1,1 @@
-r585: Ceilings show when a scan opens: Cut at ceiling height starts unticked (Show in the 3D bar, or View).
+r586: Lit window (glows at night) and Picture or video on a wall. Look > Sky, light & weather > Objects (On walls), or Insert.
