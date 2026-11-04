@@ -1,1 +1,1 @@
-r590: AI check. An AI (Claude) checks the model's doors, windows, pillars and doubtful items, names the rooms and lists anything missed; you tick what to apply. Uses your own Anthropic API key.
+r591: Model it in one go: no walls between pillars, slanted walls as one wall, cupboard recesses not windows. AI check now checks every wall.
