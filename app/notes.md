@@ -1,1 +1,1 @@
-r592: AI check answers in a fixed form, so it no longer fails to read a long answer.
+r593: AI check works with models that do not allow a forced tool.
