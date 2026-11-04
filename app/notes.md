@@ -1,1 +1,1 @@
-r593: AI check works with models that do not allow a forced tool.
+r594: AI check close-ups, refits wrong walls, adds missing walls snapped to the scan.
