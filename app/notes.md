@@ -1,1 +1,1 @@
-r588: Glow and lens flare; AR in the client viewer.
+r589: Model it in one go. (re-run)
