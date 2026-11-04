@@ -8251,7 +8251,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-04 r595';
+var SB_BUILD='2026-11-04 r596';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29869,7 +29869,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'4 November 2026', r:'r589 to r595', t:[
+ {d:'4 November 2026', r:'r589 to r596', t:[
+  'Model it in one go tidies up after itself: short walls boxed round a cluttered pillar become the pillar, glass drawn outside the building with no floor beside it goes, and two walls side by side become one.',
   'Model it in one go makes one flat floor for the whole building, so there are no seams or sections between rooms and no patches under stacked boards, and it keeps pillars that a wall runs up to.',
   'AI check sees more and fixes more: it gets close-ups of the plan with a 1 m grid, refits walls it finds in the wrong place onto the scan, and adds walls it finds missing, snapped onto the scan (nothing is added where the scan shows no wall).',
   'AI check no longer fails with "Expected , or ]" or "tool_choice" on a big model: the AI now answers in a fixed form Scan Bench always reads, with room for long answers.',
@@ -33481,6 +33482,28 @@ async function ocmRun(){ if(!APP.res){ toast('Open a scan first.', 2000); return
       var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs), y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys); if(Math.max(x1-x0, y1-y0)>0.9) return;
       rm=rm.concat(L); var cx=(x0+x1)/2, cy=(y0+y1)/2; if(!M0.cols.some(function(c){ return Math.hypot(c.x-cx, c.y-cy)<0.4; })) M0.cols.push({x:Math.round(cx*1000)/1000, y:Math.round(cy*1000)/1000, w:Math.max(0.15, Math.round((x1-x0+0.1)*100)/100), d:Math.max(0.15, Math.round((y1-y0+0.1)*100)/100), shape:'square', rot:0, h:null, base:0, auto:true}); });
     if(rm.length){ M0.walls=M0.walls.filter(function(w){ return rm.indexOf(w)<0; }); compactModel(); } }catch(e){ console.warn(e); }
+  /* r596: tidy what the wall pass gets wrong round clutter and at the scan edge */
+  try{ var M1=APP.model, V1=M1.verts, wl=function(w){ var a=V1[w.a], b=V1[w.b]; return a&&b?Math.hypot(b.x-a.x,b.y-a.y):0; }, kill=[];
+    /* an open box of short walls (up to 1.3 m across) round a post: a pillar */
+    var par1={}; function f1(i){ while(par1[i]!=null&&par1[i]!==i) i=par1[i]; return i; } M1.walls.forEach(function(w){ if(par1[w.a]==null) par1[w.a]=w.a; if(par1[w.b]==null) par1[w.b]=w.b; var ra=f1(w.a), rb=f1(w.b); if(ra!==rb) par1[ra]=rb; });
+    var G1={}; M1.walls.forEach(function(w){ var r=f1(w.a); (G1[r]=G1[r]||[]).push(w); });
+    Object.keys(G1).forEach(function(k){ var L=G1[k]; if(L.length<2||L.some(function(w){ return wl(w)>1.3||w.env; })) return; var xs=[], ys=[]; L.forEach(function(w){ [V1[w.a], V1[w.b]].forEach(function(v){ xs.push(v.x); ys.push(v.y); }); });
+      var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs), y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys); if(Math.max(x1-x0,y1-y0)>1.3) return;
+      /* the post itself: tall wall material inside the box */ var R=APP.res, g=R.grid, px=[], py=[]; for(var gy=Math.floor((y0-g.y0)/g.cell); gy<=Math.ceil((y1-g.y0)/g.cell); gy++) for(var gx=Math.floor((x0-g.x0)/g.cell); gx<=Math.ceil((x1-g.x0)/g.cell); gx++){ if(gx<0||gy<0||gx>=g.gw||gy>=g.gh||!R.wall[gy*g.gw+gx]) continue; px.push(g.x0+(gx+0.5)*g.cell); py.push(g.y0+(gy+0.5)*g.cell); }
+      if(px.length<3) return; var cx=(Math.min.apply(null,px)+Math.max.apply(null,px))/2, cy=(Math.min.apply(null,py)+Math.max.apply(null,py))/2, cw=Math.max(0.2, Math.min(1.0, Math.max.apply(null,px)-Math.min.apply(null,px))), cd=Math.max(0.2, Math.min(1.0, Math.max.apply(null,py)-Math.min.apply(null,py)));
+      kill=kill.concat(L); M1.cols=M1.cols||[]; if(!M1.cols.some(function(c){ return Math.hypot(c.x-cx,c.y-cy)<0.5; })) M1.cols.push({x:Math.round(cx*1000)/1000, y:Math.round(cy*1000)/1000, w:Math.round(cw*100)/100, d:Math.round(cd*100)/100, shape:'square', rot:0, h:null, base:0, auto:true}); });
+    /* glazing at the scan edge with no floor beside it on either side: outside the building, not a wall */
+    var fz=(APP.res.floorLayer||0);
+    M1.walls.forEach(function(w){ if(!w.glass||kill.indexOf(w)>=0) return; var a=V1[w.a], b=V1[w.b], L=wl(w); if(L<0.3) return; var st=stripPoints(a,b,0.6,0), bins=new Uint16Array(10);
+      for(var i=0;i<st.s.length;i++){ if(Math.abs(st.z[i]-fz)>0.12||Math.abs(st.o[i])<0.1) continue; var bi=Math.min(9, Math.max(0, Math.floor(st.s[i]/L*10))); bins[bi]++; }
+      var hasF=0; for(var q=0;q<10;q++) if(bins[q]>=4) hasF++; if(hasF<4) kill.push(w); });
+    /* two walls side by side (under 0.6 m apart, overlapping most of the shorter): keep the one the scan backs best, the full-height one first */
+    var Ws=M1.walls.filter(function(w){ return kill.indexOf(w)<0&&wl(w)>=0.5; });
+    for(var i=0;i<Ws.length;i++) for(var j=i+1;j<Ws.length;j++){ var p=Ws[i], q=Ws[j]; if(kill.indexOf(p)>=0||kill.indexOf(q)>=0) continue; var A=V1[p.a], B=V1[p.b], C=V1[q.a], D=V1[q.b], Lp=wl(p), Lq=wl(q), ux=(B.x-A.x)/Lp, uy=(B.y-A.y)/Lp, vx=(D.x-C.x)/Lq, vy=(D.y-C.y)/Lq;
+      if(Math.abs(ux*vx+uy*vy)<0.97) continue; var mx=(C.x+D.x)/2-A.x, my=(C.y+D.y)/2-A.y, d=Math.abs(mx*uy-my*ux); if(d<0.08||d>0.6) continue;
+      var t1=(C.x-A.x)*ux+(C.y-A.y)*uy, t2=(D.x-A.x)*ux+(D.y-A.y)*uy, ov=Math.min(Lp,Math.max(t1,t2))-Math.max(0,Math.min(t1,t2)); if(ov<0.6*Math.min(Lp,Lq)) continue;
+      var sc=function(w){ var a=V1[w.a], b=V1[w.b]; return segEvidence(a,b,true).support+(w.h?0:0.3)+(w.glass?-0.5:0)+(w._low?-0.3:0); }; kill.push(sc(p)>=sc(q)?q:p); }
+    if(kill.length){ M1.walls=M1.walls.filter(function(w){ return kill.indexOf(w)<0; }); compactModel(); try{ autoJoin(); }catch(e){} } }catch(e){ console.warn(e); }
   /* a floor in each room, part of the same undo */ var nF=0, keep=window.pushUndo, keepT=window.toast;
   try{ window.pushUndo=function(){}; window.toast=function(){}; var M=APP.model; M.roofs=M.roofs||[]; var had=M.roofs.filter(function(r){ return r.floor; }).length;
     var F=(APP.faces=computeFaces())||[], V=M.verts, pts=function(L){ return (L||[]).map(function(i){ var v=V[i]; return v?[v.x, v.y]:null; }).filter(Boolean); };

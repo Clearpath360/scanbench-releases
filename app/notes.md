@@ -1,1 +1,1 @@
-r595: one flat floor for the whole building; pillars a wall runs up to are kept.
+r596: pillars boxed by short walls, glass outside the building and doubled walls tidied.
