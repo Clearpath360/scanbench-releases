@@ -1,1 +1,1 @@
-r591: Model it in one go: no walls between pillars, slanted walls as one wall, cupboard recesses not windows. AI check now checks every wall.
+r592: AI check answers in a fixed form, so it no longer fails to read a long answer.

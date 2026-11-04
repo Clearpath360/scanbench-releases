@@ -8247,7 +8247,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-04 r591';
+var SB_BUILD='2026-11-04 r592';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29865,7 +29865,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'4 November 2026', r:'r589 to r591', t:[
+ {d:'4 November 2026', r:'r589 to r592', t:[
+  'AI check no longer fails with "Expected , or ]" on a big model: the AI now answers in a fixed form Scan Bench always reads, with room for long answers.',
   'Model it in one go is more accurate: no more walls drawn between pillars (the pillars come out as pillars), slanted walls come out as one straight wall instead of a staircase of short pieces, and a cupboard or shelf recess is no longer taken for a window.',
   'AI check now checks every wall too: it marks walls to remove (such as a line across open floor) and lists walls in the wrong place for you to redraw.',
   'AI check: after Model it in one go, an AI (Claude) looks at pictures of the model and checks each door, window, pillar and doubtful item, says keep, remove or change, names the rooms by use and lists anything it thinks was missed. You tick which answers to apply; one Ctrl+Z undoes them. Sizes and positions still come from the scan. Needs your own Anthropic API key, kept on this computer only. AI check under Model it in one go, or Tools > AI check of the model.',
@@ -33524,19 +33525,27 @@ function aic3dPics(){ var out=[], keep={tx:cam.tx, ty:cam.ty, tz:cam.tz, dist:ca
   [0, Math.PI].forEach(function(dy){ try{ camPreset('iso'); cam.yaw+=dy; gl_render(); var c=document.createElement('canvas'); c.width=glCv.width; c.height=glCv.height; c.getContext('2d').drawImage(glCv, 0, 0); out.push(aicShrink(c, 1400)); }catch(e){ console.warn(e); } });
   Object.assign(cam, keep); try{ if(kv!=='3d') wsView(kv); }catch(e){} requestRender(false); return out; }
 function aicB64(cv){ return cv.toDataURL('image/jpeg', 0.82).split(',')[1]; }
+/* r592: the answer comes back through a tool with a fixed form, so it is always well-formed JSON */
+var AIC_TOOL={name:'report', description:'Report your check of the model.', input_schema:{type:'object', properties:{
+  items:{type:'array', items:{type:'object', properties:{id:{type:'string'}, verdict:{type:'string', enum:['keep','remove','change','wrong']}, to:{type:'string', enum:['door','window','opening']}, reason:{type:'string'}}, required:['id','verdict']}},
+  rooms:{type:'array', items:{type:'object', properties:{id:{type:'string'}, name:{type:'string'}}, required:['id','name']}},
+  missed:{type:'array', items:{type:'string'}}, summary:{type:'string'}}, required:['items','rooms','summary']}};
+function aicParse(j){ var C=(j&&j.content)||[], t=C.filter(function(b){ return b.type==='tool_use'&&b.input; })[0]; if(t) return t.input;
+  if(j&&j.stop_reason==='max_tokens') throw new Error('the AI answer was too long and was cut off; press AI check again');
+  var txt=C.filter(function(b){ return b.type==='text'; }).map(function(b){ return b.text; }).join(''), m=txt.match(/\{[\s\S]*\}/); if(!m) throw new Error('the AI did not send its answer in the expected form');
+  try{ return JSON.parse(m[0]); }catch(e){ try{ return JSON.parse(m[0].replace(/,\s*([\]}])/g,'$1')); }catch(e2){ throw new Error('the AI answer could not be read ('+e.message+'); press AI check again'); } } }
 /* ---------- asking ---------- */
 async function aicRun(){ if(AIC.busy) return; if(!APP.res||!APP.model.walls.length){ toast('Model the scan first (Model it in one go), then AI check.', 3500); return; } var key=aicKey(); if(!key){ aicSetup(true); return; }
   AIC.busy=true; aicPanel('Taking pictures of the model...'); try{
   var items=aicItems(), plan=aicPlanPic(items), views=aic3dPics(); plan.restore(); var R=APP.res, rb=R.robust;
   var facts={building:{size_m:[(rb.x[1]-rb.x[0]).toFixed(1), (rb.y[1]-rb.y[0]).toFixed(1)], scan_height_m:(rb.z[1]-rb.z[0]).toFixed(2), walls:APP.model.walls.length}, items:items.map(function(it){ return {id:it.id, type:it.type, what:it.what, confidence:it.conf}; })};
-  var sys='You check an automatic building model made from a 3D scan, as an experienced measured-building surveyor would. The positions and sizes come from the scan and are right; you judge what things are. Picture 1 is the plan: the scan seen from above with the model drawn on it and every item numbered (W = wall, D = doubtful item the automatic model was unsure of, O = door, window or opening, P = pillar, R = room). Pictures 2 and 3 are 3D views from opposite corners. Common mistakes to look for: a wall drawn between pillars or across open floor (remove it), a wall at the wrong angle or in the wrong place (verdict wrong; you cannot move it), a window that is really a cupboard, shelf or recess (remove it), a doorway marked as a window or the other way round (change it). Be cautious: when the pictures do not show clearly, say keep and say why. Reply with JSON only, no other text.';
-  var ask='Measured facts and the numbered items:\n'+JSON.stringify(facts)+'\n\nReply with this JSON:\n{"items":[{"id":"D1","verdict":"keep|remove|change|wrong","to":"door|window|opening (only for change)","reason":"short"}],"rooms":[{"id":"R1","name":"short room name by use, e.g. Office, Kitchen, WC, Store, Corridor"}],"missed":["anything clearly missing, short"],"summary":"two sentences on how good the model is"}\nGive a verdict for every W, D, O and P item and a name for every R item. Use wrong only for a wall that is real but drawn in the wrong place or at the wrong angle.';
+  var sys='You check an automatic building model made from a 3D scan, as an experienced measured-building surveyor would. The positions and sizes come from the scan and are right; you judge what things are. Picture 1 is the plan: the scan seen from above with the model drawn on it and every item numbered (W = wall, D = doubtful item the automatic model was unsure of, O = door, window or opening, P = pillar, R = room). Pictures 2 and 3 are 3D views from opposite corners. Common mistakes to look for: a wall drawn between pillars or across open floor (remove it), a wall at the wrong angle or in the wrong place (verdict wrong; you cannot move it), a window that is really a cupboard, shelf or recess (remove it), a doorway marked as a window or the other way round (change it). Be cautious: when the pictures do not show clearly, say keep and say why. Give your answer with the report tool.';
+  var ask='Measured facts and the numbered items:\n'+JSON.stringify(facts)+'\n\nReport in this form:\n{"items":[{"id":"D1","verdict":"keep|remove|change|wrong","to":"door|window|opening (only for change)","reason":"short"}],"rooms":[{"id":"R1","name":"short room name by use, e.g. Office, Kitchen, WC, Store, Corridor"}],"missed":["anything clearly missing, short"],"summary":"two sentences on how good the model is"}\nGive a verdict for every W, D, O and P item and a name for every R item. Use wrong only for a wall that is real but drawn in the wrong place or at the wrong angle.';
   var content=[{type:'image', source:{type:'base64', media_type:'image/jpeg', data:aicB64(plan.cv)}}].concat(views.map(function(v){ return {type:'image', source:{type:'base64', media_type:'image/jpeg', data:aicB64(v)}}; })).concat([{type:'text', text:ask}]);
   aicPanel('Asking the AI to check '+items.length+' items...');
-  var r=await fetch('https://api.anthropic.com/v1/messages', {method:'POST', headers:{'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'}, body:JSON.stringify({model:AIC.model, max_tokens:4000, system:sys, messages:[{role:'user', content:content}]})});
+  var r=await fetch('https://api.anthropic.com/v1/messages', {method:'POST', headers:{'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true'}, body:JSON.stringify({model:AIC.model, max_tokens:16000, system:sys, tools:[AIC_TOOL], tool_choice:{type:'tool', name:'report'}, messages:[{role:'user', content:content}]})});
   var j=await r.json().catch(function(){ return null; }); if(!r.ok){ throw new Error((j&&j.error&&j.error.message)||('the AI service answered '+r.status)); }
-  var txt=(j.content||[]).filter(function(b){ return b.type==='text'; }).map(function(b){ return b.text; }).join(''), m=txt.match(/\{[\s\S]*\}/); if(!m) throw new Error('the AI did not send its answer in the expected form');
-  var A=JSON.parse(m[0]); AIC.res={A:A, items:items, usage:j.usage||null}; aicShow(); }
+  var A=aicParse(j); AIC.res={A:A, items:items, usage:j.usage||null}; aicShow(); }
   catch(e){ console.warn(e); aicPanel('AI check did not work: '+(e.message||e)+'. Nothing was changed.', true); }
   finally{ AIC.busy=false; } }
 /* ---------- its answers, to apply ---------- */
