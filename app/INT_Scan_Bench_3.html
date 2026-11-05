@@ -8261,7 +8261,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r617';
+var SB_BUILD='2026-11-05 r618';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29883,7 +29883,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r617', t:[
+ {d:'5 November 2026', r:'r599 to r618', t:[
+  'Room walls are now full model walls: pick one for Texture from scan, + Door, + Window, Flip and Heights from scan, and their heights are read from the scan along each wall.',
   'Room walls also puts in the room\'s floor, so deleting a wall no longer takes the floor with it. A floor you make replaces the automatic one under it.',
   'Walls group in the tool bar: Room walls (click the floor of a room, in 3D or on the Plan, and its walls go in on the true wall lines, one Ctrl+Z per room) and Door or window (in 3D drag a box over it on a wall; it is fitted to the hole in the scan, a door if it reaches the floor). Esc, Delete or picking another tool stops either. Each room is drawn once per press, so deleted walls stay deleted.',
   'Model it in one go, Guided model and Smart model are gone, and so is the Labs switch. AI check is in Tools.',
@@ -33700,7 +33701,7 @@ function dr2Room(p){ var poly=null; try{ ocmDelSync(); }catch(e){} try{ var AR=a
   /* r617: the room gets its own floor, so it stays when a wall is deleted (the floor made from closed walls went with the wall) */
   var fl=dr2Floor4(P); if(fl){ M.roofs=M.roofs||[]; M.roofs.push(fl); }
   if(!added&&!fl){ APP.undo.pop(); toast('That room already has its walls.', 2500); return; }
-  M.walls.slice(n0).forEach(function(w){ w.th=w.th||0.1; }); afterEdit(); requestRender(false); toast('Room walls: '+added+' added'+(fl?' and a floor':'')+'. Click the next room, Ctrl+Z to undo this one, Esc to stop.', 4000); }
+  M.walls.slice(n0).forEach(function(w){ w.th=w.th||0.1; dr2Mdl(w, P); }); afterEdit(); requestRender(false); toast('Room walls: '+added+' added'+(fl?' and a floor':'')+'. Click the next room, Ctrl+Z to undo this one, Esc to stop.', 4000); }
 function dr2Floor4(P){ try{ var M=APP.model, cx=0, cy=0; P.forEach(function(q){ cx+=q[0]; cy+=q[1]; }); cx/=P.length; cy/=P.length;
   if((M.roofs||[]).some(function(r){ return r.floor&&r.pts&&r.pts.length>2&&pointInPoly(cx, cy, r.pts.map(function(q){ return [q.x, q.y]; })); })) return null;
   var th=APP.slabThick||0.15, zt=(APP.res&&APP.res.floorLayer)||0; return {pts:P.map(function(q){ return {x:Math.round(q[0]*1000)/1000, y:Math.round(q[1]*1000)/1000, z:zt-th}; }), th:th, floor:1, mdl:1, dr2:1}; }catch(e){ return null; } }
@@ -33743,6 +33744,12 @@ dr2Btns(); setTimeout(dr2Btns, 600); setTimeout(dr2Btns, 2500); try{ sbAfter('sb
 window.addEventListener('keydown', function(e){ if((e.key==='Delete'||e.key==='Backspace')&&DR2.mode&&!(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))){ DR2.mode=null; DR2.drag=null; DR2.done=[]; dr2Ov(); document.querySelectorAll('button[data-dr2]').forEach(function(b){ b.classList.remove('on'); }); } }, true);
 /* r616: picking any other tool ends Room walls and Door or window */
 try{ sbAfter('setTool', function(r){ try{ if(DR2.mode){ DR2.mode=null; DR2.drag=null; DR2.done=[]; dr2Ov(); document.querySelectorAll('button[data-dr2]').forEach(function(b){ b.classList.remove('on'); }); } }catch(e){} return r; }); }catch(e){}
+
+/* r618: Room walls makes full model walls, the same as the Wall tool draws: the face on the room side, heights read from
+   the scan along the wall, and the wall bar (Texture from scan, + Door, + Window, Heights from scan) when one is picked */
+function dr2Mdl(w, P){ try{ var V=APP.model.verts, a=V[w.a], b=V[w.b]; if(!a||!b) return; var nl=mdlNorm([a.x,a.y],[b.x,b.y]), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+  w.side=pointInPoly(mx+nl[0]*0.2, my+nl[1]*0.2, P)?1:-1; w.mdl=1; w.openings=w.openings||[]; var F=mdlFace(w); if(!F) return; var H=mdlWallHeights(F[0], F[1], w.side);
+  w.zA=H.zA; w.zB=H.zB; w.tA=H.tA; w.tB=H.tB; if(Math.abs(w.tA-w.tB)<0.25) w.tA=w.tB=Math.max(w.tA,w.tB); if(Math.abs(w.zA-w.zB)<0.06) w.zA=w.zB=Math.min(w.zA,w.zB); delete w.h; delete w.base; mdlWallFix(w); }catch(e){ console.warn(e); } }
 
 /* ===== r614: deleted walls stayed deleted only until the scan was opened again. The tab's own copy of the work was saved
    only on switching tabs or closing the page (often lost on close), so it brought back old walls. Now it is saved shortly
