@@ -1,1 +1,1 @@
-r604: mullion windows found whole, walls not raised to sill height, deleted points left out.
+r605: AI check wall photo pairs, refit wall height and opening size.
