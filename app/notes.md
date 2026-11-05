@@ -1,1 +1,1 @@
-r612: Smart model, asks only when unsure and learns.
+r613: Quick drawing (room walls, door or window box), automatic tools behind Labs.
