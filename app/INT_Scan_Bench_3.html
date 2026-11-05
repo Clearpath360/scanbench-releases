@@ -8261,7 +8261,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r618';
+var SB_BUILD='2026-11-05 r619';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29883,7 +29883,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r618', t:[
+ {d:'5 November 2026', r:'r599 to r619', t:[
+  'Texture from scan is also in the wall panel on the right, for every wall, including walls drawn before.',
   'Room walls are now full model walls: pick one for Texture from scan, + Door, + Window, Flip and Heights from scan, and their heights are read from the scan along each wall.',
   'Room walls also puts in the room\'s floor, so deleting a wall no longer takes the floor with it. A floor you make replaces the automatic one under it.',
   'Walls group in the tool bar: Room walls (click the floor of a room, in 3D or on the Plan, and its walls go in on the true wall lines, one Ctrl+Z per room) and Door or window (in 3D drag a box over it on a wall; it is fitted to the hole in the scan, a door if it reaches the floor). Esc, Delete or picking another tool stops either. Each room is drawn once per press, so deleted walls stay deleted.',
@@ -33750,6 +33751,15 @@ try{ sbAfter('setTool', function(r){ try{ if(DR2.mode){ DR2.mode=null; DR2.drag=
 function dr2Mdl(w, P){ try{ var V=APP.model.verts, a=V[w.a], b=V[w.b]; if(!a||!b) return; var nl=mdlNorm([a.x,a.y],[b.x,b.y]), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
   w.side=pointInPoly(mx+nl[0]*0.2, my+nl[1]*0.2, P)?1:-1; w.mdl=1; w.openings=w.openings||[]; var F=mdlFace(w); if(!F) return; var H=mdlWallHeights(F[0], F[1], w.side);
   w.zA=H.zA; w.zB=H.zB; w.tA=H.tA; w.tB=H.tB; if(Math.abs(w.tA-w.tB)<0.25) w.tA=w.tB=Math.max(w.tA,w.tB); if(Math.abs(w.zA-w.zB)<0.06) w.zA=w.zB=Math.min(w.zA,w.zB); delete w.h; delete w.base; mdlWallFix(w); }catch(e){ console.warn(e); } }
+/* r619: Texture from scan in the wall panel on the right too, for every wall (also walls drawn before r618) */
+function dr2TexWalls(){ var M=APP.model, ws=(typeof mdlSelWalls==='function'?mdlSelWalls():[]); if(!ws.length&&APP.sel.type==='wall') ws=[APP.sel.id]; return ws.filter(function(i){ return M.walls[i]; }); }
+function dr2TexToggle(){ var M=APP.model, ws=dr2TexWalls(); if(!ws.length) return; var on=!ws.some(function(i){ return M.walls[i].tex; }); pushUndo(); var nf=0;
+  ws.forEach(function(i){ var W=M.walls[i]; if(on){ W.tex=1; try{ var T=wtexFaces(W, true); if(T&&T.length) nf++; }catch(e){} } else delete W.tex; });
+  if(on&&MDL.texShow===false){ MDL.texShow=true; try{ localStorage.setItem('sb_texshow','1'); }catch(e){} }
+  afterEdit(); requestRender(false); toast(on?(nf?'Scan texture on '+nf+' wall'+(nf>1?'s':''):'Not enough scan on this wall to texture it'):'Texture taken off', 3000); }
+try{ sbAfter('buildRight', function(r){ try{ if(APP.sel.type!=='wall') return r; var anchor=document.getElementById('mdFlip')||document.getElementById('wSplit'); if(!anchor||document.getElementById('dr2Tex')) return r;
+  var on=dr2TexWalls().some(function(i){ return APP.model.walls[i].tex; }), b=document.createElement('button'); b.className='btn sm'; b.id='dr2Tex'; b.title='Copy the scan colours onto this wall (press again to take it off)'; b.textContent=on?'No texture':'Texture from scan';
+  b.onclick=dr2TexToggle; anchor.parentElement.insertBefore(b, anchor); }catch(e){ console.warn(e); } return r; }); }catch(e){}
 
 /* ===== r614: deleted walls stayed deleted only until the scan was opened again. The tab's own copy of the work was saved
    only on switching tabs or closing the page (often lost on close), so it brought back old walls. Now it is saved shortly

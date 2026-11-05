@@ -1,1 +1,1 @@
-r618: Room walls are full model walls (Texture from scan, + Door, + Window, Heights from scan).
+r619: Texture from scan in the wall panel for every wall.
