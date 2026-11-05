@@ -1,1 +1,1 @@
-r613: Quick drawing (room walls, door or window box), automatic tools behind Labs.
+r614: deleted walls stay deleted (tab copy saved after every change); hidden ceiling no longer catches clicks in 3D.

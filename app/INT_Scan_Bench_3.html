@@ -8258,7 +8258,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r613';
+var SB_BUILD='2026-11-05 r614';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -12693,7 +12693,7 @@ function mdl3Pick(e){
     if(pz>lv.z1+0.02 && t1-t0<0.05) return; take(t0, 'wall', wi); });
   M.cols.forEach(function(c,ci){ var P=colPoly(c), z0=c.base||0, z1=mdlColTop(c);
     for(var t=0;t<400;t+=0.05){ var x=ray.o[0]+ray.d[0]*t, y=ray.o[1]+ray.d[1]*t, z=ray.o[2]+ray.d[2]*t; if(z<z0||z>z1) continue; if(pointInPoly(x,y,P)){ take(t,'col',ci); break; } } });
-  M.roofs.forEach(function(R,ri){ var P=R.pts.map(function(q){ return [q.x,q.y]; }), T=earClip(P);
+  M.roofs.forEach(function(R,ri){ if(R.ceil&&APP.zCutOn) return; /* r614: a hidden ceiling cannot be picked */ var P=R.pts.map(function(q){ return [q.x,q.y]; }), T=earClip(P);
     for(var i=0;i<T.length;i+=3){ var A=R.pts[T[i]], B=R.pts[T[i+1]], Cc=R.pts[T[i+2]], e1=[B.x-A.x,B.y-A.y,B.z-A.z], e2=[Cc.x-A.x,Cc.y-A.y,Cc.z-A.z], d=ray.d, pv=[d[1]*e2[2]-d[2]*e2[1], d[2]*e2[0]-d[0]*e2[2], d[0]*e2[1]-d[1]*e2[0]], det=e1[0]*pv[0]+e1[1]*pv[1]+e1[2]*pv[2]; if(Math.abs(det)<1e-9) continue;
       var tv=[ray.o[0]-A.x, ray.o[1]-A.y, ray.o[2]-A.z], u=(tv[0]*pv[0]+tv[1]*pv[1]+tv[2]*pv[2])/det; if(u<0||u>1) continue; var qv=[tv[1]*e1[2]-tv[2]*e1[1], tv[2]*e1[0]-tv[0]*e1[2], tv[0]*e1[1]-tv[1]*e1[0]], v=(d[0]*qv[0]+d[1]*qv[1]+d[2]*qv[2])/det; if(v<0||u+v>1) continue;
       take((e2[0]*qv[0]+e2[1]*qv[1]+e2[2]*qv[2])/det+(R.cid&&R.glass?0.6:0.02), 'roof', ri); } });
@@ -29880,7 +29880,9 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r613', t:[
+ {d:'5 November 2026', r:'r599 to r614', t:[
+  'Deleted walls stay deleted: your work on each scan is now kept a moment after every change, so opening the scan again no longer brings back walls you took out.',
+  'In 3D, clicking a wall picks the wall, not the hidden ceiling above it (Delete used to remove the hidden ceiling instead).',
   'Quick drawing, top of the Model panel: Room walls (click the floor of a room, in 3D or on the Plan, and its walls go in on the true wall lines, one Ctrl+Z per room) and Door or window (in 3D drag a box over it on a wall; it is fitted to the hole in the scan, a door if it reaches the floor). Esc stops either.',
   'Model it in one go, Guided model, Smart model and AI check are now behind Tools > Labs (experimental), off until you turn it on.',
   'Smart model (asks only when unsure): the whole floor in one go. For every wall it weighs the evidence in the scan (does it reach the ceiling, how much the scan backs it, how solid its face is, how plain its colour is) and says how sure it is. Sure walls, pillars, doors and windows go straight in, sure non-walls are left out, and only the doubtful ones are asked about in 3D, with the reason shown. Your answers teach it, on this computer, so it asks less next time. Top of the Model panel, or Tools.',
@@ -34094,6 +34096,17 @@ try{ sbAfter('buildRight', function(r){ try{ var R=document.getElementById('righ
   var oc=R.querySelector('#ocmCard'); R.insertBefore(d, oc&&labsOn()?oc.nextSibling:R.firstChild); d.querySelectorAll('button[data-m]').forEach(function(b){ b.onclick=function(){ dr2Set(b.dataset.m); }; b.classList.toggle('on', b.dataset.m===DR2.mode); }); }catch(e){ console.warn(e); } return r; }); }catch(e){}
 (function(){ var c=document.createElement('style'); c.textContent='#dr2Card{padding:10px 12px;border-bottom:1px solid var(--sbLn,#e5e7eb);display:flex;flex-direction:column;gap:6px}#dr2Card .btn{flex:1;font-weight:600}#dr2Card .btn.on{background:#2563eb;border-color:#2563eb;color:#fff}'+
   'body:not(.sbLabs) #ocmCard{display:none!important}'; document.head.appendChild(c); })();
+
+/* ===== r614: deleted walls stayed deleted only until the scan was opened again. The tab's own copy of the work was saved
+   only on switching tabs or closing the page (often lost on close), so it brought back old walls. Now it is saved shortly
+   after every change, and when it is older than the autosave the autosave's model wins. ===== */
+var KF={t:null};
+sbAfter('autosave', function(r){ try{ if(typeof TABS==='undefined'||!TABS.act||!APP.res||TABS.busy||TABS.pend) return r; clearTimeout(KF.t); KF.t=setTimeout(function(){ try{ if(TABS.act&&APP.res&&!TABS.busy&&!TABS.pend) tabsKeep(); }catch(e){ console.warn(e); } }, 1500); }catch(e){} return r; });
+/* a tab copy older than the autosave: take the autosave's model (an autosave that was cleared because every wall went counts as empty) */
+function kfFresh(job, t){ try{ var k=traceKey(); if(!k||!job) return job; var raw=lsGet(k), mo=null; try{ mo=raw?JSON.parse(raw):null; }catch(e){}
+  if(mo&&mo.saved&&t&&mo.saved>t+1000&&mo.model){ job.model=mo.model; } return job; }catch(e){ return job; } }
+sbBefore('ceiApplyJob', function(j){ try{ if(j&&j._kfT){ kfFresh(j, j._kfT); delete j._kfT; } }catch(e){} });
+sbAfter('tabsGet', function(pr){ return pr&&pr.then?pr.then(function(v){ try{ if(v&&v.job&&v.t) v.job._kfT=v.t; }catch(e){} return v; }):pr; });
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,
