@@ -1,1 +1,1 @@
-r599: clutter left out of walls, corridor walls cut back, loose glass removed, recessed panels not doors.
+r600: lone short walls running into a pillar left out.

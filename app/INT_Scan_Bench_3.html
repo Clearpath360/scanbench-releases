@@ -8255,7 +8255,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r599';
+var SB_BUILD='2026-11-05 r600';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29873,7 +29873,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599', t:[
+ {d:'5 November 2026', r:'r599 to r600', t:[
+  'Model it in one go: a short wall standing on its own that runs into a pillar (the pillar\'s side, or something leant on it) is left out; the pillar stays.',
   'Model it in one go leaves out clutter: a "wall" that does not reach up to just under the ceiling, or is mostly empty scan, is a stack of goods, a cabinet or a leaning board and is dropped. Walls that ran on across a corridor to a pillar are cut back to where the scan shows wall, loose glass panels outside the building are gone, and a panel set back in a wall is no longer taken for a doorway.']},
  {d:'4 November 2026', r:'r589 to r598', t:[
   'AI check sees more: the plan close-ups are coloured by height (walls red, clutter blue or green), and it gets a colour photo of each short wall from the scan with the wall outlined, so it can tell a stack of insulation, a board or a cupboard from a real wall and remove it.',
@@ -33522,6 +33523,10 @@ async function ocmRun(){ if(!APP.res){ toast('Open a scan first.', 2000); return
       for(var i=0;i<st.s.length;i++){ var z=st.z[i], ci=Math.min(nC-1, Math.max(0, Math.floor(st.s[i]/L*nC))); if(z>=z1&&z<=z2) top[ci]=1; else if(z>fzC+0.5&&z<fzC+1.5) mid[ci]=1; }
       var nt=0, nm=0; for(var c=0;c<nC;c++){ nt+=top[c]; nm+=mid[c]; } if(st.s.length<40) return;   /* nothing scanned here at all: leave it to the other checks */
       if(nt/nC<0.34||(nt/nC<0.5&&nm/nC<0.5)) kill.push(w); });   /* or mostly empty: little scan at head height or near the top */
+    /* r600: a short wall standing on its own (both ends loose) that runs into a pillar is the pillar's side or something leant on it */
+    var degI={}; M1.walls.forEach(function(w){ if(kill.indexOf(w)>=0) return; degI[w.a]=(degI[w.a]||0)+1; degI[w.b]=(degI[w.b]||0)+1; });
+    M1.walls.forEach(function(w){ if(kill.indexOf(w)>=0||w.env||!w.auto||degI[w.a]!==1||degI[w.b]!==1||wl(w)>2.0) return; var a=V1[w.a], b=V1[w.b];
+      if((M1.cols||[]).some(function(c){ var r=Math.max(c.w||0.3, c.d||c.w||0.3)/2+0.15; return distToSeg(c.x, c.y, a.x, a.y, b.x, b.y).d<r; })) kill.push(w); });
     /* r599: a wall that runs on past the scan into open floor (across a corridor mouth, up to a pillar) is cut back to where the scan backs it.
        Only an end that is loose or stops at a pillar is trimmed: a door next to a corner stays */
     var degT={}; M1.walls.forEach(function(w){ if(kill.indexOf(w)>=0) return; degT[w.a]=(degT[w.a]||0)+1; degT[w.b]=(degT[w.b]||0)+1; });
