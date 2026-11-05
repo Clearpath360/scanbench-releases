@@ -1,1 +1,1 @@
-r610: Guided model adjustable outlines, Fit to scan, + Door, Back.
+r611: Guided model room picking fixed.

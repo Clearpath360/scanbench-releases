@@ -8258,7 +8258,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r610';
+var SB_BUILD='2026-11-05 r611';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29880,7 +29880,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r610', t:[
+ {d:'5 November 2026', r:'r599 to r611', t:[
+  'Guided model picks the room you click from the scanned floor and its walls, and says so when the click is not on a room\'s floor, instead of making a square floor and ceiling off the edge of the building. The floor and ceiling offer shows the room\'s size.',
   'Guided model: each wall is fitted to where the scan shows it before it is asked about; drag the white squares on the orange outline to change its ends, top, or a door or window\'s sides, head and sill; Fit to scan refits a wall; + Door puts a door in the wall to drag to size; Back (or Backspace) undoes the last answer and asks it again.',
   'Guided model works in 3D: click the floor of a room, the camera goes to each wall, door, window and pillar in turn, and the one it asks about is outlined in orange on the scan.',
   'Guided model (room by room): click inside a room on the Plan and Scan Bench asks you about each wall, door, window and pillar it reads there, one at a time, highlighted. Answer Yes, Glass, Door, Window or No (Enter, G, D, W, X); say one wall is glass and it suggests glass for the next like it. Ask AI gets a second opinion on just that one thing. When the room is done it offers its floor and ceiling. Model panel, under Model it in one go, or Tools.',
@@ -33809,23 +33810,37 @@ function gdWm(w, op){ var V=APP.model.verts, a=V[w.a], b=V[w.b], L=Math.hypot(b.
 function gdSolid(a, b){ try{ var R=APP.res, fz=(typeof mdlFloor==='function'?mdlFloor():0), st=stripPoints(a, b, 0.12, 0), L=st.L, nC=Math.max(1, Math.round(L/0.1)), nZ=14, cells=new Uint8Array(nC*nZ);
     for(var i=0;i<st.s.length;i++){ var z=st.z[i]-fz; if(z<0.6||z>2.0) continue; var c=Math.min(nC-1, Math.floor(st.s[i]/L*nC)), r=Math.min(nZ-1, Math.floor((z-0.6)/1.4*nZ)); cells[r*nC+c]=1; }
     var f=0; for(var k=0;k<cells.length;k++) f+=cells[k]; return f/cells.length; }catch(e){ return 1; } }
-function gdArea(p){ var poly=null; try{ var AR=arFind(); (AR&&AR.rooms||[]).forEach(function(r){ var P=ocmPoly(r.E); if(P&&!poly&&pointInPoly(p[0], p[1], P)) poly=P; }); }catch(e){}
-  if(!poly) poly=[[p[0]-4,p[1]-4],[p[0]+4,p[1]-4],[p[0]+4,p[1]+4],[p[0]-4,p[1]+4]]; return poly; }
-function gdNear(P, x, y, d){ if(pointInPoly(x, y, P)) return true; for(var i=0;i<P.length;i++){ var q=P[i], r=P[(i+1)%P.length]; if(distToSeg(x, y, q[0], q[1], r[0], r[1]).d<d) return true; } return false; }
+/* r611: the room you clicked. A room Auto rooms found, if the click is in one; otherwise the open floor round the click, flooded out
+   to the walls on the scan. A click that is not on scanned floor (outside the building, on a wall top) picks nothing */
+function gdArea(p){ var W=ceiWalls(), R=APP.res; if(!W||!R) return null; var gw=W.gw, gh=W.gh, c=W.cell, fz=mdlFloor();
+  if(!GD.cov||GD.covRes!==R){ var cov=new Uint8Array(gw*gh), pos=R.pos; for(var i=0;i<R.n;i++){ if(R.del&&R.del[i]) continue; var z=pos[i*3+2]; if(z<fz-0.12||z>fz+0.15) continue; var X=((pos[i*3]-W.x0)/c)|0, Y=((pos[i*3+1]-W.y0)/c)|0; if(X>=0&&Y>=0&&X<gw&&Y<gh) cov[Y*gw+X]=1; }
+    /* close small holes in the floor (under furniture) */ var cv2=cov.slice(); for(var y=1;y<gh-1;y++) for(var x=1;x<gw-1;x++){ var k=y*gw+x; if(cov[k]) continue; var nn=0; for(var dy=-1;dy<=1;dy++) for(var dx=-1;dx<=1;dx++) nn+=cov[k+dy*gw+dx]; if(nn>=4) cv2[k]=1; } GD.cov=cv2; GD.covRes=R; }
+  var cov=GD.cov, cx=((p[0]-W.x0)/c)|0, cy=((p[1]-W.y0)/c)|0; if(cx<0||cy<0||cx>=gw||cy>=gh) return null;
+  /* nearest floor cell within 40 cm of the click */ var k0=-1; for(var r=0;r<=4&&k0<0;r++) for(var dy2=-r;dy2<=r&&k0<0;dy2++) for(var dx2=-r;dx2<=r&&k0<0;dx2++){ var X2=cx+dx2, Y2=cy+dy2; if(X2<0||Y2<0||X2>=gw||Y2>=gh) continue; var kk=Y2*gw+X2; if(cov[kk]&&!W.m[kk]) k0=kk; } if(k0<0) return null;
+  var poly=null; try{ var AR=arFind(); (AR&&AR.rooms||[]).forEach(function(rm){ var P=ocmPoly(rm.E); if(P&&!poly&&pointInPoly(p[0], p[1], P)) poly=P; }); }catch(e){}
+  /* flood the open floor, stopping at walls; a room over 600 m2 is the whole building leaking through a doorway, so stop there too */
+  var mask=new Uint8Array(gw*gh), st=[k0], n=0; mask[k0]=1; while(st.length&&n<60000){ var q=st.pop(); n++; var qx=q%gw, qy=(q/gw)|0; [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){ var X3=qx+d[0], Y3=qy+d[1]; if(X3<0||Y3<0||X3>=gw||Y3>=gh) return; var k3=Y3*gw+X3; if(mask[k3]||W.m[k3]||!cov[k3]) return; if(poly&&!pointInPoly(W.x0+(X3+0.5)*c, W.y0+(Y3+0.5)*c, poly)) return; mask[k3]=1; st.push(k3); }); }
+  /* grow it 60 cm so walls on its edge count */ var near=new Uint8Array(gw*gh), G=6; for(var y3=0;y3<gh;y3++) for(var x3=0;x3<gw;x3++){ if(!mask[y3*gw+x3]) continue; if(x3>0&&x3<gw-1&&y3>0&&y3<gh-1&&mask[y3*gw+x3-1]&&mask[y3*gw+x3+1]&&mask[(y3-1)*gw+x3]&&mask[(y3+1)*gw+x3]) { near[y3*gw+x3]=1; continue; } for(var yy=Math.max(0,y3-G);yy<=Math.min(gh-1,y3+G);yy++) for(var xx=Math.max(0,x3-G);xx<=Math.min(gw-1,x3+G);xx++) near[yy*gw+xx]=1; }
+  if(!poly){ /* its outline for the camera and the dashed line: the hull of the flooded floor */ var pts=[]; for(var k4=0;k4<gw*gh;k4++) if(mask[k4]) pts.push([W.x0+((k4%gw)+0.5)*c, W.y0+(((k4/gw)|0)+0.5)*c]); poly=gdHull(pts); }
+  return {poly:poly, mask:near, W:W, area:n*c*c, real:!!poly&&poly.length>=3}; }
+function gdHull(P){ if(P.length<3) return P; P=P.slice().sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; }); var cr=function(o,a,b){ return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); }, lo=[], up=[];
+  P.forEach(function(p){ while(lo.length>=2&&cr(lo[lo.length-2], lo[lo.length-1], p)<=0) lo.pop(); lo.push(p); }); for(var i=P.length-1;i>=0;i--){ var p=P[i]; while(up.length>=2&&cr(up[up.length-2], up[up.length-1], p)<=0) up.pop(); up.push(p); } up.pop(); lo.pop(); return lo.concat(up); }
+function gdNear(A, x, y){ var W=A.W, X=((x-W.x0)/W.cell)|0, Y=((y-W.y0)/W.cell)|0; return X>=0&&Y>=0&&X<W.gw&&Y<W.gh&&A.mask[Y*W.gw+X]===1; }
 /* read the room: the whole automatic model is worked out on a copy, and only what lies in or on the edge of this room, and is not
    already in your model, becomes a question */
 async function gdRoom(p){ if(GD.busy) return; GD.busy=true; GD.vw=APP.view; GD.wait=false; gdBar('Reading this room from the scan...');
-  var keep=JSON.stringify(APP.model), u0=APP.undo.length, kT=window.toast, R=null, area=gdArea(p);
+  var area=gdArea(p); if(!area){ GD.busy=false; gdBar('That is not on the floor of a room. Click on the floor inside a room (not on a wall or outside the building).'); GD.wait=true; return; }
+  gdBar('Reading this room from the scan ('+area.area.toFixed(0)+' m²)...'); var keep=JSON.stringify(APP.model), u0=APP.undo.length, kT=window.toast, R=null;
   try{ window.toast=function(){}; OCM.offered=true; await ocmRun(); R=APP.model; }catch(e){ console.warn(e); } finally{ window.toast=kT; }
   APP.model=JSON.parse(keep); APP.undo.length=u0; compactModel(); afterEdit(); var items=[];
   if(R){ var V=R.verts;
-    R.walls.forEach(function(w){ var a=V[w.a], b=V[w.b]; if(!a||!b) return; var mx=(a.x+b.x)/2, my=(a.y+b.y)/2; if(!gdNear(area, mx, my, 0.6)) return; if(segCovered({x:a.x, y:a.y}, {x:b.x, y:b.y})) return;
+    R.walls.forEach(function(w){ var a=V[w.a], b=V[w.b]; if(!a||!b) return; var mx=(a.x+b.x)/2, my=(a.y+b.y)/2; if(!gdNear(area, mx, my)) return; if(segCovered({x:a.x, y:a.y}, {x:b.x, y:b.y})) return;
       var L=Math.hypot(b.x-a.x, b.y-a.y); if(L<0.3) return; var fr=gdSolid(a, b), likeGlass=w.glass||(GD.glassFr!=null&&fr<=GD.glassFr+0.12);
       items.push({kind:'wall', a:{x:a.x, y:a.y}, b:{x:b.x, y:b.y}, h:w.h, glass:!!w.glass, gd:{ops:(w.openings||[]).map(function(o){ return JSON.parse(JSON.stringify(o)); }), fr:fr, likeGlass:likeGlass}, conf:w.glass?0.6:0.8,
         label:(likeGlass?'Is this a glass screen?':'Is this a wall?')+' '+L.toFixed(2)+' m', reason:''}); });
-    (R.cols||[]).forEach(function(c){ if(!gdNear(area, c.x, c.y, 0.3)) return; if((APP.model.cols||[]).some(function(e){ return Math.hypot(e.x-c.x, e.y-c.y)<0.3; })) return;
+    (R.cols||[]).forEach(function(c){ if(!gdNear(area, c.x, c.y)) return; if((APP.model.cols||[]).some(function(e){ return Math.hypot(e.x-c.x, e.y-c.y)<0.3; })) return;
       items.push({kind:'col', c:JSON.parse(JSON.stringify(c)), conf:0.75, label:'Is this a pillar? '+Math.round((c.w||0.3)*1000)+' x '+Math.round((c.d||c.w||0.3)*1000)+' mm', reason:''}); }); }
-  GD.busy=false; GD.area=area; GD.n++; if(GD.vw==='3d'&&APP.view!=='3d'){ try{ wsView('3d'); }catch(e){} }
+  GD.busy=false; GD.areaA=area; area=area.poly; GD.area=area; GD.n++; if(GD.vw==='3d'&&APP.view!=='3d'){ try{ wsView('3d'); }catch(e){} }
   if(!items.length){ gdBar('Nothing new in this room. Click another room, or Stop.'); GD.wait=true; return; }
   /* round the room in order, not by score */ var cx=0, cy=0; area.forEach(function(q){ cx+=q[0]; cy+=q[1]; }); cx/=area.length; cy/=area.length;
   items.forEach(function(s){ var c=sgCentre(s)||[cx, cy]; s._ang=Math.atan2(c[1]-cy, c[0]-cx); s.conf=0.8; }); items.sort(function(p, q){ return p._ang-q._ang; });
@@ -33851,7 +33866,8 @@ function gdAnswer(ans){ var s=sgItem(); if(!s) return; var M=APP.model, H={s:s, 
   s.st='done'; afterEdit(); sgStep(1); gdAfter(); }
 function gdAfter(){ if(sgOpen()){ gdPaint(); return; }
   var area=GD.area; SG={list:[], cur:0, title:''}; sgBar(); planDraw();
-  gdBar('Room done. Add its floor and ceiling?', [['Floor and ceiling', function(){ gdFloor(area); }], ['No', function(){ gdNext(); }]]); }
+  if(!GD.areaA||!GD.areaA.real||!area||area.length<3){ gdNext(); return; }
+  gdBar('Room done ('+GD.areaA.area.toFixed(0)+' m²). Add a floor and ceiling over the dashed outline?', [['Floor and ceiling', function(){ gdFloor(area); }], ['No', function(){ gdNext(); }]]); }
 function gdFloor(area){ try{ var M=APP.model, r0=M.roofs?M.roofs.length:0; M.roofs=M.roofs||[]; var kT=window.toast; window.toast=function(){}; try{ mdlMakeFloor(area); }finally{ window.toast=kT; }
     if(M.roofs.length>r0+1) M.roofs.splice(r0+1, M.roofs.length-r0-1); var fl=M.roofs[r0], cz=(typeof mdlFloor==='function'?mdlFloor():0)+(typeof mdlH2c==='function'?mdlH2c():2.6);
     if(fl) M.roofs.push({pts:fl.pts.map(function(q){ return {x:q.x, y:q.y, z:cz}; }), th:0.1, mdl:1, ceil:true}); afterEdit(); }catch(e){ console.warn(e); } gdNext(); }
