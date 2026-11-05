@@ -1,1 +1,1 @@
-r611: Guided model room picking fixed.
+r612: Smart model, asks only when unsure and learns.
