@@ -1,1 +1,1 @@
-r602: right click a corner point in 3D to delete it.
+r603: right click a floor or roof corner square in 3D to delete it.
