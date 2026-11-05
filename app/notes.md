@@ -1,1 +1,1 @@
-r601: 3D wall label sits above the height arrow.
+r602: right click a corner point in 3D to delete it.
