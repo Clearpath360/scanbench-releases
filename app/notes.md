@@ -1,1 +1,1 @@
-r600: lone short walls running into a pillar left out.
+r601: 3D wall label sits above the height arrow.

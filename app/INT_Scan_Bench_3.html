@@ -259,7 +259,7 @@ body.fs #side,body.fs #right{width:0;min-width:0;overflow:hidden;border:0;paddin
 #mini.big{width:560px;height:400px}
 #btnClip.rec{background:#7a2c2c;border-color:#ff6b6b;color:#fff}
 #tools3d select{background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:5px 8px;color:var(--fg);font:inherit;width:auto;flex:0 0 auto;min-width:0}
-#lbl3d{position:absolute;z-index:13;display:none;pointer-events:none;background:rgba(26,31,39,.94);border:1px solid var(--acc2);color:#ffe0a8;font-size:12px;font-weight:600;padding:3px 8px;border-radius:5px;transform:translate(-50%,-130%);white-space:nowrap}
+#lbl3d{position:absolute;z-index:13;display:none;pointer-events:none;background:rgba(26,31,39,.94);border:1px solid var(--acc2);color:#ffe0a8;font-size:12px;font-weight:600;padding:3px 8px;border-radius:5px;transform:translate(-50%,calc(-100% - 44px));white-space:nowrap}
 #lbl3d.snap{border-color:var(--ok);color:#b9f5d3}
 #tipbar{position:absolute;right:60px;bottom:80px;z-index:11;pointer-events:none;max-width:46%;font-size:11px;color:var(--dim);background:rgba(26,31,39,.85);padding:4px 8px;border-radius:5px;border:1px solid var(--line)}
 #lenbox{position:absolute;z-index:14;display:none;background:var(--bg2);border:1px solid var(--acc);border-radius:5px;padding:4px 6px}
@@ -8255,7 +8255,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r600';
+var SB_BUILD='2026-11-05 r601';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29873,7 +29873,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r600', t:[
+ {d:'5 November 2026', r:'r599 to r601', t:[
+  'In 3D, the height and length label of a selected wall sits above the height arrow instead of covering it.',
   'Model it in one go: a short wall standing on its own that runs into a pillar (the pillar\'s side, or something leant on it) is left out; the pillar stays.',
   'Model it in one go leaves out clutter: a "wall" that does not reach up to just under the ceiling, or is mostly empty scan, is a stack of goods, a cabinet or a leaning board and is dropped. Walls that ran on across a corridor to a pillar are cut back to where the scan shows wall, loose glass panels outside the building are gone, and a panel set back in a wall is no longer taken for a doorway.']},
  {d:'4 November 2026', r:'r589 to r598', t:[
