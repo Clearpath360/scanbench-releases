@@ -8261,7 +8261,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r620';
+var SB_BUILD='2026-11-05 r621';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29883,7 +29883,10 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r620', t:[
+ {d:'5 November 2026', r:'r599 to r621', t:[
+  'Scan texture is sharp: each textured wall, floor or roof is now photographed straight on from the splats (only those on the surface), so it looks like the scan view instead of soft and washed out.',
+  'A door opening in a textured wall shows the door from the scan instead of a hole (an open doorway stays open).',
+  'Wall sizes: one switch for all of them. View > Wall sizes (lengths and heights), or the wall sizes box in the Model panel, turns them on or off in every view. They also hide when the model is hidden.',
   'Every wall gets the bar above it when you pick it (Texture from scan, + Door, + Window, Flip, Heights from scan), including walls drawn before; it stays exactly where it was.',
   'Texture from scan is also in the wall panel on the right, for every wall, including walls drawn before.',
   'Room walls are now full model walls: pick one for Texture from scan, + Door, + Window, Flip and Heights from scan, and their heights are read from the scan along each wall.',
@@ -33778,6 +33781,55 @@ function kfFresh(job, t){ try{ var k=traceKey(); if(!k||!job) return job; var ra
   if(mo&&mo.saved&&t&&mo.saved>t+1000&&mo.model){ job.model=mo.model; } return job; }catch(e){ return job; } }
 sbBefore('ceiApplyJob', function(j){ try{ if(j&&j._kfT){ kfFresh(j, j._kfT); delete j._kfT; } }catch(e){} });
 sbAfter('tabsGet', function(pr){ return pr&&pr.then?pr.then(function(v){ try{ if(v&&v.job&&v.t) v.job._kfT=v.t; }catch(e){} return v; }):pr; });
+
+/* ===== r621: sharp scan texture. A textured wall, floor or roof used to be painted from the scan's points (one dot per splat
+   centre), so it came out soft and washed out next to the splat view. Now each face is photographed straight on from the splats
+   themselves (the same picture the 3D view draws, flat and to scale), only the splats from 250 mm in front of the surface to 600 mm behind it (recesses and alcoves too). Where the splats leave a gap the old painted colours show through.
+   Doors: a door opening in a textured wall gets a door leaf, photographed from the splats in the doorway, instead of a hole. ===== */
+var STX={on:true};
+function stxCross(a, b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+/* a flat photo of the splats over a rectangle: O corner, U across, V up, n towards the camera; returns RGBA rows top first, premultiplied */
+function stxShot(O, U, V, n, Wm, Hm, W, H, sl){ if(!APP.canSplat||typeof splatSnapshot!=='function') return null;
+  var D=6, C=[O[0]+U[0]*Wm/2+V[0]*Hm/2, O[1]+U[1]*Wm/2+V[1]*Hm/2, O[2]+U[2]*Wm/2+V[2]*Hm/2], eye=[C[0]+n[0]*D, C[1]+n[1]*D, C[2]+n[2]*D];
+  var cv=splatSnapshot({eye:eye, target:C, up:V, halfW:Wm/2, halfH:Hm/2, px:W, py:H, slab:[D-sl[1], D-sl[0]], transparent:true, zmax:1e9, zmin:-1e9}); if(!cv) return null;
+  var px=cv.getContext('2d').getImageData(0, 0, W, H).data, cr=stxCross(U, V), mir=(cr[0]*n[0]+cr[1]*n[1]+cr[2]*n[2])<0;
+  if(mir){ var o=new Uint8ClampedArray(px.length); for(var y=0;y<H;y++) for(var x=0;x<W;x++){ var a=(y*W+x)*4, b=(y*W+(W-1-x))*4; o[a]=px[b]; o[a+1]=px[b+1]; o[a+2]=px[b+2]; o[a+3]=px[b+3]; } px=o; }
+  return px; }
+/* the painted texture, then the splat photo laid over it */
+(function(){ if(typeof texRaster!=='function') return; var base=texRaster;
+  texRaster=function(o){ var r=base(o); if(!r||!STX.on) return r; try{ var W=r.w, H=r.h, Wm=W*r.px, Hm=H*r.px, n=o.n, O=[o.O[0]+n[0]*r.d0, o.O[1]+n[1]*r.d0, o.O[2]+n[2]*r.d0];
+      var px=stxShot(O, o.U, o.V, n, Wm, Hm, W, H, [-0.6, 0.25]); if(!px) return r; var D=r.data, used=0;
+      for(var q=0;q<W*H;q++){ var a=px[q*4+3]/255, i=q*4; if(a<0.02) continue; if(a>=0.6){ var f=1/a; D[i]=Math.min(255, px[i]*f); D[i+1]=Math.min(255, px[i+1]*f); D[i+2]=Math.min(255, px[i+2]*f); } else { var k=1-a; D[i]=Math.min(255, px[i]+k*D[i]); D[i+1]=Math.min(255, px[i+1]+k*D[i+1]); D[i+2]=Math.min(255, px[i+2]+k*D[i+2]); } used++; }
+      r.sharp=used/(W*H); }catch(e){ console.warn(e); } return r; }; })();
+/* door leaves in the door openings of a textured wall */
+function stxDoorFaces(w){ var M=APP.model, V=M.verts, a=V[w.a], b=V[w.b], F=mdlFace(w); if(!a||!b||!F) return []; var out=[], L=wallLevels(w), th=wallThick(w), nl=mdlNorm([a.x,a.y],[b.x,b.y]), sd=(w.side||1), n=[nl[0]*sd, nl[1]*sd, 0];
+  var len=Math.hypot(F[1][0]-F[0][0], F[1][1]-F[0][1]); if(len<0.1) return []; var U=[(F[1][0]-F[0][0])/len, (F[1][1]-F[0][1])/len, 0], mid=[F[0][0]-n[0]*th/2, F[0][1]-n[1]*th/2];
+  (w.openings||[]).forEach(function(op, oi){ if(!op||op.door||op.glazed) return; var t=(op.t0+op.t1)/2, lo=L.a0+(L.b0-L.a0)*t, hi=L.a1+(L.b1-L.a1)*t;
+    var isDoor=op.kind==='door'||op.sill==null||op.sill<=lo+0.15; if(!isDoor) return; var zl=lo, zh=Math.min(hi, op.head!=null?op.head:hi); if(zh-zl<0.5) return;
+    var s0=op.t0*len, s1=op.t1*len, Wm=s1-s0, Hm=zh-zl; if(Wm<0.3) return; var pxs=0.006, Wp=Math.min(2048, Math.ceil(Wm/pxs)), Hp=Math.min(2048, Math.ceil(Hm/pxs));
+    var O=[F[0][0]+U[0]*s0, F[0][1]+U[1]*s0, zl], px=stxShot(O, U, [0,0,1], n, Wm, Hm, Wp, Hp, [-th-0.25, 0.2]); if(!px) return;
+    var D=new Uint8ClampedArray(Wp*Hp*4), cov=0; for(var q=0;q<Wp*Hp;q++){ var i=q*4, al=px[i+3]/255; if(al<0.35) continue; var f=1/al; D[i]=px[i]*f; D[i+1]=px[i+1]*f; D[i+2]=px[i+2]*f; D[i+3]=255; cov++; }
+    if(cov<Wp*Hp*0.5) return;   /* an open doorway or one the scanner barely saw stays open */
+    var img={w:Wp, h:Hp, data:D, px:Wm/Wp}, P=function(s, z){ return [mid[0]+U[0]*s, mid[1]+U[1]*s, z]; }, q4=[P(s0,zl), P(s1,zl), P(s1,zh), P(s0,zh)], key='dl'+JSON.stringify([F, L, th, op.t0, op.t1, op.head, APP.res&&APP.res.n]);
+    out.push({key:key+'_f', img:img, q:q4, n:n, door:1}, {key:key+'_b', img:img, q:q4, n:[-n[0],-n[1],0], door:1}); });
+  return out; }
+(function(){ if(typeof wtexFacesNow!=='function') return; var base=wtexFacesNow;
+  wtexFacesNow=function(w){ var out=base(w); try{ if(STX.on&&out&&!out._doors){ out._doors=true; stxDoorFaces(w).forEach(function(f){ out.push(f); }); } }catch(e){ console.warn(e); } return out; }; })();
+
+/* ===== r621: one switch for the wall sizes. The lengths (blue) and heights (pink) on the walls were on two separate switches
+   (the 3D one hidden under View > Show), so the box in the Model panel did not turn the 3D ones off. Now View > Wall sizes,
+   the box in the Model panel and the sizes tick all turn every wall size on or off, in every view. Sizes also hide with the model. ===== */
+function sizesOn(){ return !!MDL.wallDims&&MDL.dims!==false; }
+function sizesSet(on){ MDL.wallDims=!!on; MDL.dims=!!on; try{ localStorage.setItem('sb_wdims', on?'1':'0'); }catch(e){}
+  ['pWd','mdDims'].forEach(function(id){ var c=document.getElementById(id); if(c) c.checked=!!on; }); var bt=document.getElementById('t3Dims'); if(bt){ bt.classList.toggle('on', !!on); bt.style.background=on?'#dbe8ff':''; }
+  try{ ceiDraw(); }catch(e){} try{ planDraw(); }catch(e){} try{ mdlOv(); }catch(e){} try{ requestRender(false); }catch(e){} toast(on?'Wall sizes on':'Wall sizes off', 1500); }
+try{ MDL.dims=MDL.wallDims!==false; }catch(e){}
+try{ sbAfter('buildRight', function(r){ try{ var dm=document.getElementById('mdDims'); if(dm&&!dm._sz){ dm._sz=1; dm.checked=sizesOn(); dm.onchange=function(){ sizesSet(this.checked); }; var lb=dm.parentElement; if(lb&&lb.lastChild&&lb.lastChild.nodeType===3) lb.lastChild.textContent=' wall sizes (all views)'; }
+  var pw=document.getElementById('pWd'); if(pw&&!pw._sz){ pw._sz=1; pw.onchange=function(){ sizesSet(this.checked); }; } }catch(e){} return r; }); }catch(e){}
+try{ sbAfter('sbMenus', function(M){ try{ var V=M.filter(function(m){ return m.id==='view'; })[0]; if(!V||V.items.some(function(x){ return x&&x.sz; })) return M; var i=V.items.findIndex(function(x){ return x&&x.t==='Show measurements'; });
+  V.items.splice(i>=0?i+1:V.items.length, 0, {sz:1, t:'Wall sizes (lengths and heights)', chk:sizesOn(), fn:function(){ sizesSet(!sizesOn()); }}); }catch(e){} return M; }); }catch(e){}
+try{ sbAround('mdlWallDims3D', function(next){ if(!APP.showSolid||MDL.dims===false) return; return next(); }); }catch(e){}
+document.addEventListener('click', function(e){ var b=e.target&&e.target.closest&&e.target.closest('#t3Dims'); if(b) setTimeout(function(){ MDL.dims=!!MDL.wallDims; var c=document.getElementById('mdDims'); if(c) c.checked=MDL.dims; try{ ceiDraw(); planDraw(); }catch(er){} }, 0); }, true);
 
 /* ===== r516: what counts as a roof for rain, wet ground and puddles. A roof has to cover a good part of its 0.5 m patch, seen in 16
    smaller squares: rope lights, cables, wires and thin branches cover a line through it, not the patch, so rain falls past them,
