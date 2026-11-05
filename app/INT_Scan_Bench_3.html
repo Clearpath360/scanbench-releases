@@ -8258,7 +8258,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r605';
+var SB_BUILD='2026-11-05 r606';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -8734,9 +8734,13 @@ function sbOfferRestore(){
   var bg=document.createElement('div'); bg.id='sbRestore'; bg.innerHTML='<div class="box"><b>You have worked on this scan before</b><p>'+bits.join(', ')+when+'.</p><div class="row"><button class="btn p" id="sbRsYes">Carry on where I left off</button><button class="btn" id="sbRsNo">Start fresh</button></div><p class="mini">Start fresh keeps a copy, so Ctrl+Z straight after brings it back.</p></div>';
   document.body.appendChild(bg);
   function done(){ bg.remove(); rebuildSolid(); buildRight(); buildSidebar(); planDraw(); if(typeof ceiDraw==='function') ceiDraw(); if(typeof mdlOv==='function') mdlOv(); }
-  $('#sbRsYes').onclick=function(){ if(nw||nc||nr||nb) restoreAutosave(); CEI.lastDoc=null; if(P){ CEI.zones=P.zones; CEI.notes=P.notes; CEI.meas=Object.assign({plan:[],rcp:[],top:[],long:[],cross:[]}, P.meas); } CEI.pendRestore=null; done(); toast('Carried on: '+bits.join(', ')); };
+  $('#sbRsYes').onclick=function(){ if(typeof TABS!=='undefined'&&TABS.pendJob){ var pj=TABS.pendJob; TABS.pendJob=null; bg.remove(); try{ ceiApplyJob(pj); }catch(e){ console.warn(e); } CEI.pendRestore=null; done(); toast('Carried on where you left off'); return; } if(nw||nc||nr||nb) restoreAutosave(); CEI.lastDoc=null; if(P){ CEI.zones=P.zones; CEI.notes=P.notes; CEI.meas=Object.assign({plan:[],rcp:[],top:[],long:[],cross:[]}, P.meas); } CEI.pendRestore=null; done(); toast('Carried on: '+bits.join(', ')); };
   if(window.SB_AUTORESUME){ window.SB_AUTORESUME=false; setTimeout(function(){ var y=$('#sbRsYes'); if(y) y.click(); }, 0); }   /* straight after an app update: carry on without asking */
-  $('#sbRsNo').onclick=function(){ if(raw){ try{ localStorage.setItem(k+'_bak', raw); localStorage.removeItem(k); }catch(e){} APP.undo.push(JSON.stringify(mo.model)); } CEI.pendRestore=null; CEI.zones=[]; CEI.notes=[]; CEI.meas={plan:[],rcp:[],top:[],long:[],cross:[]}; ceiSave(); done(); toast('Fresh start. The old work is kept as a backup'); };
+  $('#sbRsNo').onclick=function(){ /* r606: start fresh means an empty model, and the work kept on this scan's tab is not put back either */
+    try{ if(typeof TABS!=='undefined'){ TABS.pendJob=null; if(TABS.pend) TABS.pend=null; if(TABS.act&&typeof tabsPut==='function') tabsPut(TABS.act, null); } }catch(e){}
+    if(APP.model&&((APP.model.walls||[]).length||(APP.model.cols||[]).length||(APP.model.roofs||[]).length||(APP.model.beams||[]).length)){ APP.undo.push(snap()); }
+    APP.model={verts:[],walls:[],rooms:[]}; APP.sel={type:null,id:null}; APP.selSet=[]; try{ if(typeof SG!=='undefined'){ SG={list:[], cur:0, title:''}; sgBar(); } }catch(e){} try{ afterEdit(); }catch(e){}
+    if(raw){ try{ localStorage.setItem(k+'_bak', raw); localStorage.removeItem(k); }catch(e){} APP.undo.push(JSON.stringify(mo.model)); } CEI.pendRestore=null; CEI.zones=[]; CEI.notes=[]; CEI.meas={plan:[],rcp:[],top:[],long:[],cross:[]}; ceiSave(); done(); toast('Fresh start. The old work is kept as a backup'); };
 }
 
 /* --------------------------------- pictures --------------------------------- */
@@ -29876,7 +29880,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r605', t:[
+ {d:'5 November 2026', r:'r599 to r606', t:[
+  'Start fresh, when you reopen a scan you have worked on, now really starts with an empty model: the work kept on the scan\'s tab is no longer put back a moment later. Ctrl+Z straight after still brings it back.',
   'AI check gets a pair of photos for up to 20 walls (scan only, and the model on the scan, taken from inside the room), and two new answers: a wall whose bottom or top is wrong is refitted to floor and ceiling, and a door or window the wrong size is refitted from the scan.',
   'Model it in one go: a big window split by a centre bar is found as one window (both panes), not half of it; a wall no longer starts at window sill or radiator height unless the floor really is higher there; and points you delete with Clean are left out of the model and the AI check.',
   'Right click a corner square of a floor or roof (or a pillar outline or rail) in 3D for Delete point: the edge closes up in a straight line.',
@@ -30262,7 +30267,7 @@ try{ sbAfter('rcAdd', function(r, f){ try{ if(!f||!f.name) return r; if((typeof 
 /* when it has finished opening, put its kept work back */
 try{ sbAfter('onResult', function(r){ TABS.resT=performance.now(); return r; }); }catch(e){}
 function tabsWaitLoad(k){ var n=0; (function w(){ if(TABS.pend!==k) return; var ready=APP.res&&(TABS.resT||0)>TABS.addT-2500&&!(window.SB&&SB.busy)&&!APP.busy; if(!ready){ if(n++<1200) setTimeout(w, 250); return; }
-    setTimeout(function(){ if(TABS.pend!==k) return; TABS.pend=null; tabsGet(k).then(function(v){ try{ if(v&&v.job){ ceiApplyJob(v.job); toast('Your work on this scan is back.', 2500); } }catch(e){ console.warn(e); } TABS.u0=APP.undo?APP.undo.length:0; TABS.busy=false; tabsDraw(); }); }, 600); })(); }
+    setTimeout(function(){ if(TABS.pend!==k) return; TABS.pend=null; tabsGet(k).then(function(v){ try{ if(v&&v.job){ if(document.getElementById('sbRestore')) TABS.pendJob=v.job; /* r606: the Carry on / Start fresh question is up: it decides */ else { ceiApplyJob(v.job); toast('Your work on this scan is back.', 2500); } } }catch(e){ console.warn(e); } TABS.u0=APP.undo?APP.undo.length:0; TABS.busy=false; tabsDraw(); }); }, 600); })(); }
 function tabsSwitch(k){ if(k===TABS.act&&APP.res) return; if(TABS.busy){ toast('Still opening the last one.', 2000); return; } var t=TABS.list.filter(function(o){ return o.k===k; })[0]; if(!t) return;
   rcAll().then(function(L){ var q=L.filter(function(o){ return o.k===k; })[0]; if(!q){ toast(t.name+' is not in the recent list any more: open it with + and it will be kept as a tab.', 6000); return; }
     TABS.busy=true; tabsDraw(); try{ if(typeof MS!=='undefined'&&MS.on) msClose(); }catch(e){}
