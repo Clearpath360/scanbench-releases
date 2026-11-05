@@ -1,1 +1,1 @@
-r597: long boxed pillar kept as a pillar; no wall stretched across the corridor.
+r598: AI check close-ups coloured by height, colour photo of each short wall.
