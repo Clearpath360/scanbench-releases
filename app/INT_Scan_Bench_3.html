@@ -8258,7 +8258,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r614';
+var SB_BUILD='2026-11-05 r615';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29880,7 +29880,8 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
- {d:'5 November 2026', r:'r599 to r614', t:[
+ {d:'5 November 2026', r:'r599 to r615', t:[
+  'Room walls no longer brings back walls you deleted: each room is drawn once per press of Room walls, a click on a wall picks the wall instead of filling the room behind it, and pressing Delete turns Room walls off.',
   'Deleted walls stay deleted: your work on each scan is now kept a moment after every change, so opening the scan again no longer brings back walls you took out.',
   'In 3D, clicking a wall picks the wall, not the hidden ceiling above it (Delete used to remove the hidden ceiling instead).',
   'Quick drawing, top of the Model panel: Room walls (click the floor of a room, in 3D or on the Plan, and its walls go in on the true wall lines, one Ctrl+Z per room) and Door or window (in 3D drag a box over it on a wall; it is fitted to the hole in the scan, a door if it reaches the floor). Esc stops either.',
@@ -34057,10 +34058,13 @@ function dr2Floor(e){ var ctx=mdl3Ctx(), px=mdlPx(e, ctx), ray=ctx.ray(px[0], px
 /* ---------- Room walls ---------- */
 function dr2Room(p){ var poly=null; try{ var AR=arFind(); (AR&&AR.rooms||[]).forEach(function(rm){ var P=ocmPoly(rm.E); if(P&&!poly&&pointInPoly(p[0], p[1], P)) poly=P; }); }catch(e){}
   if(!poly){ toast('No closed room found there: click on the floor well inside a room, or draw its walls with the Walls tool.', 4000); return; }
+  /* r614: each room fills once per press of Room walls, so a later click in that room never brings back walls you deleted */ var cx0=0, cy0=0; poly.forEach(function(q){ cx0+=q[0]; cy0+=q[1]; }); cx0/=poly.length; cy0/=poly.length; DR2.done=DR2.done||[];
+  if(DR2.done.some(function(c){ return Math.hypot(c[0]-cx0, c[1]-cy0)<0.3; })){ toast('This room has had its walls drawn. To draw them again, press Room walls again first.', 3500); return; }
   /* the room outline runs along the wall faces: the wall centres sit 50 mm further out */ var n=poly.length, ar=0; for(var i=0;i<n;i++){ var a=poly[i], b=poly[(i+1)%n]; ar+=a[0]*b[1]-b[0]*a[1]; } var sg=ar>0?1:-1, off=0.05, L=[];
   for(i=0;i<n;i++){ var A=poly[i], B=poly[(i+1)%n], dx=B[0]-A[0], dy=B[1]-A[1], l=Math.hypot(dx, dy)||1, nx=sg*dy/l, ny=-sg*dx/l; L.push({p:[A[0]+nx*off, A[1]+ny*off], d:[dx/l, dy/l]}); }
   var P=[]; for(i=0;i<n;i++){ var l1=L[(i-1+n)%n], l2=L[i], den=l1.d[0]*l2.d[1]-l1.d[1]*l2.d[0]; if(Math.abs(den)<1e-9){ P.push(l2.p); continue; } var t=((l2.p[0]-l1.p[0])*l2.d[1]-(l2.p[1]-l1.p[1])*l2.d[0])/den; P.push([l1.p[0]+l1.d[0]*t, l1.p[1]+l1.d[1]*t]); }
   pushUndo(); var M=APP.model, n0=M.walls.length, added=0; for(i=0;i<P.length;i++){ var a2={x:P[i][0], y:P[i][1]}, b2={x:P[(i+1)%P.length][0], y:P[(i+1)%P.length][1]}; if(Math.hypot(b2.x-a2.x, b2.y-a2.y)<0.15||segCovered(a2, b2)) continue; addWallNoded(a2, b2); added++; }
+  DR2.done.push([cx0, cy0]);
   if(!added){ APP.undo.pop(); toast('That room already has its walls.', 2500); return; }
   M.walls.slice(n0).forEach(function(w){ w.th=w.th||0.1; }); afterEdit(); requestRender(false); toast('Room walls: '+added+' added. Click the next room, Ctrl+Z to undo this one, Esc to stop.', 4000); }
 /* ---------- Door or window box ---------- */
@@ -34075,7 +34079,7 @@ function dr2Make(D){ var M=APP.model, w=M.walls[D.wi]; if(!w) return; var L=D.L,
   pushUndo(); w.openings=(w.openings||[]).filter(function(o){ return !(o.t1>op.t0&&o.t0<op.t1); }).concat([op]); afterEdit(); requestRender(false);
   toast((op.kind==='door'?'Door':'Window')+' '+Math.round((op.t1-op.t0)*L*1000)+' x '+Math.round((op.head-op.sill)*1000)+' mm'+(fit?', fitted to the scan':'')+'. Drag the next, Ctrl+Z to undo, Esc to stop.', 4000); }
 /* ---------- the mouse ---------- */
-function dr2Set(m){ DR2.mode=DR2.mode===m?null:m; DR2.drag=null; dr2Ov(); document.querySelectorAll('#dr2Card button[data-m]').forEach(function(b){ b.classList.toggle('on', b.dataset.m===DR2.mode); });
+function dr2Set(m){ DR2.mode=DR2.mode===m?null:m; DR2.drag=null; DR2.done=[]; dr2Ov(); document.querySelectorAll('#dr2Card button[data-m]').forEach(function(b){ b.classList.toggle('on', b.dataset.m===DR2.mode); });
   if(DR2.mode==='box'){ try{ if(APP.view!=='3d') wsView('3d'); }catch(e){} toast('Drag a box over a door or window on a wall. Esc to stop.', 4000); }
   else if(DR2.mode==='room') toast('Click the floor of a room (3D or Plan). Esc to stop.', 4000); }
 window.addEventListener('keydown', function(e){ if(e.key==='Escape'&&DR2.mode){ DR2.mode=null; DR2.drag=null; dr2Ov(); document.querySelectorAll('#dr2Card button[data-m]').forEach(function(b){ b.classList.remove('on'); }); } }, true);
@@ -34084,7 +34088,7 @@ window.addEventListener('mousedown', function(e){ if(!DR2.mode||e.button!==0) re
   if(DR2.mode==='box'&&e.target===glCv){ var hit=null; try{ hit=pickWall(pickRay(e.clientX, e.clientY)); }catch(er){} if(!hit){ toast('Start the box on a wall.', 2000); return; } e.preventDefault(); e.stopImmediatePropagation(); var h=dr2WallHit(e, hit.wi); if(!h) return; DR2.drag={wi:hit.wi, L:h.L, s0:h.s, s1:h.s, z0:h.z, z1:h.z}; dr2Ov(); } }, true);
 window.addEventListener('mousemove', function(e){ var D=DR2.drag; if(!D) return; e.preventDefault(); e.stopImmediatePropagation(); var h=dr2WallHit(e, D.wi); if(!h) return; D.s1=h.s; D.z1=h.z; dr2Ov(); }, true);
 window.addEventListener('mouseup', function(e){ if(DR2.drag){ var D=DR2.drag; DR2.drag=null; e.stopImmediatePropagation(); dr2Make(D); dr2Ov(); return; }
-  var d=DR2.dn; DR2.dn=null; if(DR2.mode==='room'&&d&&d.t===glCv&&e.target===glCv&&Math.hypot(e.clientX-d.x, e.clientY-d.y)<5){ var p=dr2Floor(e); if(p) dr2Room(p); } }, true);
+  var d=DR2.dn; DR2.dn=null; if(DR2.mode==='room'&&d&&d.t===glCv&&e.target===glCv&&Math.hypot(e.clientX-d.x, e.clientY-d.y)<5){ var p=dr2Floor(e); if(!p) return; try{ var ry=pickRay(e.clientX, e.clientY), hw=pickWall(ry), fz=mdlFloor(), tf=Math.abs(ry.d[2])>1e-6?(fz-ry.o[2])/ry.d[2]:1e9; if(hw&&hw.t<tf-0.05) return; }catch(er){} dr2Room(p); } }, true);
 function dr2Ov(){ var cv=document.getElementById('dr2Ov'); if(!DR2.drag||APP.view!=='3d'){ if(cv) cv.style.display='none'; return; }
   if(!cv){ cv=document.createElement('canvas'); cv.id='dr2Ov'; cv.style.cssText='position:absolute;pointer-events:none;z-index:12'; glCv.parentElement.appendChild(cv); }
   var W=glCv.clientWidth, H=glCv.clientHeight, dpr=window.devicePixelRatio||1; cv.style.display='block'; cv.style.left=glCv.offsetLeft+'px'; cv.style.top=glCv.offsetTop+'px'; cv.style.width=W+'px'; cv.style.height=H+'px'; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
@@ -34096,6 +34100,9 @@ try{ sbAfter('buildRight', function(r){ try{ var R=document.getElementById('righ
   var oc=R.querySelector('#ocmCard'); R.insertBefore(d, oc&&labsOn()?oc.nextSibling:R.firstChild); d.querySelectorAll('button[data-m]').forEach(function(b){ b.onclick=function(){ dr2Set(b.dataset.m); }; b.classList.toggle('on', b.dataset.m===DR2.mode); }); }catch(e){ console.warn(e); } return r; }); }catch(e){}
 (function(){ var c=document.createElement('style'); c.textContent='#dr2Card{padding:10px 12px;border-bottom:1px solid var(--sbLn,#e5e7eb);display:flex;flex-direction:column;gap:6px}#dr2Card .btn{flex:1;font-weight:600}#dr2Card .btn.on{background:#2563eb;border-color:#2563eb;color:#fff}'+
   'body:not(.sbLabs) #ocmCard{display:none!important}'; document.head.appendChild(c); })();
+
+/* r614: pressing Delete ends Room walls and Door or window, so the next click is an ordinary click */
+window.addEventListener('keydown', function(e){ if((e.key==='Delete'||e.key==='Backspace')&&DR2.mode&&!(e.target&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))){ DR2.mode=null; DR2.drag=null; DR2.done=[]; dr2Ov(); document.querySelectorAll('#dr2Card button[data-m]').forEach(function(b){ b.classList.remove('on'); }); } }, true);
 
 /* ===== r614: deleted walls stayed deleted only until the scan was opened again. The tab's own copy of the work was saved
    only on switching tabs or closing the page (often lost on close), so it brought back old walls. Now it is saved shortly
