@@ -1,1 +1,1 @@
-r598: AI check close-ups coloured by height, colour photo of each short wall.
+r599: clutter left out of walls, corridor walls cut back, loose glass removed, recessed panels not doors.
