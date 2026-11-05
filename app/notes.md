@@ -1,1 +1,1 @@
-r603: right click a floor or roof corner square in 3D to delete it.
+r604: mullion windows found whole, walls not raised to sill height, deleted points left out.
