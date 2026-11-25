@@ -1,1 +1,1 @@
-r621: sharp scan texture from the splats; door leaf in textured door openings; one switch for wall sizes.
+r622: floors found for you on a building with several storeys; walls stay within their floor; the x-ray look follows the Model switch.

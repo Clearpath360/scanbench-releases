@@ -8261,7 +8261,7 @@ $$('details.filemenu').forEach(function(d){ var m=d.querySelector('.fmenu'); if(
 document.addEventListener('click', function(e){ $$('details.filemenu').forEach(function(m){ if(m.open&&!m.contains(e.target)&&!(m._menu&&m._menu.contains(e.target))) m.open=false; }); });
 rcRender();
 /* ---- updating the app in place: a newer copy of this file is written over this one, then the page reloads and picks up where it was ---- */
-var SB_BUILD='2026-11-05 r621';
+var SB_BUILD='2026-11-25 r622';
 function sbSelfDb(op, val){ return rcDb().then(function(db){ return new Promise(function(ok){ var tx=db.transaction('files', op==='get'?'readonly':'readwrite'), st=tx.objectStore('files'); if(op==='get'){ var q=st.get('__self__'); q.onsuccess=function(){ ok(q.result?q.result.h:null); }; q.onerror=function(){ ok(null); }; } else { st.put({k:'__self__', name:'(Scan Bench itself)', h:val, t:0, size:0}); tx.oncomplete=function(){ ok(true); }; tx.onerror=function(){ ok(false); }; } }); }).catch(function(){ return null; }); }
 function sbUpdFrom(file){ var fr=new FileReader(); fr.onload=function(){ var txt=String(fr.result||'');
     if(!/Scan Bench/.test(txt)||!/function openFile\(/.test(txt)){ toast(file.name+' is not a copy of Scan Bench, so nothing was changed.', 5000); return; }
@@ -29883,6 +29883,10 @@ try{ sbAfter('cltPaint', function(r){ try{ sbiClt(); }catch(e){} return r; }); }
 /* ===== r416: Help > What's new. The changes, one short paragraph per day, newest first. It also opens once by itself
    the first time an updated build starts (not on a brand new install). Add each new build's line to the top day. ===== */
 var SB_WN=[
+ {d:'25 November 2026', r:'r622', t:[
+  'Floors found for you: open a scan of a building with several storeys and Scan Bench offers to set a floor up for each one, with its level and height read from the scan. The Plan then shows one floor at a time; pick the floor in Model > Floor. Find floors, beside + Floor, does it any time.',
+  'On a building with floors, walls read from the scan stay within their own floor: they start at that floor and stop at its ceiling instead of running to the top of the building. Heights from scan puts right a wall drawn before.',
+  'The x-ray look follows the Model switch: with Model off the model is hidden there too, and on a building with floors it shows only the floor you are on.']},
  {d:'5 November 2026', r:'r599 to r621', t:[
   'Scan texture is sharp: each textured wall, floor or roof is now photographed straight on from the splats (only those on the surface), so it looks like the scan view instead of soft and washed out.',
   'A door opening in a textured wall shows the door from the scan instead of a hole (an open doorway stays open).',
@@ -33848,6 +33852,77 @@ wxTop=function(){ var R=APP.res; if(!R||!R.pos) return null; if(WX.top&&WX.top.r
   for(c=0;c<NC;c++) if(ex[c]>-1e8) top[c]=ex[c];
   WX.top={res:R, x0:x0, y0:y0, cell:cell, nx:nx, ny:ny, top:top, tex:null}; return WX.top; };
 try{ if(typeof WX!=='undefined') WX.top=null; }catch(e){}
+
+/* ===== r622: floors found for you. A scan of a building with several storeys used to open as one Ground floor, so the Plan showed
+   every storey on top of each other until each floor was added by hand at a guessed height. Now the app reads the storeys from
+   the scan itself (the heights where the scan covers the most plan area are the floors and ceilings) and offers to set them up:
+   name, level and floor to ceiling height for each, with the Plan on the ground floor. Model panel > Find floors does it again.
+   Also: the 3D x-ray look drew the model even with Model switched off, and drew the other floors' models when the height band was
+   on one floor. It now follows the Model switch, and on a building with floors it shows the model inside the band only. ===== */
+var AF={seen:{}, t:null};
+/* plan area covered at each height, in 5 cm layers: [{z, a}] */
+function afLayers(){ var R=APP.res; if(!R||!R.pos||R.n<5000) return null; var P=R.pos, n=R.n, del=R.del, st=Math.max(1, Math.floor(n/3000000));
+  var x0=1e30, y0=1e30, x1=-1e30, y1=-1e30, z0=1e30, z1=-1e30, i, x, y, z; for(i=0;i<n;i+=st*4){ if(del&&del[i]) continue; x=P[i*3]; y=P[i*3+1]; z=P[i*3+2]; if(x<x0) x0=x; if(x>x1) x1=x; if(y<y0) y0=y; if(y>y1) y1=y; if(z<z0) z0=z; if(z>z1) z1=z; }
+  if(!(z1-z0>4.2)||z1-z0>200) return null; var bw=0.05, nb=Math.ceil((z1-z0)/bw)+1, cs=Math.max(0.25, Math.sqrt((x1-x0)*(y1-y0)/40000)), nx=Math.ceil((x1-x0)/cs)+1, ny=Math.ceil((y1-y0)/cs)+1, nc=nx*ny; if(nb*nc>60000000) return null;
+  var seen=new Uint8Array(nb*nc), A=new Float32Array(nb); for(i=0;i<n;i+=st){ if(del&&del[i]) continue; var b=Math.floor((P[i*3+2]-z0)/bw); if(b<0||b>=nb) continue; var c=Math.floor((P[i*3+1]-y0)/cs)*nx+Math.floor((P[i*3]-x0)/cs), q=b*nc+c; if(c<0||c>=nc||seen[q]) continue; seen[q]=1; A[b]++; }
+  return {A:A, z0:z0, bw:bw, nb:nb, cell:cs*cs, plan:nc}; }
+/* the storeys: [{z, h}] from the bottom up, or null when the scan is one floor */
+function afFind(){ var H=afLayers(); if(!H) return null; var A=H.A, nb=H.nb, bw=H.bw, S=new Float32Array(nb), i, k;
+  for(i=0;i<nb;i++){ var s=0; for(k=-1;k<=1;k++) if(i+k>=0&&i+k<nb) s+=A[i+k]; S[i]=s; }
+  var srt=Array.prototype.slice.call(S).sort(function(a,b){ return a-b; }), med=srt[nb>>1], mx=srt[nb-1]; if(!(mx>med*1.5)) return null; var thr=med+(mx-med)*0.3, win=Math.round(0.3/bw), pk=[];
+  for(i=0;i<nb;i++){ if(S[i]<thr) continue; var top=true; for(k=-win;k<=win;k++){ if(!k||i+k<0||i+k>=nb) continue; if(S[i+k]>S[i]||(S[i+k]===S[i]&&k<0)){ top=false; break; } } if(!top) continue;
+    var sw=0, sz=0; for(k=-2;k<=2;k++) if(i+k>=0&&i+k<nb){ sw+=A[i+k]; sz+=A[i+k]*(H.z0+(i+k+0.5)*bw); } pk.push({z:sz/Math.max(1,sw), a:S[i]}); }
+  if(pk.length<3) return null;
+  /* bottom up: a floor, its ceiling 1.8 m or more above, then either the next floor just above that ceiling (the slab between) or,
+     where the scanner saw the slab as one layer, that layer is the next floor too */
+  var F=[], f=pk[0], p=1; while(f){ var c=null; while(p<pk.length&&pk[p].z-f.z<1.8) p++; if(p>=pk.length){ F.push({z:f.z, h:null}); break; } c=pk[p]; p++;
+    var nxt=null; if(p<pk.length&&pk[p].z-c.z<=1.0){ nxt=pk[p]; p++; } else if(p<pk.length){ nxt=c; }
+    F.push({z:f.z, c:c.z, h:Math.min(c.z-f.z, 6)}); f=nxt; }
+  if(F.length<2) return null; var topZ=H.z0+nb*bw;
+  /* the layers are 5 cm thick: read each floor and ceiling again to the millimetre, as the height most points sit at */
+  try{ var Lv=[]; F.forEach(function(g){ Lv.push(g.z); if(g.c!=null) Lv.push(g.c); }); var fine=afRefine(Lv), q=0; F.forEach(function(g){ g.z=fine[q++]; if(g.c!=null){ g.c=fine[q++]; g.h=Math.min(g.c-g.z, 6); } }); }catch(e){ console.warn(e); }
+  F.forEach(function(g, gi){ var nx=gi+1<F.length?F[gi+1].z:topZ; if(!g.h){ var hc=null; try{ hc=cmbCeil(g.z, nx+0.2); }catch(e){} g.h=hc&&hc>1.8?hc:Math.max(2, Math.min(2.7, nx-g.z-0.3)); } if(gi+1<F.length&&g.h>nx-g.z-0.05) g.h=nx-g.z-0.05; g.z=Math.round(g.z*1000)/1000; g.h=Math.round(g.h*1000)/1000; });
+  return F; }
+function afRefine(Z){ var R=APP.res, P=R.pos, n=R.n, del=R.del, st=Math.max(1, Math.floor(n/3000000)), hw=0.12, fb=0.002, nf=Math.round(2*hw/fb), Hs=Z.map(function(){ return new Int32Array(nf); });
+  for(var i=0;i<n;i+=st){ if(del&&del[i]) continue; var z=P[i*3+2]; for(var k=0;k<Z.length;k++){ var d=z-Z[k]+hw; if(d>=0&&d<2*hw){ Hs[k][Math.min(nf-1, Math.floor(d/fb))]++; break; } } }
+  return Z.map(function(z0, k){ var h=Hs[k], bi=-1, bv=0; for(var j=2;j<nf-2;j++){ var v=h[j-2]+h[j-1]+h[j]+h[j+1]+h[j+2]; if(v>bv){ bv=v; bi=j; } } if(bi<0||bv<20) return z0; var sw=0, sz=0; for(j=bi-4;j<=bi+4;j++) if(j>=0&&j<nf){ sw+=h[j]; sz+=h[j]*(j+0.5)*fb; } return z0-hw+sz/sw; }); }
+function afNames(n){ var nm=['Ground floor','First floor','Second floor','Third floor','Fourth floor','Fifth floor','Sixth floor','Seventh floor','Eighth floor','Ninth floor']; var out=[]; for(var i=0;i<n;i++) out.push(nm[i]||('Floor '+i)); return out; }
+/* set the floors up: what is already drawn stays on the floor it was drawn on */
+function afApply(F){ if(!F||F.length<2||!APP.res) return false; var M=APP.model, had=M.levels&&M.levels.list&&M.levels.list.length>1; if(had) return false; pushUndo();
+  var zOld=M.levels&&M.levels.list[0]?M.levels.list[0].z:((APP.res.floorLayer)||0), drawn=(M.walls&&M.walls.length)||(M.roofs&&M.roofs.length)||(M.cols&&M.cols.length), cur=0;
+  if(drawn){ var bd=1e9; F.forEach(function(g, gi){ var d=Math.abs(g.z-zOld); if(d<bd){ bd=d; cur=gi; } }); }
+  var nm=afNames(F.length); M.levels={cur:cur, list:F.map(function(g, gi){ return {name:nm[gi], z:g.z, h:g.h, model:gi===cur?null:{verts:[],walls:[],rooms:[],cols:[],roofs:[]}}; })};
+  if(typeof MDL!=='undefined') MDL.lvCache={}; try{ if(CEI) CEI.wf=null; }catch(e){}
+  lvBand(); afterEdit(); try{ rebuildSolid(); }catch(e){} buildRight(); try{ if(CEI.view!=='3d') ceiDraw(); }catch(e){} planDraw(); try{ mdlOv(); }catch(e){}
+  toast(F.length+' floors set up. The Plan now shows the '+nm[cur].toLowerCase()+'; pick another in Model > Floor. 3D shows them all. Ctrl+Z undoes it.', 7000); return true; }
+function afBarOff(){ var b=document.getElementById('afBar'); if(b) b.remove(); }
+function afOffer(F){ afBarOff(); var nm=afNames(F.length), b=document.createElement('div'); b.id='afBar';
+  b.innerHTML='<div class="afT"><b>'+F.length+' floors found in this scan</b><span>'+F.map(function(g, gi){ return nm[gi]+' '+lev(g.z); }).join(' &middot; ')+'</span></div><button id="afYes">Set them up</button><button id="afNo">Not now</button>';
+  document.body.appendChild(b); b.querySelector('#afYes').onclick=function(){ afBarOff(); afApply(F); }; b.querySelector('#afNo').onclick=function(){ afBarOff(); toast('Find floors is in the Model panel, beside + Floor, when you want it.', 4000); }; }
+/* Model panel > Find floors, and the offer a few seconds after a scan opens */
+function afRun(quiet){ if(!APP.res){ if(!quiet) toast('Open a scan first.'); return; } var L=APP.model&&APP.model.levels; if(L&&L.list&&L.list.length>1){ if(!quiet) toast('This job already has '+L.list.length+' floors. Delete the extra floors first to find them again.', 4500); return; }
+  var F=null; try{ F=afFind(); }catch(e){ console.warn(e); } if(!F){ if(!quiet) toast('Only one floor found in this scan. Use + Floor to add one by hand.', 4500); return; } if(quiet) afOffer(F); else afApply(F); }
+try{ sbAfter('onResult', function(r){ try{ clearTimeout(AF.t); afBarOff(); var key=(APP.fileName||'')+'|'+(APP.res?APP.res.n:0); if(AF.seen[key]||(typeof CMBDONE!=='undefined'&&CMBDONE)) return r; AF.t=setTimeout(function(){ try{ if(!APP.res||APP.busy) return; AF.seen[key]=1; afRun(true); }catch(e){ console.warn(e); } }, 3500); }catch(e){} return r; }); }catch(e){}
+try{ sbAfter('buildRight', function(r){ try{ var a=document.getElementById('lvAdd'); if(a&&!document.getElementById('afGo')){ var L=APP.model&&APP.model.levels; if(L&&L.list&&L.list.length>1) return r; var b=document.createElement('button'); b.className='btn sm'; b.id='afGo'; b.title='Read the storeys from the scan and set up a floor for each, with its level and height'; b.textContent='Find floors'; b.onclick=function(){ afRun(false); }; a.parentElement.insertBefore(b, a.nextSibling); } }catch(e){} return r; }); }catch(e){}
+(function(){ var c=document.createElement('style'); c.textContent='#afBar{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:9000;display:flex;gap:10px;align-items:center;background:#fff;color:#111827;border:1px solid #cbd5e1;border-radius:12px;padding:10px 12px;box-shadow:0 8px 28px rgba(15,23,42,.22);font:13px system-ui,sans-serif;max-width:92vw}#afBar .afT{display:flex;flex-direction:column;gap:2px;min-width:0}#afBar .afT span{color:#475569;font-size:12px}#afBar button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:7px 12px;font:600 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap}#afBar #afYes{background:#2563eb;border-color:#2563eb;color:#fff}'; document.head.appendChild(c); })();
+
+/* ---------- the 3D x-ray look follows the Model switch, and the height band on a building with floors ---------- */
+var X3L=false;
+try{ sbAround('ceiDraw3D', function(next, c, W, H, cam, k, opt){ var p=X3L; X3L=!!(opt&&opt.live); try{ return next(); } finally{ X3L=p; } }); }catch(e){}
+(function(){ if(typeof mdlDrawX3D!=='function') return; var inner=window.mdlDrawX3D; window.mdlDrawX3D=function(c, S3, k, light, keep){
+    if(X3L){ if(!APP.showSolid) return; var L=APP.model&&APP.model.levels; if(L&&L.list&&L.list.length>1&&typeof CEI!=='undefined'){ var lo=CEI.zlo-0.06, hi=CEI.zhi+0.06, k0=keep; keep=function(x, y, z){ return z>=lo&&z<=hi&&(!k0||k0(x, y, z)); }; } }
+    return inner.call(this, c, S3, k, light, keep); }; })();
+
+/* ---------- on a building of several floors, walls read from the scan stay within the floor they are on ----------
+   This rule was written for Combine, then lost when a later part replaced mdlWallHeights (the hook went with the old function), so on
+   an upper floor a wall started at the ceiling below and every wall ran up to the top of the building. Put back here, after that part. */
+try{ sbAfter('mdlWallHeights', function(H){ try{ var L=APP.model&&APP.model.levels; if(!H||!L||!L.list||L.list.length<2) return H; var f=L.list[L.cur], lo=f.z, hi=f.z+(f.h||2.7);
+  ['zA','zB'].forEach(function(k){ if(H[k]!=null&&(H[k]<lo-0.15||H[k]>lo+0.6)) H[k]=lo; }); ['tA','tB'].forEach(function(k){ if(H[k]!=null&&(H[k]>hi+0.15||H[k]<lo+1.5)) H[k]=hi; }); }catch(e){} return H; }); }catch(e){}
+
+/* ---------- Room walls on an upper floor: the room's floor goes in at that floor's level, not the ground floor's ---------- */
+function dr2Floor4(P){ try{ var M=APP.model, cx=0, cy=0; P.forEach(function(q){ cx+=q[0]; cy+=q[1]; }); cx/=P.length; cy/=P.length;
+  if((M.roofs||[]).some(function(r){ return r.floor&&r.pts&&r.pts.length>2&&pointInPoly(cx, cy, r.pts.map(function(q){ return [q.x, q.y]; })); })) return null;
+  var th=APP.slabThick||0.15, zt=mdlFloor(); return {pts:P.map(function(q){ return {x:Math.round(q[0]*1000)/1000, y:Math.round(q[1]*1000)/1000, z:zt-th}; }), th:th, floor:1, mdl:1, dr2:1}; }catch(e){ return null; } }
 
 /* ===== r496: runs last of all the parts. The smooth video takes its frame here, after everything has been drawn into the 3D view
    (the RC car, fireworks, weather, lights, fun effects), not straight after the scan. Keep this file last in parts.txt. ===== */
